@@ -40,6 +40,11 @@ typedef uint64_t __be64;
 #define ROUND_UP_POWER2(x) ((x) <= 1 ? 1 : (1U << (32 - __builtin_clz((x) - 1))))
 #define ROUND_UP_POWER2_ULL(x) ((x) <= 1 ? 1 : (1ULL << (64 - __builtin_clzll((x) - 1))))
 
+enum {
+        MATCH_CASE = 0,
+        CASELESS = 1,
+};
+
 static int __attribute__((unused)) is_str_equal(char *a, char *b, int caseless)
 {
         enum {
