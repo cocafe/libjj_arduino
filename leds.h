@@ -41,4 +41,23 @@ static void led_init(void)
         led_off();
 }
 
+static inline void led_aux_flash(int interval_ms)
+{
+        static long last_timestamp = 0;
+        static int last_state = LOW;
+        long ts = millis();
+
+        if (ts - last_timestamp >= interval_ms) {
+                if (last_state == LOW) {
+                        digitalWrite(LED_BUILTIN_AUX, HIGH);
+                        last_state = HIGH;
+                } else {
+                        digitalWrite(LED_BUILTIN_AUX, LOW);
+                        last_state = LOW;
+                }
+
+                last_timestamp = ts;
+        }
+}
+
 #endif // __LIBJJ_LEDS_H__
