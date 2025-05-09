@@ -11,6 +11,7 @@
 #define WIFI_CONNECT_TIMEOUT_SEC        (60)
 
 static wifi_power_t __wifi_tx_power = WIFI_POWER_19_5dBm;
+static wifi_mode_t __wifi_mode = WIFI_OFF;
 
 struct wifi_nw_cfg {
         char ssid[64];
@@ -22,7 +23,7 @@ struct wifi_nw_cfg {
         char subnet[32];
 };
 
-static struct wifi_nw_cfg wifi_failsafe = {
+static struct wifi_nw_cfg __attribute__((unused)) wifi_failsafe = {
         "0xC0CAFE",
         "jijijiji",
         10,
@@ -40,16 +41,33 @@ static void __wifi_init(void)
         WiFi.useStaticBuffers(true);
         WiFi.setSleep(false);
         WiFi.setTxPower(__wifi_tx_power);
-        WiFi.mode(WIFI_STA);
+        WiFi.mode(__wifi_mode);
 }
 
-static void wifi_init(wifi_power_t tx_pwr)
+static __attribute__((unused)) void wifi_init(wifi_power_t tx_pwr)
 {
         __wifi_tx_power = tx_pwr;
+        __wifi_mode = WIFI_STA;
         __wifi_init();
 }
 
-static void wifi_connect(struct wifi_nw_cfg *cfg)
+static __attribute__((unused)) int wifi_ap_init(wifi_power_t tx_pwr, struct wifi_nw_cfg *nw)
+{
+        IPAddress local, gw, subnet;
+
+        if (!local.fromString(nw->local) || !gw.fromString(nw->gw) || !subnet.fromString(nw->subnet))
+                return 1;
+
+        __wifi_tx_power = tx_pwr;
+        __wifi_mode = WIFI_AP;
+        __wifi_init();
+        WiFi.softAPConfig(local, gw, subnet);
+        WiFi.softAP(nw->ssid, nw->passwd);
+
+        return 0;
+}
+
+static __attribute__((unused)) void wifi_connect(struct wifi_nw_cfg *cfg)
 {
         // reset once
         __wifi_init();
@@ -67,7 +85,7 @@ static void wifi_connect(struct wifi_nw_cfg *cfg)
         WiFi.begin(cfg->ssid, cfg->passwd);
 }
 
-static int wifi_first_connect(struct wifi_nw_cfg **cfgs, size_t cfg_cnt)
+static __attribute__((unused)) int wifi_first_connect(struct wifi_nw_cfg **cfgs, size_t cfg_cnt)
 {
         int idx = 0;
         int ok = 0;
