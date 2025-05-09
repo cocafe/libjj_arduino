@@ -321,6 +321,8 @@ static void can_init(uint8_t mcp_baudrate, uint8_t mcp_clkrate, uint8_t mcp_mode
                 printf("MCP2515 init failed\n");
                 can_inited = 0;
         }
+
+        can_server.begin();
 }
 
 #endif // __LIBJJ_MCP2515_TCP_H__
