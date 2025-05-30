@@ -3,42 +3,57 @@
 
 #include <Arduino.h>
 
-static inline void led_off()
+#ifndef GPIO_MAIN_LED
+#warning GPIO_MAIN_LED is not defined, functions are stub
+#endif
+
+#ifndef GPIO_AUX_LED
+#warning GPIO_AUX_LED is not defined, functions are stub
+#endif
+
+#ifdef GPIO_MAIN_LED
+static inline void led_off(void)
 {
-        digitalWrite(LED_BUILTIN, LOW);
+        digitalWrite(GPIO_MAIN_LED, LOW);
 }
 
-static inline void led_on()
+static inline void led_on(void)
 {
-        digitalWrite(LED_BUILTIN, HIGH);
+        digitalWrite(GPIO_MAIN_LED, HIGH);
 }
 
-static inline void led_aux_off()
+static inline void led_switch(void)
 {
-        digitalWrite(LED_BUILTIN_AUX, LOW);
+        if (digitalRead(GPIO_MAIN_LED) == HIGH) {
+                led_off();
+        } else {
+                led_on();
+        }
+}
+#else
+static inline void led_off(void) { }
+static inline void led_on(void) { }
+static inline void led_switch(void) { }
+#endif // GPIO_MAIN_LED
+
+#ifdef GPIO_AUX_LED
+static inline void led_aux_off(void)
+{
+        digitalWrite(GPIO_AUX_LED, LOW);
 }
 
-static inline void led_aux_on()
+static inline void led_aux_on(void)
 {
-        digitalWrite(LED_BUILTIN_AUX, HIGH);
+        digitalWrite(GPIO_AUX_LED, HIGH);
 }
 
-static inline void led_aux_switch()
+static inline void led_aux_switch(void)
 {
-        if (digitalRead(LED_BUILTIN_AUX) == HIGH) {
+        if (digitalRead(GPIO_AUX_LED) == HIGH) {
                 led_aux_off();
         } else {
                 led_aux_on();
         }
-}
-
-static void led_init(void)
-{
-        pinMode(LED_BUILTIN, OUTPUT);
-        pinMode(LED_BUILTIN_AUX, OUTPUT);
-
-        led_aux_off();
-        led_off();
 }
 
 static inline void led_aux_flash(int interval_ms)
@@ -49,15 +64,30 @@ static inline void led_aux_flash(int interval_ms)
 
         if (ts - last_timestamp >= interval_ms) {
                 if (last_state == LOW) {
-                        digitalWrite(LED_BUILTIN_AUX, HIGH);
+                        digitalWrite(GPIO_AUX_LED, HIGH);
                         last_state = HIGH;
                 } else {
-                        digitalWrite(LED_BUILTIN_AUX, LOW);
+                        digitalWrite(GPIO_AUX_LED, LOW);
                         last_state = LOW;
                 }
 
                 last_timestamp = ts;
         }
+}
+#else
+static inline void led_aux_off(void) { }
+static inline void led_aux_on(void) { }
+static inline void led_aux_switch(void) { }
+static inline void led_aux_flash(int interval_ms) { (void)interval_ms; }
+#endif // GPIO_AUX_LED
+
+static void led_init(void)
+{
+        pinMode(GPIO_MAIN_LED, OUTPUT);
+        pinMode(GPIO_AUX_LED, OUTPUT);
+
+        led_aux_off();
+        led_off();
 }
 
 #endif // __LIBJJ_LEDS_H__

@@ -5,80 +5,20 @@
 #include <endian.h>
 #include "utils.h"
 
-#include <mcp_can.h>
 #include <WebServer.h>
 
 #define CAN_DATA_MAGIC                  (0xC0CAFEEE)
-
-#ifndef CAN_INT_PIN
-#warning CAN_INT_PIN is not defined, use default PIN
-#define CAN_INT_PIN                     6
-#endif
-
-#ifndef CAN_SS_PIN
-#warning CAN_SS_PIN is not defined, use default PIN
-#define CAN_SS_PIN                      7
-#endif
 
 #ifndef CAN_SERVER_PORT
 #warning CAN_SERVER_PORT is not defined, use default port number
 #define CAN_SERVER_PORT                 35000
 #endif
 
+#include "mcp2515_can.h"
+
 static WiFiServer can_server(CAN_SERVER_PORT);
 
-struct strval cfg_mcp_baudrate[] = {
-        { "CAN_4K096BPS",       CAN_4K096BPS    },
-        { "CAN_5KBPS",          CAN_5KBPS       },
-        { "CAN_10KBPS",         CAN_10KBPS      },
-        { "CAN_20KBPS",         CAN_20KBPS      },
-        { "CAN_31K25BPS",       CAN_31K25BPS    },
-        { "CAN_33K3BPS",        CAN_33K3BPS     },
-        { "CAN_40KBPS",         CAN_40KBPS      },
-        { "CAN_50KBPS",         CAN_50KBPS      },
-        { "CAN_80KBPS",         CAN_80KBPS      },
-        { "CAN_100KBPS",        CAN_100KBPS     },
-        { "CAN_125KBPS",        CAN_125KBPS     },
-        { "CAN_200KBPS",        CAN_200KBPS     },
-        { "CAN_250KBPS",        CAN_250KBPS     },
-        { "CAN_500KBPS",        CAN_500KBPS     },
-        { "CAN_1000KBPS",       CAN_1000KBPS    },
-};
-
-struct strval cfg_mcp_clkrate[] = { 
-        { "MCP_20MHZ",          MCP_20MHZ       },
-        { "MCP_16MHZ",          MCP_16MHZ       },
-        { "MCP_8MHZ",           MCP_8MHZ        },
-};
-
-struct strval cfg_mcp_mode[] = {
-        { "MCP_NORMAL",         MCP_NORMAL      },
-        { "MCP_SLEEP",          MCP_SLEEP       },
-        { "MCP_LOOPBACK",       MCP_LOOPBACK    },
-        { "MCP_LISTENONLY",     MCP_LISTENONLY  },
-};
-
-struct can_frame {
-        __le32 magic;
-        __le32 id;
-        uint8_t len;
-        uint8_t heartbeat;
-        uint8_t padding[2];
-        uint8_t data[];
-} __attribute__((packed));
-
-static MCP_CAN CAN0(CAN_SS_PIN);
-
-static uint8_t can_inited = 0;
-
-static uint64_t cnt_can_send;
-static uint64_t cnt_can_send_error;
-static uint64_t cnt_can_recv;
-static uint64_t cnt_can_recv_error;
 static uint64_t cnt_can_tcp_recv_error;
-#ifdef CAN_AUX_LED
-static uint8_t can_txrx = 0;
-#endif
 
 static int can_frame_input(struct can_frame *f)
 {
@@ -170,19 +110,17 @@ next_frame:
 }
 
 
-static void can_loop(void)
+static void can_tcp_server_loop(void)
 {
         WiFiClient client = can_server.accept();
 
         if (client) {
-                static unsigned long ts = millis();
-
                 printf("new client connected\n");
                 led_aux_on();
 
                 while (client.connected()) {
 #ifdef CAN_AUX_LED
-                        can_txrx = 0;
+                        can_aux_led_loop_begin();
 #endif
 
                         do {
@@ -269,14 +207,7 @@ static void can_loop(void)
                         } while (0);
 
 #ifdef CAN_AUX_LED
-                        if (can_txrx) {
-                                if ((millis() - ts) >= 500) {
-                                        led_aux_switch();
-                                        ts = millis();
-                                }
-                        } else if ((millis() - ts) >= 1000) {
-                                led_aux_on();
-                        }
+                        can_aux_led_flash();
 #endif
                 }
 
@@ -285,41 +216,6 @@ static void can_loop(void)
 #ifdef CAN_AUX_LED
                 led_aux_off();
 #endif
-        }
-}
-
-static void can_init(uint8_t mcp_baudrate, uint8_t mcp_clkrate, uint8_t mcp_mode)
-{
-        for (size_t i = 0; i < ARRAY_SIZE(cfg_mcp_baudrate); i++) {
-                if (mcp_baudrate == cfg_mcp_baudrate[i].val) {
-                        printf("MCP2515 baudrate: %s\n", cfg_mcp_baudrate[i].str);
-                        break;
-                }
-        }
-
-        for (size_t i = 0; i < ARRAY_SIZE(cfg_mcp_clkrate); i++) {
-                if (mcp_clkrate == cfg_mcp_clkrate[i].val) {
-                        printf("MCP2515 clockrate: %s\n", cfg_mcp_clkrate[i].str);
-                        break;
-                }
-        }
-
-        for (size_t i = 0; i < ARRAY_SIZE(cfg_mcp_mode); i++) {
-                if (mcp_mode == cfg_mcp_mode[i].val) {
-                        printf("MCP2515 mode: %s\n", cfg_mcp_mode[i].str);
-                        break;
-                }
-        }
-
-        if (CAN0.begin(MCP_ANY, mcp_baudrate, mcp_clkrate) == CAN_OK) {
-                printf("MCP2515 init ok\n");
-                can_inited = 1;
-
-                CAN0.setMode(mcp_mode);
-                pinMode(CAN_INT_PIN, INPUT);
-        } else {
-                printf("MCP2515 init failed\n");
-                can_inited = 0;
         }
 }
 
