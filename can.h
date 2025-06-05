@@ -71,13 +71,6 @@ static void task_can_recv(void *arg)
         }
 }
 
-static __attribute__((unused)) void task_can_recv_start(unsigned cpu)
-{
-        if (can_dev) {
-                xTaskCreatePinnedToCore(task_can_recv, "can_recv", 4096, NULL, 1, NULL, cpu);
-        }
-}
-
 #ifdef CAN_LED_BLINK
 static uint8_t can_txrx = 0;
 static uint8_t can_led = CAN_LED_BLINK;
@@ -116,5 +109,13 @@ static __attribute__((unused)) void task_can_led_blink_start(unsigned cpu)
 #else
 static __attribute__((unused)) inline void task_can_led_blink_start(unsigned cpu) { }
 #endif // CAN_LED_BLINK
+
+static __attribute__((unused)) void task_can_start(unsigned cpu)
+{
+        if (can_dev) {
+                task_can_led_blink_start(cpu);
+                xTaskCreatePinnedToCore(task_can_recv, "can_recv", 4096, NULL, 1, NULL, cpu);
+        }
+}
 
 #endif // __LIBJJ_CAN_H__
