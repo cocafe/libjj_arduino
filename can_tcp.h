@@ -222,8 +222,6 @@ static void can_ratelimit_init(struct can_ratelimit_cfg *cfg)
         lck_can_rlimit = xSemaphoreCreateMutex();
         hash_init(htbl_can_rlimit);
 }
-#else
-static void can_ratelimit_init(struct can_ratelimit_cfg *cfg) { }
 #endif // CONFIG_HAVE_CANTCP_RLIMIT
 
 static int is_valid_can_frame(can_frame_t *f)
