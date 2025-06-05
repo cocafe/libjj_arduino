@@ -171,7 +171,7 @@ static void can_ble_frame_send(can_frame_t *f)
         }
 }
 
-static void ble_init(struct ble_cfg *cfg)
+static void __attribute__((unused)) ble_init(struct ble_cfg *cfg)
 {
         if (cfg) {
                 strncpy(ble_device_prefix, cfg->devname, sizeof(ble_device_prefix));
