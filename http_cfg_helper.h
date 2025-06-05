@@ -56,7 +56,7 @@ static int http_param_help_print(WebServer *http_server, struct http_cfg_param *
                 if (unlikely(p->arg == NULL))
                         continue;
 
-                c += snprintf(&buf[c], sizeof(buf) - c, "\"%s\": ", p->arg);
+                c += snprintf(&buf[c], sizeof(buf) - c, "%s: ", p->arg);
                 if (p->is_char) {
                         c += snprintf(&buf[c], sizeof(buf) - c, "<string>");
                 } else if (p->map && p->mapsz) {
