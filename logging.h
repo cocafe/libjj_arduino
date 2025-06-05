@@ -3,33 +3,27 @@
 
 #include <stdio.h>
 
-#define LOG_ERR_STREAM          stdout
-
-#ifdef LOG_ALWAYS_FLUSH
-#define LOG_FLUSH(fp) do { fflush((fp)); } while (0)
-#else
-#define LOG_FLUSH(fp) do { } while (0)
-#endif // LOG_ALWAYS_FLUSH
-
-#define ___pr_wrapped(fp, msg, fmt...)                                  \
-        do {                                                            \
-                fprintf(fp, msg, ##fmt);                                \
-                LOG_FLUSH(fp);                                          \
+#define ___pr_timestamp()                               \
+        do {                                            \
+                printf("[%8lu] ", millis());            \
         } while (0)
 
-#define pr_err(msg, fmt...)                                             \
-        do {                                                            \
-                ___pr_wrapped(LOG_ERR_STREAM, "%s(): ", __func__);      \
-                ___pr_wrapped(LOG_ERR_STREAM, msg, ##fmt);              \
+#define ___pr_wrapped(msg, fmt...)                      \
+        do {                                            \
+                printf(msg, ##fmt);                     \
+        } while (0)
+
+#define pr_info(msg, fmt...)                            \
+        do {                                            \
+                ___pr_timestamp();                      \
+                ___pr_wrapped("%s(): ", __func__);      \
+                ___pr_wrapped(msg, ##fmt);              \
         } while(0)
 
-#define pr_info(msg, fmt...)                                            \
-        do {                                                            \
-                ___pr_wrapped(stdout, "%s(): ", __func__);              \
-                ___pr_wrapped(stdout, msg, ##fmt);                      \
-        } while(0)
+#define pr_none(msg, fmt...) do { } while (0)
 
+#define pr_err          pr_info
 #define pr_dbg          pr_info
-#define pr_verbose      pr_info
+#define pr_verbose      pr_none
 
 #endif // __LIBJJ_LOGGING_H__

@@ -1,6 +1,7 @@
 #ifndef __LIBJJ_UTLIS_H__
 #define __LIBJJ_UTLIS_H__
 
+#include <stdio.h>
 #include <stdint.h>
 #include <string.h>
 
@@ -147,6 +148,34 @@ static void __attribute__((unused)) hexdump_addr(const void *data, size_t size, 
                         }
                 }
         }
+}
+
+static unsigned long long __attribute__((unused)) strtoull_wrap(const char *str, int base, int *err)
+{
+        char *endptr;
+        unsigned long long ret = strtoull(str, &endptr, base);
+        
+        if (endptr == str || errno == ERANGE || *endptr != '\0') {
+                *err = -EINVAL;
+                return 0;
+        }
+
+        *err = 0;
+        return ret;
+}
+
+static long long __attribute__((unused)) strtoll_wrap(const char *str, int base, int *err)
+{
+        char *endptr;
+        long long ret = strtoull(str, &endptr, base);
+        
+        if (endptr == str || errno == ERANGE || *endptr != '\0') {
+                *err = -EINVAL;
+                return 0;
+        }
+
+        *err = 0;
+        return ret;
 }
 
 #endif // __LIBJJ_UTLIS_H__

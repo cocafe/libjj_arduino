@@ -6,10 +6,7 @@
 static void err_trap()
 {
         while (1) {
-                led_on();
-                delay(150);
-                led_off();
-                delay(150);
+                vTaskDelay(portMAX_DELAY);
         }
 }
 

@@ -1,5 +1,7 @@
-#ifndef __LIBJJ_CANFRAME_H__
-#define __LIBJJ_CANFRAME_H__
+#ifndef __LIBJJ_CAN_FRAME_H__
+#define __LIBJJ_CAN_FRAME_H__
+
+#include <stdint.h>
 
 extern "C" {
 
@@ -19,8 +21,6 @@ extern "C" {
 #define CAN_ID_BROADCAST                        (0x7df)
 
 #define CAN_FRAME_DLC                           (8)
-
-#define CAN_DATA_MAGIC                          (0xC0CAFEEE)
 
 #define CAN_FC_STATUS_CTS                       (0x00)
 #define CAN_FC_STATUS_WAIT                      (0x01)
@@ -53,17 +53,26 @@ struct can_hdr_fc {
         uint8_t st;
 } __attribute__((packed));
 
-struct can_frame {
+#define CAN_DATA_MAGIC                          (0xC0CAFEEE)
+
+struct can_frame_t {
         __le32 magic;
         __le32 id;
-        uint8_t len;
-        uint8_t heartbeat;
-        uint8_t padding[2];
+        union {
+                struct {
+                        uint8_t heartbeat : 1;
+                        uint8_t extd      : 1;
+                        uint8_t rtr       : 1;
+                        uint8_t reserved  : 5;
+                };
+                uint8_t flags;
+        };
+        uint8_t dlc;
         uint8_t data[];
 } __attribute__((packed));
 
-typedef struct can_frame can_frame_t;
+typedef struct can_frame_t can_frame_t;
 
 } // C
 
-#endif // __LIBJJ_CANFRAME_H__
+#endif // __LIBJJ_CAN_FRAME_H__

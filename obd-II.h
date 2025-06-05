@@ -242,7 +242,7 @@ static int can_frame_obd_pid_input(can_frame_t *f)
         uint32_t now = millis();
         obd_pid_t *p;
         uint32_t can_id = f->id;
-        uint32_t dlc = f->len;
+        uint32_t dlc = f->dlc;
         uint8_t mode = f->data[0];
         uint8_t pid = f->data[1];
         uint8_t *pdata = &f->data[2];
@@ -308,7 +308,7 @@ static void can_isotp_frame_obd_input(can_frame_t *f)
                 uint8_t dlc = sf->dlc;
                 memcpy(buf, &f->data[1], dlc);
                 memcpy(&f->data[0], buf, dlc);
-                f->len = dlc;
+                f->dlc = dlc;
 
                 can_frame_obd_input(f);
 
@@ -353,7 +353,7 @@ static void can_isotp_frame_obd_input(can_frame_t *f)
                 mf_pos += dlc;
 
                 if (mf_pos >= mf_dlc_want) {
-                        mf->len = mf_pos;
+                        mf->dlc = mf_pos;
                         can_frame_obd_input(mf);
 
                         mf_dlc_want = 0;
