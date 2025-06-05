@@ -29,6 +29,8 @@ void rpc_can_tcp_add(void)
                 if (modified == 1) {
                         can_rlimit_enabled = !!enabled;
                         can_rlimit_update_hz_default = (update_hz >= 255 )? 0 : update_hz;
+                        g_cfg.rlimit_cfg.enabled = can_rlimit_enabled;
+                        g_cfg.rlimit_cfg.default_hz = can_rlimit_update_hz_default;
 
                         http_server.send(200, "text/plain", "OK\n");
                 } else {
