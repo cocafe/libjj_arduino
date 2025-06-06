@@ -22,7 +22,7 @@ void rpc_esp32_add(void)
         http_rpc.on("/esp32_top", HTTP_GET, [](){
                 char *buf;
                 unsigned sampling_ms = 500;
-                unsigned bufsz = 1024;
+                unsigned bufsz = 1200;
 
                 if (http_rpc.hasArg("sampling_ms")) {
                         String _val = http_rpc.arg("sampling_ms");
