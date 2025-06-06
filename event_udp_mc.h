@@ -70,9 +70,9 @@ unlock:
 }
 
 static unsigned udp_event_pkt_dlen[] = {
-        [EVENT_DEV_HEARTBEAT]           = sizeof(struct event_dev_hb),
-        [EVENT_RC_BLE_CONNECTED]        = 0,
-        [EVENT_RC_BLE_DISCONNECTED]     = 0,
+        [EVENT_DEV_HEARTBEAT]        = sizeof(struct event_dev_hb),
+        [EVENT_RC_BLE_CONNECTED]     = 0,
+        [EVENT_RC_BLE_DISCONNECTED]  = 0,
 };
 
 static char evt_udp_mc_addr[24] = "239.0.0.1";
@@ -137,16 +137,9 @@ static int event_udp_input(udp_event_t *pkt, int len)
         if (pkt->dlen != udp_event_pkt_dlen[pkt->event])
                 return -EINVAL;
 
-        switch (pkt->event) {
-        case EVENT_RC_BLE_CONNECTED:
-                break;
-
-        case EVENT_RC_BLE_DISCONNECTED:
-                break;
-
-        case EVENT_DEV_HEARTBEAT:
-        default:
-                break;
+        for (int i = 0; i < ARRAY_SIZE(udp_event_cbs); i++) {
+                if (udp_event_cbs[i].cb)
+                        udp_event_cbs[i].cb(pkt->event, pkt->data, pkt->dlen);
         }
 
         return 0;
@@ -172,7 +165,6 @@ static int event_udp_mc_recv(void)
 
         return event_udp_input((udp_event_t *)buf, len);
 }
-
 
 static void task_event_udp_mc_recv(void *arg)
 {

@@ -13,11 +13,12 @@
 
 #include "utils.h"
 
+#ifdef CONFIG_FREERTOS_UNICORE
 #define CPU0                            (0)
-#ifdef CONFIG_IDF_TARGET_ESP32S3
+#define CPU1                            CPU0
+#else
+#define CPU0                            (0)
 #define CPU1                            (1)
-#elif defined CONFIG_IDF_TARGET_ESP32C3
-#define CPU1                            (0)
 #endif
 
 static TaskStatus_t *esp32_top_stats_snapshot(UBaseType_t *task_cnt, unsigned long *ulTotalRunTime)
@@ -26,7 +27,7 @@ static TaskStatus_t *esp32_top_stats_snapshot(UBaseType_t *task_cnt, unsigned lo
         UBaseType_t uxArraySize;
         
         uxArraySize = uxTaskGetNumberOfTasks();
-        pxTaskStatusArray = (TaskStatus_t *)malloc(uxArraySize * sizeof(TaskStatus_t));
+        pxTaskStatusArray = (TaskStatus_t *)calloc(uxArraySize, sizeof(TaskStatus_t));
         if (!pxTaskStatusArray)
                 return NULL;
         
@@ -38,7 +39,8 @@ static TaskStatus_t *esp32_top_stats_snapshot(UBaseType_t *task_cnt, unsigned lo
 
 static int esp32_top_stats_print(unsigned sampling_ms, int (*__snprintf)(char *buffer, size_t bufsz, const char *format, ...), char *buf, size_t bufsz)
 {
-        struct task_track {
+        struct task_track { 
+                uint16_t id;
                 const char *name;
                 uint32_t tick_delta;
                 uint16_t stack_high_watermark;
@@ -83,20 +85,23 @@ static int esp32_top_stats_print(unsigned sampling_ms, int (*__snprintf)(char *b
         }
 
         for (unsigned i = 0; i < task_cnt2; i++) {
+                tracks[i].id = tasks2[i].xTaskNumber;
                 tracks[i].name = tasks2[i].pcTaskName;
                 tracks[i].stack_high_watermark = tasks2[i].usStackHighWaterMark;
 
                 for (unsigned j = 0; j < task_cnt1; j++) {
-                        if (is_str_equal((char *)tasks2[i].pcTaskName, (char *)tasks1[j].pcTaskName, CASELESS)) {
-                                tracks[i].tick_delta = tasks2[i].ulRunTimeCounter - tasks1[j].ulRunTimeCounter;
+                        if (tasks2[i].xTaskNumber == tasks1[j].xTaskNumber) {
+                                uint64_t delta = tasks2[i].ulRunTimeCounter - tasks1[j].ulRunTimeCounter;
+
+                                tracks[i].tick_delta = delta;
 
                                 if (strcmp(tasks2[i].pcTaskName, "IDLE") == 0 ||
                                     strcmp(tasks2[i].pcTaskName, "IDLE0") == 0 ||
                                     strcmp(tasks2[i].pcTaskName, "IDLE1") == 0) {
-                                        idle_ticks_delta += tasks2[i].ulRunTimeCounter - tasks1[j].ulRunTimeCounter;
+                                        idle_ticks_delta += delta;
                                 }
 
-                                total_ticks_delta += tasks2[i].ulRunTimeCounter - tasks1[j].ulRunTimeCounter;
+                                total_ticks_delta += delta;
                         }
                 }
         }
@@ -105,18 +110,20 @@ static int esp32_top_stats_print(unsigned sampling_ms, int (*__snprintf)(char *b
                 __snprintf = ___snprintf_to_vprintf;
         }
 
-        c += __snprintf(&buf[c], bufsz - c, "%-16s | %-10s | %-4s | Stack High Watermark\n", "Task", "Tick", "CPU");
+        c += __snprintf(&buf[c], bufsz - c, "%-4s | %-16s | %-10s | %-4s | Stack High Watermark\n", "Task", "Name", "Tick", "CPU");
         for (unsigned i = 0; i < task_cnt2; i++) {
-                // XXX: ulTotalRunTime is much more smaller than total ticks
-                //      ulTotalRunTime * 2 ~= total ticks
+                // XXX: when we run on dual core, this CPU percent means usage of total two core...
                 uint64_t percent = 100ULL * tracks[i].tick_delta / total_ticks_delta;
-                c += __snprintf(&buf[c], bufsz - c, "%-16s | %10lu | %3ju%% | %lu\n",
+                c += __snprintf(&buf[c], bufsz - c, "%-4u | %-16s | %10lu | %3ju%% | %lu\n",
+                                tracks[i].id,
                                 tracks[i].name,
                                 tracks[i].tick_delta,
                                 percent,
                                 tracks[i].stack_high_watermark);
         }
 
+        // XXX: ulTotalRunTime is much more smaller than total ticks
+        //      ulTotalRunTime * 2 ~= total ticks
         uint64_t total_cpu_percent = 100ULL * (total_ticks_delta - idle_ticks_delta) / total_ticks_delta;
         c += __snprintf(&buf[c], bufsz - c, "ulTotalRunTimeDelta: %lu TicksDelta: %ju IdleDelta: %ju TotalCPU: %ju%%\n",
                         rt2 - rt1, total_ticks_delta, idle_ticks_delta, total_cpu_percent);
@@ -125,6 +132,49 @@ static int esp32_top_stats_print(unsigned sampling_ms, int (*__snprintf)(char *b
         free(tasks1);
         free(tasks2);
         free(tracks);
+
+        return c;
+}
+
+static int esp32_top_snapshot_print(int (*__snprintf)(char *buffer, size_t bufsz, const char *format, ...), char *buf, size_t bufsz)
+{
+        TaskStatus_t *tasks;
+        UBaseType_t task_cnt;
+        unsigned long rt;
+        uint64_t total_ticks = 0, idle_ticks = 0;
+
+        size_t c = 0;
+
+        tasks = esp32_top_stats_snapshot(&task_cnt, &rt);
+        if (!tasks) {
+                return -ENOMEM;
+        }
+
+        if (!__snprintf) {
+                __snprintf = ___snprintf_to_vprintf;
+        }
+
+        c += __snprintf(&buf[c], bufsz - c, "%-4s | %-16s | %-10s | %-4s | Stack High Watermark\n", "Task", "Name", "Tick", "CPU");
+        for (unsigned i = 0; i < task_cnt; i++) {
+                c += __snprintf(&buf[c], bufsz - c, "%-4s | %-16s | %10lu | %lu\n",
+                                tasks[i].xTaskNumber,
+                                tasks[i].pcTaskName,
+                                tasks[i].ulRunTimeCounter,
+                                tasks[i].usStackHighWaterMark);
+
+                total_ticks += tasks[i].ulRunTimeCounter;
+
+                if (strcmp(tasks[i].pcTaskName, "IDLE") == 0 ||
+                        strcmp(tasks[i].pcTaskName, "IDLE0") == 0 ||
+                        strcmp(tasks[i].pcTaskName, "IDLE1") == 0) {
+                        idle_ticks += tasks[i].ulRunTimeCounter;
+                }
+        }
+
+        c += __snprintf(&buf[c], bufsz - c, "ulTotalRunTime: %lu TotalTicks: %ju IdleTicks: %ju\n", rt, total_ticks, idle_ticks);
+        c += __snprintf(&buf[c], bufsz - c, "FreeHeapBytes: %lu MinimalFreeHeap: %lu\n", esp_get_free_heap_size(), esp_get_minimum_free_heap_size());
+
+        free(tasks);
 
         return c;
 }

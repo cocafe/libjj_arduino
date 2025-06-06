@@ -54,7 +54,12 @@ void rpc_esp32_add(void)
                         return;
                 }
 
-                esp32_top_stats_print(sampling_ms, snprintf, buf, bufsz);
+                if (http_rpc.hasArg("snapshot")) {
+                        esp32_top_snapshot_print(snprintf, buf, bufsz);
+                } else {
+                        esp32_top_stats_print(sampling_ms, snprintf, buf, bufsz);
+                }
+
                 http_rpc.send(200, "text/plain", buf);
 
                 free(buf);

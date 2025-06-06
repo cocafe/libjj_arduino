@@ -126,14 +126,13 @@ static void task_ble_conn_update(void *arg)
                 if (RaceChronoBle.isConnected()) {
                         if (!is_connected) {
                                 pr_info("BLE connected\n");
+                                is_connected = 1;
                         }
 
 #ifdef __LIBJJ_EVENT_UDP_MC_H__
                         // keep sending to avoid miss
                         event_udp_mc_send(EVENT_RC_BLE_CONNECTED, NULL, 0);
 #endif
-
-                        is_connected = 1;
                 } else {
                         if (is_connected) {
                                 pr_info("BLE disconnected\n");
