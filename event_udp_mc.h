@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <errno.h>
 
+#include <esp_mac.h>
 #include <esp_system.h>
 
 #include "libjj/utils.h"
@@ -27,7 +28,7 @@ struct udp_event_pkt {
         uint8_t event;
         uint8_t dlen;
         uint8_t data[];
-};
+} __attribute__((packed));
 
 struct event_dev_hb {
         uint8_t devname[16];
@@ -49,7 +50,7 @@ static uint8_t udp_event_cb_cnt;
 
 static SemaphoreHandle_t lck_udp_event_cb;
 
-static int udp_event_cb_register(void (*cb)(uint8_t event, void *data, unsigned dlen))
+static int __attribute__((unused)) udp_event_cb_register(void (*cb)(uint8_t event, void *data, unsigned dlen))
 {
         int err = 0;
 
@@ -110,12 +111,15 @@ static int __attribute__((unused)) event_udp_mc_send(uint8_t event, uint8_t *dat
                 return -ENOMEM;
 
         pkt->magic = htole32(EVENT_PKT_MAGIC);
+        pkt->event = event;
         pkt->dlen = dlen;
 
-        if (dlen)
+        if (data && dlen)
                 memcpy(&pkt->data, data, dlen);
 
         rc = __event_udp_mc_send(pkt);
+
+        pr_verbose("sent event %hhu %dbytes\n", event, sizeof(udp_event_t) + dlen);
 
         free(pkt);
 

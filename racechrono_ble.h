@@ -124,8 +124,14 @@ static void task_ble_conn_update(void *arg)
 
         while (1) {
                 if (RaceChronoBle.isConnected()) {
-                        if (!is_connected)
+                        if (!is_connected) {
                                 pr_info("BLE connected\n");
+                        }
+
+#ifdef __LIBJJ_EVENT_UDP_MC_H__
+                        // keep sending to avoid miss
+                        event_udp_mc_send(EVENT_RC_BLE_CONNECTED, NULL, 0);
+#endif
 
                         is_connected = 1;
                 } else {
@@ -134,6 +140,10 @@ static void task_ble_conn_update(void *arg)
                                 is_connected = 0;
                                 raceChronoHandler.handleDisconnect();
                         }
+
+#ifdef __LIBJJ_EVENT_UDP_MC_H__
+                        event_udp_mc_send(EVENT_RC_BLE_DISCONNECTED, NULL, 0);
+#endif
                 }
 
                 vTaskDelay(pdMS_TO_TICKS(5 * 1000UL));
