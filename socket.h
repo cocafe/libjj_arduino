@@ -10,6 +10,12 @@
 
 #include "libjj/logging.h"
 
+struct udp_mc_cfg {
+        uint8_t enabled;
+        uint16_t port;
+        char mcaddr[24];
+};
+
 static int __attribute__((unused)) udp_mc_sock_create(char *mc_addr, unsigned port, sockaddr_in *skaddr)
 {
         int sock;

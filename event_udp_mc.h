@@ -74,12 +74,6 @@ static unsigned udp_event_pkt_dlen[] = {
         [EVENT_RC_BLE_DISCONNECTED]     = 0,
 };
 
-struct udp_mc_cfg {
-        uint8_t enabled;
-        uint16_t port;
-        char mcaddr[24];
-};
-
 static char evt_udp_mc_addr[24] = "239.0.0.1";
 static int evt_udp_mc_port = 5090;
 static int evt_udp_mc_sock = -1;

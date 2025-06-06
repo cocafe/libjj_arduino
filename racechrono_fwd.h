@@ -17,12 +17,6 @@
 #error include racechrono_ble.h first
 #endif
 
-struct rc_fwd_cfg {
-        uint8_t enabled;
-        uint16_t port;
-        char mcaddr[24];
-};
-
 static char rc_udp_mc_addr[24] = "239.0.0.1";
 static int rc_udp_mc_port = 4090;
 static int rc_udp_mc_sock = -1;
@@ -138,7 +132,7 @@ static void racechrono_fwd_wifi_event_cb(int event)
         }
 }
 
-static void __attribute__((unused)) racechrono_fwd_init(struct rc_fwd_cfg *cfg, int is_receiver)
+static void __attribute__((unused)) racechrono_fwd_init(struct udp_mc_cfg *cfg, int is_receiver)
 {
         if (!cfg)
                 return;
