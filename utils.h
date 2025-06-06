@@ -51,6 +51,20 @@ enum {
         CASELESS = 1,
 };
 
+static inline int ___snprintf_to_vprintf(char *buffer, size_t bufsz, const char *format, ...)
+{
+        int ret;
+
+        va_list vlist2;
+        va_start(vlist2, format);
+
+        ret = vprintf(format, vlist2);
+
+        va_end(vlist2);
+
+        return ret;
+}
+
 static int __attribute__((unused)) is_str_equal(char *a, char *b, int caseless)
 {
         enum {

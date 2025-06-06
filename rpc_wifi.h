@@ -5,7 +5,7 @@
 
 void rpc_wifi_add(void)
 {
-        http_server.on("/wifi_cfg", HTTP_GET, [](){
+        http_rpc.on("/wifi_cfg", HTTP_GET, [](){
                 struct wifi_nw_cfg tmp = { };
                 struct http_cfg_param params[] = {
                         HTTP_CFG_PARAM_STR(ssid, tmp.ssid),
@@ -20,12 +20,12 @@ void rpc_wifi_add(void)
 
                 memcpy(&tmp, &g_cfg.nw_cfg, sizeof(tmp));
 
-                if (http_param_help_print(&http_server, params, ARRAY_SIZE(params)))
+                if (http_param_help_print(http_rpc, params, ARRAY_SIZE(params)))
                         return;
 
-                modified = http_param_parse(&http_server, params, ARRAY_SIZE(params));
+                modified = http_param_parse(http_rpc, params, ARRAY_SIZE(params));
                 if (modified < 0) {
-                        http_server.send(500, "text/plain", "Invalid value or internal error\n");
+                        http_rpc.send(500, "text/plain", "Invalid value or internal error\n");
                         return;
                 }
 
@@ -34,24 +34,24 @@ void rpc_wifi_add(void)
                                 IPAddress ip;
 
                                 if (ip.fromString(tmp.local) != true) {
-                                        http_server.send(200, "text/plain", "Invalid local ip\n");
+                                        http_rpc.send(200, "text/plain", "Invalid local ip\n");
                                         return;
                                 }
 
                                 if (ip.fromString(tmp.subnet) != true) {
-                                        http_server.send(200, "text/plain", "Invalid subnet ip\n");
+                                        http_rpc.send(200, "text/plain", "Invalid subnet ip\n");
                                         return;
                                 }
 
                                 if (ip.fromString(tmp.gw) != true) {
-                                        http_server.send(200, "text/plain", "Invalid gateway ip\n");
+                                        http_rpc.send(200, "text/plain", "Invalid gateway ip\n");
                                         return;
                                 }
                         }
 
                         memcpy(&g_cfg.nw_cfg, &tmp, sizeof(g_cfg.nw_cfg));
 
-                        http_server.send(200, "text/plain", "OK\n");
+                        http_rpc.send(200, "text/plain", "OK\n");
                 } else {
                         char buf[256] = { };
                         size_t c = 0;
@@ -66,21 +66,21 @@ void rpc_wifi_add(void)
                         c += snprintf(&buf[c], sizeof(buf) - c, "  \"sta_timeout_sec\": %hu\n", g_cfg.nw_cfg.timeout_sec);
                         c += snprintf(&buf[c], sizeof(buf) - c, "}\n");
 
-                        http_server.send(200, "text/plain", buf);
+                        http_rpc.send(200, "text/plain", buf);
                 }
         });
 
-        http_server.on("/wifi_rssi", HTTP_GET, [](){
+        http_rpc.on("/wifi_rssi", HTTP_GET, [](){
                 char buf[16] = { };
                 
                 snprintf(buf, sizeof(buf), "%d dBm\n", WiFi.RSSI());
 
-                http_server.send(200, "text/plain", buf);
+                http_rpc.send(200, "text/plain", buf);
         });
 
-        http_server.on("/wifi_tx_power", HTTP_GET, [](){
-                if (http_server.hasArg("set")) {
-                        String data = http_server.arg("set");
+        http_rpc.on("/wifi_tx_power", HTTP_GET, [](){
+                if (http_rpc.hasArg("set")) {
+                        String data = http_rpc.arg("set");
                         int match = 0;
                         int i = 0;
 
@@ -92,7 +92,7 @@ void rpc_wifi_add(void)
                         }
 
                         if (!match) {
-                                http_server.send(404, "text/plain", "Invalid value\n");
+                                http_rpc.send(404, "text/plain", "Invalid value\n");
                                 return;
                         }
 
@@ -100,7 +100,7 @@ void rpc_wifi_add(void)
 
                         g_cfg.nw_cfg.tx_pwr = cfg_wifi_txpwr[i].val;
 
-                        http_server.send(200, "text/plain", "OK\n");
+                        http_rpc.send(200, "text/plain", "OK\n");
                 } else {
                         char buf[128] = { };
                         size_t c = 0;
@@ -111,7 +111,7 @@ void rpc_wifi_add(void)
                                         g_cfg.nw_cfg.tx_pwr == cfg_wifi_txpwr[i].val ? "*" : "");
                         }
 
-                        http_server.send(200, "text/plain", buf);
+                        http_rpc.send(200, "text/plain", buf);
                 }
         });
 }

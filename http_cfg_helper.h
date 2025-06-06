@@ -42,9 +42,9 @@ do {                                                    \
         }                                               \
 } while (0)
 
-static int http_param_help_print(WebServer *http_server, struct http_cfg_param *params, unsigned params_cnt)
+static int http_param_help_print(WebServer &http_server, struct http_cfg_param *params, unsigned params_cnt)
 {
-        if (!http_server->hasArg("help"))
+        if (!http_server.hasArg("help"))
                 return 0;
 
         char buf[1024] = { };
@@ -73,12 +73,12 @@ static int http_param_help_print(WebServer *http_server, struct http_cfg_param *
                 c += snprintf(&buf[c], sizeof(buf) - c, "\n");
         }
 
-        http_server->send(200, "text/plain", buf);
+        http_server.send(200, "text/plain", buf);
 
         return 1;
 }
 
-static int http_param_parse(WebServer *http_server, struct http_cfg_param *params, unsigned params_cnt)
+static int http_param_parse(WebServer &http_server, struct http_cfg_param *params, unsigned params_cnt)
 {
         int modified = 0;
 
@@ -88,8 +88,8 @@ static int http_param_parse(WebServer *http_server, struct http_cfg_param *param
                 if (unlikely(p->arg == NULL))
                         continue;
 
-                if (http_server->hasArg(p->arg)) {
-                        String arg = http_server->arg(p->arg);
+                if (http_server.hasArg(p->arg)) {
+                        String arg = http_server.arg(p->arg);
 
                         if (unlikely(p->val == NULL || p->size == 0))
                                 continue;

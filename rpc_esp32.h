@@ -5,75 +5,75 @@
 
 void rpc_esp32_add(void)
 {
-        http_server.on("/esp32_reset", HTTP_GET, [](){
-                http_server.send(200, "text/plain", "OK\n");
+        http_rpc.on("/esp32_reset", HTTP_GET, [](){
+                http_rpc.send(200, "text/plain", "OK\n");
                 delay(500);
                 ESP.restart();
         });
 
-        http_server.on("/esp32_uptime", HTTP_GET, [](){
+        http_rpc.on("/esp32_uptime", HTTP_GET, [](){
                 char buf[20] = { };
 
                 snprintf(buf, sizeof(buf), "%lu\n", millis());
 
-                http_server.send(200, "text/plain", buf);
+                http_rpc.send(200, "text/plain", buf);
         });
 
-        http_server.on("/esp32_top", HTTP_GET, [](){
+        http_rpc.on("/esp32_top", HTTP_GET, [](){
                 char *buf;
                 unsigned sampling_ms = 500;
                 unsigned bufsz = 1024;
 
-                if (http_server.hasArg("sampling_ms")) {
-                        String _val = http_server.arg("sampling_ms");
+                if (http_rpc.hasArg("sampling_ms")) {
+                        String _val = http_rpc.arg("sampling_ms");
                         int err;
 
                         sampling_ms = strtoull_wrap(_val.c_str(), 10, &err);
 
                         if (err) {
-                                http_server.send(200, "text/plain", "Invalid value\n");
+                                http_rpc.send(200, "text/plain", "Invalid value\n");
                                 return;
                         }
                 }
 
-                if (http_server.hasArg("bufsz")) {
-                        String _val = http_server.arg("bufsz");
+                if (http_rpc.hasArg("bufsz")) {
+                        String _val = http_rpc.arg("bufsz");
                         int err;
 
                         bufsz = strtoull_wrap(_val.c_str(), 10, &err);
 
                         if (err) {
-                                http_server.send(200, "text/plain", "Invalid value\n");
+                                http_rpc.send(200, "text/plain", "Invalid value\n");
                                 return;
                         }
                 }
 
                 buf = (char *)malloc(bufsz);
                 if (!buf) {
-                        http_server.send(200, "text/plain", "No memory for output buffer\n");
+                        http_rpc.send(200, "text/plain", "No memory for output buffer\n");
                         return;
                 }
 
                 esp32_top_stats_print(sampling_ms, snprintf, buf, bufsz);
-                http_server.send(200, "text/plain", buf);
+                http_rpc.send(200, "text/plain", buf);
 
                 free(buf);
         });
 
-        http_server.on("/esp32_tsens", HTTP_GET, [](){
+        http_rpc.on("/esp32_tsens", HTTP_GET, [](){
                 char buf[8] = { };
                 float tempC = 0.0;
 
                 if (esp32_tsens_get(&tempC)) {
-                        http_server.send(200, "text/plain", "ERROR\n");
+                        http_rpc.send(200, "text/plain", "ERROR\n");
                         return;
                 }
 
                 snprintf(buf, sizeof(buf), "%.2fC\n", tempC);
-                http_server.send(200, "text/plain", buf);
+                http_rpc.send(200, "text/plain", buf);
         });
 
-        http_server.on("/esp32_stats", HTTP_GET, [](){
+        http_rpc.on("/esp32_stats", HTTP_GET, [](){
                 char buf[512] = { };
                 float tempC = 0.0;
                 int cpu = 0;
@@ -93,7 +93,7 @@ void rpc_esp32_add(void)
                 c += snprintf(&buf[c], sizeof(buf) - c, "esp_stats{t=\"tempC\"} %.2f\n", tempC);
                 c += snprintf(&buf[c], sizeof(buf) - c, "esp_stats{t=\"cpu_usage\"} %d\n", cpu);
 
-                http_server.send(200, "text/plain", buf);
+                http_rpc.send(200, "text/plain", buf);
         });
 }
 

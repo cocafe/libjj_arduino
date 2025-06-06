@@ -11,26 +11,14 @@
 
 #include <driver/temperature_sensor.h>
 
+#include "utils.h"
+
 #define CPU0                            (0)
 #ifdef CONFIG_IDF_TARGET_ESP32S3
 #define CPU1                            (1)
 #elif defined CONFIG_IDF_TARGET_ESP32C3
 #define CPU1                            (0)
 #endif
-
-static inline int ___snprintf_to_vprintf(char *buffer, size_t bufsz, const char *format, ...)
-{
-        int ret;
-
-        va_list vlist2;
-        va_start(vlist2, format);
-
-        ret = vprintf(format, vlist2);
-
-        va_end(vlist2);
-
-        return ret;
-}
 
 static TaskStatus_t *esp32_top_stats_snapshot(UBaseType_t *task_cnt, unsigned long *ulTotalRunTime)
 {
@@ -48,7 +36,6 @@ static TaskStatus_t *esp32_top_stats_snapshot(UBaseType_t *task_cnt, unsigned lo
         return pxTaskStatusArray;
 }
 
-// FIXME: Ticks are ... overall ticks over time...
 static int esp32_top_stats_print(unsigned sampling_ms, int (*__snprintf)(char *buffer, size_t bufsz, const char *format, ...), char *buf, size_t bufsz)
 {
         struct task_track {

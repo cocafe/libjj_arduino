@@ -6,7 +6,7 @@
 void rpc_rcfwd_add(void)
 {
 #ifdef __LIBJJ_RACECHRONO_FWD_H__
-        http_server.on("/rc_fwd_cfg", HTTP_GET, [](){
+        http_rpc.on("/rc_fwd_cfg", HTTP_GET, [](){
                 struct rc_fwd_cfg rc_fwd_cfg;
                 struct http_cfg_param params[] = {
                         HTTP_CFG_PARAM_INT(rc_fwd_enabled, rc_fwd_cfg.enabled),
@@ -17,12 +17,12 @@ void rpc_rcfwd_add(void)
 
                 memcpy(&rc_fwd_cfg, &g_cfg.rc_fwd_cfg, sizeof(rc_fwd_cfg));
 
-                if (http_param_help_print(&http_server, params, ARRAY_SIZE(params)))
+                if (http_param_help_print(http_rpc, params, ARRAY_SIZE(params)))
                         return;
 
-                modified = http_param_parse(&http_server, params, ARRAY_SIZE(params));
+                modified = http_param_parse(http_rpc, params, ARRAY_SIZE(params));
                 if (modified < 0) {
-                        http_server.send(500, "text/plain", "Invalid value or internal error\n");
+                        http_rpc.send(500, "text/plain", "Invalid value or internal error\n");
                         return;
                 }
 
@@ -30,13 +30,13 @@ void rpc_rcfwd_add(void)
                         IPAddress ip;
 
                         if (ip.fromString(rc_fwd_cfg.mcaddr) != true) {
-                                http_server.send(200, "text/plain", "Invalid IP\n");
+                                http_rpc.send(200, "text/plain", "Invalid IP\n");
                                 return;
                         }
 
                         memcpy(&g_cfg.rc_fwd_cfg, &rc_fwd_cfg, sizeof(g_cfg.rc_fwd_cfg));
 
-                        http_server.send(200, "text/plain", "OK\n");
+                        http_rpc.send(200, "text/plain", "OK\n");
                 } else {
                         char buf[256] = { };
                         size_t c = 0;
@@ -47,7 +47,7 @@ void rpc_rcfwd_add(void)
                         c += snprintf(&buf[c], sizeof(buf) - c, "  \"port\": %d\n", g_cfg.rc_fwd_cfg.port);
                         c += snprintf(&buf[c], sizeof(buf) - c, "}\n");
 
-                        http_server.send(200, "text/plain", buf);
+                        http_rpc.send(200, "text/plain", buf);
                 }
         });
 

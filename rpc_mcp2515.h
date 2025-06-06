@@ -6,7 +6,7 @@
 void rpc_mcp2515_add(void)
 {
 #ifdef CONFIG_HAVE_CAN_MCP2515
-        http_server.on("/mcp2515_cfg", HTTP_GET, [](){
+        http_rpc.on("/mcp2515_cfg", HTTP_GET, [](){
                 unsigned baudrate_i = 0, clkrate_i = 0, mode_i = 0;
                 struct mcp2515_cfg tmp = { };
                 struct http_cfg_param params[] = {
@@ -40,12 +40,12 @@ void rpc_mcp2515_add(void)
                         }
                 }
 
-                if (http_param_help_print(&http_server, params, ARRAY_SIZE(params)))
+                if (http_param_help_print(http_rpc, params, ARRAY_SIZE(params)))
                         return;
 
-                modified = http_param_parse(&http_server, params, ARRAY_SIZE(params));
+                modified = http_param_parse(http_rpc, params, ARRAY_SIZE(params));
                 if (modified < 0) {
-                        http_server.send(500, "text/plain", "Invalid value or internal error\n");
+                        http_rpc.send(500, "text/plain", "Invalid value or internal error\n");
                         return;
                 }
 
@@ -55,7 +55,7 @@ void rpc_mcp2515_add(void)
                         g_cfg.mcp2515_cfg.clkrate = cfg_mcp_clkrate[clkrate_i].val;
                         g_cfg.mcp2515_cfg.mode = cfg_mcp_mode[mode_i].val;
 
-                        http_server.send(200, "text/plain", "OK\n");
+                        http_rpc.send(200, "text/plain", "OK\n");
                 } else {
                         char buf[256] = { };
 
@@ -68,7 +68,7 @@ void rpc_mcp2515_add(void)
                         c += snprintf(&buf[c], sizeof(buf) - c, "  \"pin_int\": %hhu\n", g_cfg.mcp2515_cfg.pin_int);
                         c += snprintf(&buf[c], sizeof(buf) - c, "}\n");
 
-                        http_server.send(200, "text/plain", buf);
+                        http_rpc.send(200, "text/plain", buf);
                 }
         });
 #endif // CONFIG_HAVE_CAN_MCP2515

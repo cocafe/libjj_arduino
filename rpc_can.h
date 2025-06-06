@@ -5,7 +5,7 @@
 
 void rpc_can_add(void)
 {
-        http_server.on("/can_stats", HTTP_GET, [](){
+        http_rpc.on("/can_stats", HTTP_GET, [](){
                 char buf[1024] = { };
                 size_t c = 0;
 
@@ -35,7 +35,7 @@ void rpc_can_add(void)
                 c += snprintf(&buf[c], sizeof(buf) - c, "can_stats{t=\"ble_send\"} %llu\n", cnt_can_ble_send);
 #endif
 
-                http_server.send(200, "text/plain", buf);
+                http_rpc.send(200, "text/plain", buf);
         });
 }
 

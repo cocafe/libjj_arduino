@@ -7,7 +7,7 @@ void rpc_twai_add(void)
 {
 #ifdef CONFIG_HAVE_CAN_TWAI
 
-        http_server.on("/twai_cfg", HTTP_GET, [](){
+        http_rpc.on("/twai_cfg", HTTP_GET, [](){
                 struct twai_cfg tmp = { };
                 struct http_cfg_param params[] = {
                         HTTP_CFG_PARAM_INT(pin_tx, tmp.pin_tx),
@@ -25,18 +25,18 @@ void rpc_twai_add(void)
 
                 memcpy(&tmp, &g_cfg.twai_cfg, sizeof(struct twai_cfg));
 
-                if (http_param_help_print(&http_server, params, ARRAY_SIZE(params)))
+                if (http_param_help_print(http_rpc, params, ARRAY_SIZE(params)))
                         return;
 
-                modified = http_param_parse(&http_server, params, ARRAY_SIZE(params));
+                modified = http_param_parse(http_rpc, params, ARRAY_SIZE(params));
                 if (modified < 0) {
-                        http_server.send(500, "text/plain", "Invalid value or internal error\n");
+                        http_rpc.send(500, "text/plain", "Invalid value or internal error\n");
                         return;
                 }
 
                 if (modified == 1) {
                         memcpy(&g_cfg.twai_cfg, &tmp, sizeof(g_cfg.twai_cfg));
-                        http_server.send(200, "text/plain", "OK\n");
+                        http_rpc.send(200, "text/plain", "OK\n");
                 } else {
                         char buf[256] = { };
                         size_t c = 0;
@@ -54,7 +54,7 @@ void rpc_twai_add(void)
                         c += snprintf(&buf[c], sizeof(buf) - c, "  \"tx_timedout_ms\": %hu\n", g_cfg.twai_cfg.tx_timedout_ms);
                         c += snprintf(&buf[c], sizeof(buf) - c, "}\n");
 
-                        http_server.send(200, "text/plain", buf);
+                        http_rpc.send(200, "text/plain", buf);
                 }
         });
 
