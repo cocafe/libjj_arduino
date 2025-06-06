@@ -70,6 +70,7 @@ static void __attribute__((unused)) i2c_init(unsigned pin_sda, unsigned pin_scl)
 {
         lck_i2c = xSemaphoreCreateMutex();
         Wire.begin(pin_sda, pin_scl);
+        delay(300);
 }
 
 static int __attribute__((unused)) i2c_lock(void)

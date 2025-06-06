@@ -4,6 +4,7 @@
 #include <stdio.h>
 
 #include <WiFi.h>
+#include <freertos/semphr.h>
 
 #include "utils.h"
 #include "leds.h"
@@ -25,13 +26,26 @@ struct wifi_event_cb_ctx {
 static struct wifi_event_cb_ctx wifi_event_cbs[4] = { };
 static uint8_t wifi_event_cb_cnt;
 
-// FIXME: can be racing
-#define wifi_event_cb_add(_cb)                                  \
-do {                                                            \
-        if (wifi_event_cb_cnt < ARRAY_SIZE(wifi_event_cbs)) {   \
-                wifi_event_cbs[wifi_event_cb_cnt++].cb = _cb;   \
-        }                                                       \
-} while (0)
+static SemaphoreHandle_t lck_wifi_cb;
+
+static int wifi_event_cb_register(void (*cb)(int event))
+{
+        int err = 0;
+
+        xSemaphoreTake(lck_wifi_cb, portMAX_DELAY);
+
+        if (wifi_event_cb_cnt >= ARRAY_SIZE(wifi_event_cbs)) {
+                err = -ENOSPC;
+                goto unlock;
+        }
+
+        wifi_event_cbs[wifi_event_cb_cnt++].cb = cb;
+
+unlock:
+        xSemaphoreGive(lck_wifi_cb);
+
+        return err;
+}
 
 static wifi_power_t __wifi_tx_power = WIFI_POWER_19_5dBm;
 static wifi_mode_t __wifi_mode = WIFI_OFF;
@@ -107,6 +121,7 @@ static inline void wifi_tx_power_print(int val)
 
 static __attribute__((unused)) void wifi_sta_init(struct wifi_nw_cfg *nw)
 {
+        lck_wifi_cb = xSemaphoreCreateMutex();
         wifi_tx_power_print(nw->tx_pwr);
         __wifi_tx_power = (wifi_power_t)nw->tx_pwr;
         __wifi_mode = WIFI_STA;
@@ -120,6 +135,7 @@ static __attribute__((unused)) int wifi_ap_init(struct wifi_nw_cfg *nw)
         if (!local.fromString(nw->local) || !gw.fromString(nw->gw) || !subnet.fromString(nw->subnet))
                 return 1;
 
+        lck_wifi_cb = xSemaphoreCreateMutex();
         wifi_tx_power_print(nw->tx_pwr);
         __wifi_tx_power = (wifi_power_t)nw->tx_pwr;
         __wifi_mode = WIFI_AP;

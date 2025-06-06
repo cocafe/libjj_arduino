@@ -5,11 +5,9 @@
 #include <stdlib.h>
 #include <errno.h>
 
-#include <lwip/sockets.h>
-#include <lwip/inet.h>
-
 #include "libjj/utils.h"
 #include "libjj/logging.h"
+#include "libjj/socket.h"
 
 #ifndef __LIBJJ_CAN_TCP_H__
 #error include can_tcp.h first
@@ -38,6 +36,10 @@ static uint64_t cnt_can_udp_send; // send to remote multicase
 static int __attribute__((unused)) racechrono_udp_mc_send(can_frame_t *f)
 {
         int sock = READ_ONCE(rc_udp_mc_sock);
+
+        if (unlikely(sock < 0))
+                return -ENODEV;
+
         int sendsz = sizeof(can_frame_t) + f->dlc;
         int rc = sendto(sock, f, sendsz, 0,
                         (struct sockaddr *)&rc_udp_mc_skaddr,
@@ -65,7 +67,7 @@ static int racechrono_udp_mc_recv(void)
         int sock = READ_ONCE(rc_udp_mc_sock);
 
         if (unlikely(sock < 0))
-                return -ENOENT;
+                return -ENODEV;
 
         // blocked waiting
         int len = recvfrom(sock, buf, sizeof(buf) - 1, 0,
@@ -87,40 +89,26 @@ static int racechrono_udp_mc_recv(void)
         return 0;
 }
 
-static int racechrono_udp_mc_create(char *mc_addr, int port)
+static void task_racechrono_fwd_recv(void *arg)
 {
-        int sock;
+        pr_info("started\n");
 
-        sock = socket(AF_INET, SOCK_DGRAM, 0);
-        if (sock < 0) {
-                pr_err("socket(): %d %s\n", errno, strerror(abs(errno)));
-                return -EIO;
+        while (1) {
+                if (READ_ONCE(rc_udp_mc_sock) < -1) {
+                        vTaskDelay(pdMS_TO_TICKS(5000));
+                        continue;
+                }
+
+                racechrono_udp_mc_recv();
         }
+}
 
-        int yes = 1;
-        setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(yes));
+static int racechrono_udp_mc_create(char *mc_addr, unsigned port)
+{
+        int sock = udp_mc_sock_create(mc_addr, port, &rc_udp_mc_skaddr);
 
-        struct sockaddr_in addr;
-        addr.sin_family = AF_INET;
-        addr.sin_addr.s_addr = htonl(INADDR_ANY);
-        addr.sin_port = htons(port);
-        if (bind(sock, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
-                pr_err("socket(): %d %s\n", errno, strerror(abs(errno)));
-                return -EFAULT;
-        }
-
-        struct ip_mreq mreq;
-        mreq.imr_multiaddr.s_addr = inet_addr(mc_addr);
-        mreq.imr_interface.s_addr = inet_addr(WiFi.localIP().toString().c_str());
-        if (setsockopt(sock, IPPROTO_IP, IP_ADD_MEMBERSHIP, &mreq, sizeof(mreq)) < 0) {
-                pr_err("setsockopt() failed\n");
-                return -EFAULT;
-        }
-
-        memset(&rc_udp_mc_skaddr, 0x00, sizeof(rc_udp_mc_skaddr));
-        rc_udp_mc_skaddr.sin_family = AF_INET;
-        rc_udp_mc_skaddr.sin_addr.s_addr = inet_addr(mc_addr);
-        rc_udp_mc_skaddr.sin_port = htons(port);
+        if (sock < 0)
+                return sock;
 
         WRITE_ONCE(rc_udp_mc_sock, sock);
         pr_info("%s:%u\n", mc_addr, port);
@@ -130,30 +118,8 @@ static int racechrono_udp_mc_create(char *mc_addr, int port)
 
 static void racechrono_udp_mc_close(void)
 {
-        int sock = READ_ONCE(rc_udp_mc_sock);
-
-        if (sock < -1)
-                return;
-
-        rc_udp_mc_sock = -1;
-        shutdown(sock, SHUT_RDWR);
-        close(sock);
-
-        return;
-}
-
-static void task_racechrono_fwd_recv(void *arg)
-{
-        pr_info("started\n");
-
-        while (1) {
-                if (rc_udp_mc_sock < -1) {
-                        vTaskDelay(pdMS_TO_TICKS(5000));
-                        continue;
-                }
-
-                racechrono_udp_mc_recv();
-        }
+        if (!udp_mc_sock_close(READ_ONCE(rc_udp_mc_sock)))
+                rc_udp_mc_sock = -1;
 }
 
 static void racechrono_fwd_wifi_event_cb(int event)
@@ -172,7 +138,7 @@ static void racechrono_fwd_wifi_event_cb(int event)
         }
 }
 
-static void __attribute__((unused)) racechrono_fwd_receiver_init(struct rc_fwd_cfg *cfg)
+static void __attribute__((unused)) racechrono_fwd_init(struct rc_fwd_cfg *cfg, int is_receiver)
 {
         if (!cfg)
                 return;
@@ -182,8 +148,10 @@ static void __attribute__((unused)) racechrono_fwd_receiver_init(struct rc_fwd_c
 
         strncpy(rc_udp_mc_addr, cfg->mcaddr, sizeof(rc_udp_mc_addr));
         rc_udp_mc_port = cfg->port;
-        wifi_event_cb_add(racechrono_fwd_wifi_event_cb);
-        xTaskCreatePinnedToCore(task_racechrono_fwd_recv, "rc_fwd", 4096, NULL, 1, NULL, CPU1);
+        wifi_event_cb_register(racechrono_fwd_wifi_event_cb);
+
+        if (is_receiver)
+                xTaskCreatePinnedToCore(task_racechrono_fwd_recv, "rc_fwd", 4096, NULL, 1, NULL, CPU1);
 }
 
 #endif // __LIBJJ_RACECHRONO_FWD_H__

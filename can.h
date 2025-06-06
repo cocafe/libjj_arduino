@@ -32,13 +32,26 @@ struct can_recv_cb_ctx {
 static struct can_recv_cb_ctx can_recv_cbs[4] = { };
 static uint8_t can_recv_cb_cnt;
 
-// FIXME: can_recv_cb_cnt can be racing
-#define can_recv_cb_add(_cb)                                    \
-do {                                                            \
-        if (can_recv_cb_cnt < ARRAY_SIZE(can_recv_cbs)) {       \
-                can_recv_cbs[can_recv_cb_cnt++].cb = _cb;       \
-        }                                                       \
-} while (0)
+static SemaphoreHandle_t lck_can_cb;
+
+static int can_recv_cb_register(void (*cb)(can_frame_t *))
+{
+        int err = 0;
+
+        xSemaphoreTake(lck_can_cb, portMAX_DELAY);
+
+        if (can_recv_cb_cnt >= ARRAY_SIZE(can_recv_cbs)) {
+                err = -ENOSPC;
+                goto unlock;
+        }
+
+        can_recv_cbs[can_recv_cb_cnt++].cb = cb;
+
+unlock:
+        xSemaphoreGive(lck_can_cb);
+
+        return err;
+}
 
 static void task_can_recv(void *arg)
 {
@@ -110,12 +123,22 @@ static __attribute__((unused)) void task_can_led_blink_start(unsigned cpu)
 static __attribute__((unused)) inline void task_can_led_blink_start(unsigned cpu) { }
 #endif // CAN_LED_BLINK
 
-static __attribute__((unused)) void task_can_start(unsigned cpu)
+static __attribute__((unused)) void can_init(void)
+{
+        lck_can_cb = xSemaphoreCreateMutex();
+}
+
+static __attribute__((unused)) int task_can_start(unsigned task_cpu)
 {
         if (can_dev) {
-                task_can_led_blink_start(cpu);
-                xTaskCreatePinnedToCore(task_can_recv, "can_recv", 4096, NULL, 1, NULL, cpu);
+                task_can_led_blink_start(task_cpu);
+                xTaskCreatePinnedToCore(task_can_recv, "can_recv", 4096, NULL, 1, NULL, task_cpu);
+        } else {
+                pr_err("no device inited\n");
+                return -ENODEV;
         }
+
+        return 0;
 }
 
 #endif // __LIBJJ_CAN_H__

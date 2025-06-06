@@ -182,7 +182,7 @@ static void __attribute__((unused)) ble_init(struct ble_cfg *cfg)
         RaceChronoBle.startAdvertising();
 
         if (can_dev) {
-                can_recv_cb_add(can_ble_frame_send);
+                can_recv_cb_register(can_ble_frame_send);
         }
 }
 

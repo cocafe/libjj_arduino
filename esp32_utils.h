@@ -120,6 +120,7 @@ static int esp32_top_stats_print(unsigned sampling_ms, int (*__snprintf)(char *b
         uint64_t total_cpu_percent = 100ULL * (total_ticks_delta - idle_ticks_delta) / total_ticks_delta;
         c += __snprintf(&buf[c], bufsz - c, "ulTotalRunTimeDelta: %lu TicksDelta: %ju IdleDelta: %ju TotalCPU: %ju%%\n",
                         rt2 - rt1, total_ticks_delta, idle_ticks_delta, total_cpu_percent);
+        c += __snprintf(&buf[c], bufsz - c, "FreeHeapBytes: %lu MinimalFreeHeap: %lu\n", esp_get_free_heap_size(), esp_get_minimum_free_heap_size());
 
         free(tasks1);
         free(tasks2);

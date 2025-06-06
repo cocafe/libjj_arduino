@@ -419,7 +419,7 @@ static void task_can_tcp_server_start(unsigned cpu)
 {
         if (can_dev) {
                 lck_can_tcp_client = xSemaphoreCreateMutex();
-                can_recv_cb_add(can_tcp_recv_cb);
+                can_recv_cb_register(can_tcp_recv_cb);
                 can_tcp_server.begin();
                 xTaskCreatePinnedToCore(task_can_tcp, "can_tcp", 4096, NULL, 1, NULL, cpu);
 #ifdef CAN_TCP_LED_BLINK
