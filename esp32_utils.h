@@ -120,11 +120,11 @@ static int esp32_top_stats_print(unsigned sampling_ms, int (*__snprintf)(char *b
                 __snprintf = ___snprintf_to_vprintf;
         }
 
-        c += __snprintf(&buf[c], bufsz - c, "%-4s | %-16s | %-10s | %-4s | Stack High Watermark\n", "Task", "Name", "Tick", "CPU");
+        c += __snprintf(&buf[c], bufsz - c, "%-4s | %-16s | %-8s | %-4s | Stack High Watermark\n", "Task", "Name", "Tick", "CPU");
         for (unsigned i = 0; i < task_cnt2; i++) {
                 // XXX: when we run on dual core, this CPU percent means usage of total two core...
                 uint64_t percent = 100ULL * tracks[i].tick_delta / total_ticks_delta;
-                c += __snprintf(&buf[c], bufsz - c, "%-4u | %-16s | %10lu | %3ju%% | %lu\n",
+                c += __snprintf(&buf[c], bufsz - c, "%-4u | %-16s | %8lu | %3ju%% | %lu\n",
                                 tracks[i].id,
                                 tracks[i].name,
                                 tracks[i].tick_delta,

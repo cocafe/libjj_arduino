@@ -93,6 +93,8 @@ static int mcp2515_recv_once(can_frame_t *f)
                         cnt_can_recv_error++;
                         return -EIO;
                 }
+        } else {
+                vTaskDelay(pdMS_TO_TICKS(1));
         }
 
         return -EAGAIN;

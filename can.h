@@ -65,13 +65,13 @@ static void task_can_recv(void *arg)
 
         while (1) {
                 if (can_dev->recv(f) == 0) {
-                        #if 0
+#if 0
                         printf("canbus recv: id: 0x%04lx len: %hhu ", id, len);
                         for (uint8_t i = 0; i < len; i++) {
                                 printf("0x%02x ", f->data[i]);
                         }
                         printf("\n");
-                        #endif
+#endif
 
                         for (int i = 0; i < ARRAY_SIZE(can_recv_cbs); i++) {
                                 if (can_recv_cbs[i].cb)
