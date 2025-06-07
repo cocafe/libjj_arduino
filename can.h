@@ -114,13 +114,6 @@ static void task_can_led_blink(void *arg)
                 }
         }
 }
-
-static __attribute__((unused)) void task_can_led_blink_start(unsigned cpu)
-{
-        xTaskCreatePinnedToCore(task_can_led_blink, "led_blink_can", 1024, NULL, 1, NULL, cpu);
-}
-#else
-static __attribute__((unused)) inline void task_can_led_blink_start(unsigned cpu) { }
 #endif // CAN_LED_BLINK
 
 static __attribute__((unused)) void can_init(void)
@@ -131,7 +124,9 @@ static __attribute__((unused)) void can_init(void)
 static __attribute__((unused)) int task_can_start(unsigned task_cpu)
 {
         if (can_dev) {
-                task_can_led_blink_start(task_cpu);
+#ifdef CAN_LED_BLINK
+                xTaskCreatePinnedToCore(task_can_led_blink, "led_blink_can", 1024, NULL, 1, NULL, task_cpu)
+#endif
                 xTaskCreatePinnedToCore(task_can_recv, "can_recv", 4096, NULL, 1, NULL, task_cpu);
         } else {
                 pr_err("no device inited\n");

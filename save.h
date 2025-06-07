@@ -213,7 +213,7 @@ static __attribute__((unused)) void save_reset_gpio_check(unsigned gpio_rst)
         static uint32_t ts_pressed = 0;
 
         while (digitalRead(gpio_rst) == LOW) {
-                uint32_t now = millis();
+                uint32_t now = esp32_millis();
 
                 pr_info("config reset button pressed\n");
 

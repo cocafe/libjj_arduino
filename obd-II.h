@@ -239,7 +239,7 @@ static int can_fc_cts_send(uint32_t can_id)
 
 static int can_frame_obd_pid_input(can_frame_t *f)
 {
-        uint32_t now = millis();
+        uint32_t now = esp32_millis();
         obd_pid_t *p;
         uint32_t can_id = f->id;
         uint32_t dlc = f->dlc;
@@ -374,7 +374,7 @@ static void can_isotp_frame_obd_input(can_frame_t *f)
 
 static int obd_pid_query_send(obd_pid_t *p)
 {
-        uint32_t now = millis();
+        uint32_t now = esp32_millis();
         uint8_t payload[8] = { };
 
         if (unlikely(p->pid == OBD_PID_DUMMY))

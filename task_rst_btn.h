@@ -12,7 +12,7 @@ static void task_rst_btn(void *arg)
                 ts_pressed = 0;
 
                 while (digitalRead(GPIO_BTN_RST) == LOW) {
-                        uint32_t now = millis();
+                        uint32_t now = esp32_millis();
 
                         pr_info("reset button pressed\n");
 

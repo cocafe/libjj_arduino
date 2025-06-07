@@ -26,33 +26,6 @@ static uint64_t cnt_can_ble_send; // send to remote
 #ifdef CAN_BLE_LED_BLINK
 static uint8_t can_ble_txrx = 0;
 static uint8_t can_ble_led = CAN_BLE_LED_BLINK;
-
-static void task_can_ble_led_blink(void *arg)
-{
-        while (1) {
-                can_ble_txrx = 0;
-
-                vTaskDelay(pdMS_TO_TICKS(500));
-
-                if (can_ble_txrx) {
-                        static uint8_t last_on = 0;
-
-                        // blink
-                        if (!last_on) {
-                                led_on(can_ble_led, 0, 255, 0);
-                                last_on = 1;
-                        } else {
-                                led_off(can_ble_led);
-                                last_on = 0;
-                        }
-                } else {
-                        if (RaceChronoBle.isConnected())
-                                led_on(can_ble_led, 0, 0, 255);
-                        else
-                                led_off(can_ble_led);
-                }
-        }
-}
 #endif // CAN_BLE_LED_BLINK
 
 using PidExtra = struct
@@ -79,8 +52,6 @@ public:
 
         void allowPid(uint32_t pid, uint16_t updateIntervalMs)
         {
-                pr_info("pid: 0x%03lx\n", pid);
-
                 if (pidMap.allowOnePid(pid, updateIntervalMs)) {
                         void *entry = pidMap.getEntryId(pid);
                         PidExtra *pidExtra = pidMap.getExtra(entry);
@@ -148,6 +119,35 @@ static void task_ble_conn_update(void *arg)
                 vTaskDelay(pdMS_TO_TICKS(5 * 1000UL));
         }
 }
+
+#ifdef CAN_BLE_LED_BLINK
+static void task_can_ble_led_blink(void *arg)
+{
+        while (1) {
+                can_ble_txrx = 0;
+
+                vTaskDelay(pdMS_TO_TICKS(500));
+
+                if (can_ble_txrx) {
+                        static uint8_t last_on = 0;
+
+                        // blink
+                        if (!last_on) {
+                                led_on(can_ble_led, 0, 255, 0);
+                                last_on = 1;
+                        } else {
+                                led_off(can_ble_led);
+                                last_on = 0;
+                        }
+                } else {
+                        if (RaceChronoBle.isConnected())
+                                led_on(can_ble_led, 0, 0, 255);
+                        else
+                                led_off(can_ble_led);
+                }
+        }
+}
+#endif // CAN_BLE_LED_BLINK
 
 static __attribute__((unused)) void task_ble_conn_start(unsigned cpu)
 {

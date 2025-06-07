@@ -11,14 +11,6 @@ void rpc_esp32_add(void)
                 ESP.restart();
         });
 
-        http_rpc.on("/esp32_uptime", HTTP_GET, [](){
-                char buf[20] = { };
-
-                snprintf(buf, sizeof(buf), "%lu\n", millis());
-
-                http_rpc.send(200, "text/plain", buf);
-        });
-
         http_rpc.on("/esp32_top", HTTP_GET, [](){
                 char *buf;
                 unsigned sampling_ms = 500;
@@ -94,7 +86,7 @@ void rpc_esp32_add(void)
 
                 c += snprintf(&buf[c], sizeof(buf) - c, "# HELP esp_stats\n");
                 c += snprintf(&buf[c], sizeof(buf) - c, "# TYPE esp_stats gauge\n");
-                c += snprintf(&buf[c], sizeof(buf) - c, "esp_stats{t=\"uptime\"} %lu\n", millis() / 1000);
+                c += snprintf(&buf[c], sizeof(buf) - c, "esp_stats{t=\"uptime\"} %ju\n", esp32_millis() / 1000);
                 c += snprintf(&buf[c], sizeof(buf) - c, "esp_stats{t=\"tempC\"} %.2f\n", tempC);
                 c += snprintf(&buf[c], sizeof(buf) - c, "esp_stats{t=\"cpu_usage\"} %d\n", cpu);
 

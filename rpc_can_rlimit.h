@@ -1,12 +1,12 @@
-#ifndef __LIBJJ_RPC_CAN_TCP_H__
-#define __LIBJJ_RPC_CAN_TCP_H__
+#ifndef __LIBJJ_RPC_CAN_RLIMIT_H__
+#define __LIBJJ_RPC_CAN_RLIMIT_H__
 
 #include <WebServer.h>
 
-void rpc_can_tcp_add(void)
+void rpc_can_rlimit_add(void)
 {
 #ifdef CONFIG_HAVE_CANTCP_RLIMIT
-        http_rpc.on("/can_tcp_rlimit_cfg", HTTP_GET, [](){
+        http_rpc.on("/can_rlimit_cfg", HTTP_GET, [](){
                 unsigned enabled, update_hz;
                 struct http_cfg_param params[] = {
                         HTTP_CFG_PARAM_INT(enabled, enabled),
@@ -46,7 +46,7 @@ void rpc_can_tcp_add(void)
                 }
         });
 
-        http_rpc.on("/can_tcp_rlimit", HTTP_GET, [](){
+        http_rpc.on("/can_rlimit", HTTP_GET, [](){
                 if (http_rpc.hasArg("add") || http_rpc.hasArg("mod")) {
                         if (!http_rpc.hasArg("id") || !http_rpc.hasArg("hz")) {
                                 http_rpc.send(500, "text/plain", "<id> <hz 0:unlimited>\n");
@@ -155,4 +155,4 @@ void rpc_can_tcp_add(void)
 #endif // CONFIG_HAVE_CANTCP_RLIMIT
 }
 
-#endif // __LIBJJ_RPC_CAN_TCP_H__
+#endif // __LIBJJ_RPC_CAN_RLIMIT_H__

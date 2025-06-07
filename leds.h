@@ -106,7 +106,7 @@ static inline void __ws2812_led_flash(uint8_t idx, uint8_t r, uint8_t g, uint8_t
 {
         static long last_timestamp = 0;
         static int last_state = LOW;
-        long ts = millis();
+        long ts = esp32_millis();
 
         if (unlikely(idx >= NUM_LED_WS2812))
                 return;

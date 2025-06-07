@@ -21,6 +21,16 @@
 #define CPU1                            (1)
 #endif
 
+static inline uint64_t esp32_millis(void)
+{
+        return esp_timer_get_time() / 1000;
+}
+
+static inline __attribute__((unused)) uint64_t esp32_microsecs(void)
+{
+        return esp_timer_get_time();
+}
+
 static TaskStatus_t *esp32_top_stats_snapshot(UBaseType_t *task_cnt, unsigned long *ulTotalRunTime)
 {
         TaskStatus_t *pxTaskStatusArray;

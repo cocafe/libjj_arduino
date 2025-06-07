@@ -3,9 +3,11 @@
 
 #include <stdio.h>
 
+#include "esp32_utils.h"
+
 #define ___pr_timestamp()                               \
         do {                                            \
-                printf("[%8lu] ", millis());            \
+                printf("[%8ju] ", esp32_millis());      \
         } while (0)
 
 #define ___pr_wrapped(msg, fmt...)                      \

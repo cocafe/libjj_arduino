@@ -207,9 +207,6 @@ static int is_can_id_ratelimited(unsigned can_id, uint32_t now)
 
 static void can_ratelimit_init(struct can_ratelimit_cfg *cfg)
 {
-        if (!can_dev)
-                return;
-
         if (cfg) {
                 can_rlimit_enabled = cfg->enabled;
                 can_rlimit_update_hz_default = cfg->default_hz;
@@ -314,7 +311,7 @@ next_frame:
 static void can_tcp_recv_cb(can_frame_t *f)
 {
 #ifdef CONFIG_HAVE_CANTCP_RLIMIT
-        if (is_can_id_ratelimited(f->id, millis())) {
+        if (is_can_id_ratelimited(f->id, esp32_millis())) {
                 return;
         }
 #endif
