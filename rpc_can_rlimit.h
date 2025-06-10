@@ -47,6 +47,8 @@ void rpc_can_rlimit_add(void)
         });
 
         http_rpc.on("/can_rlimit", HTTP_GET, [](){
+                uint8_t enabled_saved = can_rlimit_enabled;
+
                 if (http_rpc.hasArg("add") || http_rpc.hasArg("mod")) {
                         if (!http_rpc.hasArg("id") || !http_rpc.hasArg("hz")) {
                                 http_rpc.send(500, "text/plain", "<id> <hz 0:unlimited>\n");
@@ -71,7 +73,12 @@ void rpc_can_rlimit_add(void)
                         }
 
                         if (http_rpc.hasArg("add")) {
-                                xSemaphoreTake(lck_can_rlimit, portMAX_DELAY);
+                                if (enabled_saved) {
+                                        can_rlimit_enabled = 0;
+                                        while (can_rlimit_lck) {
+                                                vTaskDelay(pdMS_TO_TICKS(1));
+                                        }
+                                }
 
                                 struct can_ratelimit *n = can_ratelimit_get(id);
 
@@ -85,16 +92,12 @@ void rpc_can_rlimit_add(void)
                                                 http_rpc.send(500, "text/plain", "OK\n");
                                 }
 
-                                xSemaphoreGive(lck_can_rlimit);
+                                can_rlimit_enabled = enabled_saved;
                         } else {
                                 if ((err = can_ratelimit_set(id, hz))) {
                                         switch (err) {
                                         case -ENOENT:
                                                 http_rpc.send(500, "text/plain", "No such item\n");
-                                                break;
-
-                                        case -ENOLCK:
-                                                http_rpc.send(500, "text/plain", "Failed to grab lock\n");
                                                 break;
                                         
                                         default:
@@ -121,7 +124,6 @@ void rpc_can_rlimit_add(void)
                                 return;
                         }
 
-                        xSemaphoreTake(lck_can_rlimit, portMAX_DELAY);
                         struct can_ratelimit *n = can_ratelimit_get(id);
                         if (!n) {
                                 http_rpc.send(500, "text/plain", "No such item\n");
@@ -131,23 +133,30 @@ void rpc_can_rlimit_add(void)
                                         snprintf(buf, sizeof(buf), "0x%03x %u\n", n->can_id, 1000 / n->sampling_ms);
                                         http_rpc.send(200, "text/plain", buf);
                                 } else {
+                                        if (enabled_saved) {
+                                                can_rlimit_enabled = 0;
+                                                while (can_rlimit_lck) {
+                                                        vTaskDelay(pdMS_TO_TICKS(1));
+                                                }
+                                        }
+
                                         can_ratelimit_del(n);
+
+                                        can_rlimit_enabled = enabled_saved;
+
                                         http_rpc.send(200, "text/plain", "OK\n");
                                 }
                         }
-                        xSemaphoreGive(lck_can_rlimit);
                 } else {
                         char buf[256] = { };
                         size_t c = 0;
 
-                        xSemaphoreTake(lck_can_rlimit, portMAX_DELAY);
                         struct can_ratelimit *n;
                         unsigned bkt;
 
                         hash_for_each(htbl_can_rlimit, bkt, n, hnode) {
                                 c += snprintf(&buf[c], sizeof(buf) - c, "0x%03x %u\n", n->can_id, 1000 / n->sampling_ms);
                         }
-                        xSemaphoreGive(lck_can_rlimit);
 
                         http_rpc.send(200, "text/plain", buf);
                 }

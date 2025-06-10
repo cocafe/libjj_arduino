@@ -35,7 +35,8 @@ struct can_ratelimit {
         uint32_t                last_ts;
 };
 
-static SemaphoreHandle_t lck_can_rlimit = NULL;
+// XXX: this only protect add/del with rpc server
+static uint8_t __attribute__((aligned(16))) can_rlimit_lck = 0; 
 static struct hlist_head htbl_can_rlimit[1 << 8] = { };
 static uint8_t can_rlimit_enabled = 1;
 static uint8_t can_rlimit_update_hz_default = 20;
@@ -137,7 +138,7 @@ static inline struct can_ratelimit *can_ratelimit_get(unsigned can_id)
         return NULL;
 }
 
-static int __can_ratelimit_set(unsigned can_id, unsigned update_hz)
+static int can_ratelimit_set(unsigned can_id, unsigned update_hz)
 {
         struct can_ratelimit *n = can_ratelimit_get(can_id);
 
@@ -145,6 +146,8 @@ static int __can_ratelimit_set(unsigned can_id, unsigned update_hz)
                 if (update_hz == 0) {
                         pr_dbg("can_id 0x%03x: no ratelimit\n", can_id);
                         n->sampling_ms = 0;
+                } else {
+                        n->sampling_ms = update_hz_to_ms(update_hz);
                 }
 
                 return 0;
@@ -153,24 +156,8 @@ static int __can_ratelimit_set(unsigned can_id, unsigned update_hz)
         return -ENOENT;
 }
 
-static int can_ratelimit_set(unsigned can_id, unsigned update_hz)
-{
-        int err;
-
-        if (xSemaphoreTake(lck_can_rlimit, portMAX_DELAY) != pdTRUE)
-                return -ENOLCK;
-
-        err = __can_ratelimit_set(can_id, update_hz);
-        xSemaphoreGive(lck_can_rlimit);
-
-        return err;
-}
-
 static int __is_can_id_ratelimited(unsigned can_id, uint32_t now)
 {
-        if (!can_rlimit_enabled)
-                return 0;
-
         struct can_ratelimit *n = can_ratelimit_get(can_id);
 
         if (!n) {
@@ -196,11 +183,14 @@ static int is_can_id_ratelimited(unsigned can_id, uint32_t now)
 {
         int ret;
 
-        if (xSemaphoreTake(lck_can_rlimit, portMAX_DELAY) != pdTRUE)
+        if (!can_rlimit_enabled)
                 return 0;
 
+        WRITE_ONCE(can_rlimit_lck, 1);
+
         ret = __is_can_id_ratelimited(can_id, now);
-        xSemaphoreGive(lck_can_rlimit);
+
+        WRITE_ONCE(can_rlimit_lck, 0);
 
         return ret;
 }
@@ -216,7 +206,6 @@ static void can_ratelimit_init(struct can_ratelimit_cfg *cfg)
                 htbl_can_rlimit[i].first = NULL;
         }
 
-        lck_can_rlimit = xSemaphoreCreateMutex();
         hash_init(htbl_can_rlimit);
 }
 #endif // CONFIG_HAVE_CANTCP_RLIMIT
