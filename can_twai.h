@@ -13,6 +13,11 @@
 #include <freertos/ringbuf.h>
 #include <freertos/semphr.h>
 
+#ifndef CONFIG_HAVE_CAN_TWAI
+#define GPIO_TWAI_TX                    (-1)
+#define GPIO_TWAI_RX                    (-1)
+#endif
+
 struct twai_cfg {
         int8_t pin_tx; // controller tx
         int8_t pin_rx; // controller rx

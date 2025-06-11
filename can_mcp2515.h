@@ -9,6 +9,10 @@
 #include "logging.h"
 #include "can.h"
 
+#ifndef CONFIG_HAVE_CAN_MCP2515
+#define GPIO_MCP2515_INT                (-1)
+#endif
+
 #ifndef GPIO_MCP2515_SPI_SS
 #error GPIO_MCP2515_SPI_SS is not defined
 #endif

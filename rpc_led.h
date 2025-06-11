@@ -12,7 +12,7 @@ void rpc_led_add(void)
                         int err;
                         uint32_t i = strtoull_wrap(arg.c_str(), 10, &err);
                         
-                        if (err || i > 255)
+                        if (err || i > 255) {
                                 http_rpc.send(200, "text/plain", "Invalid value\n");
                                 return;
                         }
