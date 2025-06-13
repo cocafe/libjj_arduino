@@ -19,42 +19,70 @@
 
 struct mcp2515_cfg {
         uint8_t baudrate;
-        uint8_t clkrate;
+        uint8_t quartz;
         uint8_t mode;
         int8_t  pin_int;
 };
 
 static uint8_t mcp2515_pin_int;
 
-struct strval cfg_mcp_baudrate[] = {
-        { "CAN_4K096BPS",       CAN_4K096BPS    },
-        { "CAN_5KBPS",          CAN_5KBPS       },
-        { "CAN_10KBPS",         CAN_10KBPS      },
-        { "CAN_20KBPS",         CAN_20KBPS      },
-        { "CAN_31K25BPS",       CAN_31K25BPS    },
-        { "CAN_33K3BPS",        CAN_33K3BPS     },
-        { "CAN_40KBPS",         CAN_40KBPS      },
-        { "CAN_50KBPS",         CAN_50KBPS      },
-        { "CAN_80KBPS",         CAN_80KBPS      },
-        { "CAN_100KBPS",        CAN_100KBPS     },
-        { "CAN_125KBPS",        CAN_125KBPS     },
-        { "CAN_200KBPS",        CAN_200KBPS     },
-        { "CAN_250KBPS",        CAN_250KBPS     },
-        { "CAN_500KBPS",        CAN_500KBPS     },
-        { "CAN_1000KBPS",       CAN_1000KBPS    },
+enum {
+        MCP2515_QUARTZ_20MHZ,
+        MCP2515_QUARTZ_16MHZ,
+        MCP2515_QUARTZ_8MHZ,
+        NUM_MCP2515_QUARTZ_TYPES,
 };
 
-struct strval cfg_mcp_clkrate[] = { 
-        { "MCP_20MHZ",          MCP_20MHZ       },
-        { "MCP_16MHZ",          MCP_16MHZ       },
-        { "MCP_8MHZ",           MCP_8MHZ        },
+enum {
+        MCP2515_MODE_NORMAL,
+        MCP2515_MODE_SLEEP,
+        MCP2515_MODE_LOOPBACK,
+        MCP2515_MODE_LISTENONLY,
+        NUM_MCP2515_MODES,
 };
 
-struct strval cfg_mcp_mode[] = {
-        { "MCP_NORMAL",         MCP_NORMAL      },
-        { "MCP_SLEEP",          MCP_SLEEP       },
-        { "MCP_LOOPBACK",       MCP_LOOPBACK    },
-        { "MCP_LISTENONLY",     MCP_LISTENONLY  },
+static uint8_t mcp2515_cfg_mode_convert[NUM_MCP2515_MODES] = {
+        [MCP2515_MODE_NORMAL]     = MCP_NORMAL,
+        [MCP2515_MODE_SLEEP]      = MCP_SLEEP,
+        [MCP2515_MODE_LOOPBACK]   = MCP_LOOPBACK,
+        [MCP2515_MODE_LISTENONLY] = MCP_LISTENONLY,
+};
+
+static uint8_t mcp2515_cfg_quartz_convert[NUM_MCP2515_QUARTZ_TYPES] = {
+        [MCP2515_QUARTZ_20MHZ] = MCP_20MHZ,
+        [MCP2515_QUARTZ_16MHZ] = MCP_16MHZ,
+        [MCP2515_QUARTZ_8MHZ]  = MCP_8MHZ,
+};
+
+static uint8_t mcp2515_cfg_baudrate_convert[NUM_CAN_BAUDRATES] = {
+        [CAN_BAUDRATE_4K096BPS] = CAN_4K096BPS,
+        [CAN_BAUDRATE_5KBPS]    = CAN_5KBPS,
+        [CAN_BAUDRATE_10KBPS]   = CAN_10KBPS,
+        [CAN_BAUDRATE_20KBPS]   = CAN_20KBPS,
+        [CAN_BAUDRATE_31K25BPS] = CAN_31K25BPS,
+        [CAN_BAUDRATE_33K3BPS]  = CAN_33K3BPS,
+        [CAN_BAUDRATE_40KBPS]   = CAN_40KBPS,
+        [CAN_BAUDRATE_50KBPS]   = CAN_50KBPS,
+        [CAN_BAUDRATE_80KBPS]   = CAN_80KBPS,
+        [CAN_BAUDRATE_100KBPS]  = CAN_100KBPS,
+        [CAN_BAUDRATE_125KBPS]  = CAN_125KBPS,
+        [CAN_BAUDRATE_200KBPS]  = CAN_200KBPS,
+        [CAN_BAUDRATE_250KBPS]  = CAN_250KBPS,
+        [CAN_BAUDRATE_500KBPS]  = CAN_500KBPS,
+        [CAN_BAUDRATE_1000KBPS] = CAN_1000KBPS,
+};
+
+static const char *str_mcp_quartz[] = {
+        [MCP2515_QUARTZ_20MHZ] = "MCP_QUARTZ_20MHZ",
+        [MCP2515_QUARTZ_16MHZ] = "MCP_QUARTZ_16MHZ",
+        [MCP2515_QUARTZ_8MHZ]  = "MCP_QUARTZ_8MHZ",
+};
+
+static const char *str_mcp_mode[] = {
+        [MCP2515_MODE_NORMAL]     = "MCP_MODE_NORMAL",
+        [MCP2515_MODE_SLEEP]      = "MCP_MODE_SLEEP",
+        [MCP2515_MODE_LOOPBACK]   = "MCP_MODE_LOOPBACK",
+        [MCP2515_MODE_LISTENONLY] = "MCP_MODE_LISTENONLY",
 };
 
 static MCP_CAN CAN0(GPIO_MCP2515_SPI_SS);
@@ -111,7 +139,7 @@ static can_device_t can_mcp2515 = {
 
 static int mcp2515_init(struct mcp2515_cfg *cfg)
 {
-        int found = 0;
+        uint8_t baudrate, quartz, mode;
 
         if (!cfg)
                 return -ENODATA;
@@ -121,38 +149,26 @@ static int mcp2515_init(struct mcp2515_cfg *cfg)
                 return -ENODEV;
         }
 
-        for (size_t i = 0; i < ARRAY_SIZE(cfg_mcp_baudrate); i++) {
-                if (cfg->baudrate == cfg_mcp_baudrate[i].val) {
-                        pr_info("baudrate: %s\n", cfg_mcp_baudrate[i].str);
-                        found++;
-                        break;
-                }
-        }
-
-        for (size_t i = 0; i < ARRAY_SIZE(cfg_mcp_clkrate); i++) {
-                if (cfg->clkrate == cfg_mcp_clkrate[i].val) {
-                        pr_info("clockrate: %s\n", cfg_mcp_clkrate[i].str);
-                        found++;
-                        break;
-                }
-        }
-
-        for (size_t i = 0; i < ARRAY_SIZE(cfg_mcp_mode); i++) {
-                if (cfg->mode == cfg_mcp_mode[i].val) {
-                        pr_info("mode: %s\n", cfg_mcp_mode[i].str);
-                        found++;
-                        break;
-                }
-        }
-
-        if (found != 3)
+        if (cfg->baudrate >= ARRAY_SIZE(mcp2515_cfg_baudrate_convert) ||
+                cfg->quartz >= ARRAY_SIZE(mcp2515_cfg_quartz_convert) ||
+                cfg->mode >= ARRAY_SIZE(mcp2515_cfg_mode_convert)) {
+                pr_info("invalid config\n");
                 return -EINVAL;
+        }
 
-        if (CAN0.begin(MCP_ANY, cfg->baudrate, cfg->clkrate) != CAN_OK) {
+        pr_info("baudrate: %s\n", str_can_baudrates[cfg->baudrate]);
+        pr_info("quartz: %s\n", str_mcp_quartz[cfg->quartz]);
+        pr_info("mode: %s\n", str_mcp_mode[cfg->mode]);
+
+        baudrate = mcp2515_cfg_baudrate_convert[cfg->baudrate];
+        quartz = mcp2515_cfg_quartz_convert[cfg->quartz];
+        mode = mcp2515_cfg_mode_convert[cfg->mode];
+
+        if (CAN0.begin(MCP_ANY, baudrate, quartz) != CAN_OK) {
                 return -EIO;
         }
 
-        CAN0.setMode(cfg->mode);
+        CAN0.setMode(mode);
         mcp2515_pin_int = (uint8_t)cfg->pin_int;
         pinMode(cfg->pin_int, INPUT);
 

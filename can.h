@@ -3,9 +3,47 @@
 
 #include <stdint.h>
 
+#include "utils.h"
 #include "leds.h"
 #include "logging.h"
 #include "can_frame.h"
+
+enum {
+        CAN_BAUDRATE_4K096BPS,
+        CAN_BAUDRATE_5KBPS,
+        CAN_BAUDRATE_10KBPS,
+        CAN_BAUDRATE_20KBPS,
+        CAN_BAUDRATE_31K25BPS,
+        CAN_BAUDRATE_33K3BPS,
+        CAN_BAUDRATE_40KBPS,
+        CAN_BAUDRATE_50KBPS,
+        CAN_BAUDRATE_80KBPS,
+        CAN_BAUDRATE_100KBPS,
+        CAN_BAUDRATE_125KBPS,
+        CAN_BAUDRATE_200KBPS,
+        CAN_BAUDRATE_250KBPS,
+        CAN_BAUDRATE_500KBPS,
+        CAN_BAUDRATE_1000KBPS,
+        NUM_CAN_BAUDRATES,
+};
+
+static const char *str_can_baudrates[] = {
+        [CAN_BAUDRATE_4K096BPS] = "CAN_4K096BPS",
+        [CAN_BAUDRATE_5KBPS]    = "CAN_5KBPS",
+        [CAN_BAUDRATE_10KBPS]   = "CAN_10KBPS",
+        [CAN_BAUDRATE_20KBPS]   = "CAN_20KBPS",
+        [CAN_BAUDRATE_31K25BPS] = "CAN_31K25BPS",
+        [CAN_BAUDRATE_33K3BPS]  = "CAN_33K3BPS",
+        [CAN_BAUDRATE_40KBPS]   = "CAN_40KBPS",
+        [CAN_BAUDRATE_50KBPS]   = "CAN_50KBPS",
+        [CAN_BAUDRATE_80KBPS]   = "CAN_80KBPS",
+        [CAN_BAUDRATE_100KBPS]  = "CAN_100KBPS",
+        [CAN_BAUDRATE_125KBPS]  = "CAN_125KBPS",
+        [CAN_BAUDRATE_200KBPS]  = "CAN_200KBPS",
+        [CAN_BAUDRATE_250KBPS]  = "CAN_250KBPS",
+        [CAN_BAUDRATE_500KBPS]  = "CAN_500KBPS",
+        [CAN_BAUDRATE_1000KBPS] = "CAN_1000KBPS",
+};
 
 struct can_device {
         int (*send)(uint32_t can_id, uint8_t dlc, uint8_t *data);

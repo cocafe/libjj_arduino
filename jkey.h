@@ -17,20 +17,6 @@
 #define JBUF_INIT_ALLOC_KEYS            (20)
 #define JBUF_GROW_ARR_REALLOC_INCR      (5)
 
-#ifndef JKEY_BOOL_SIZE
-#define JKEY_BOOL_SIZE                  (1)
-#endif
-
-#if JKEY_BOOL_SIZE == 1
-typedef uint8_t jkey_bool_t;
-#elif JKEY_BOOL_SIZE == 2
-typedef uint16_t jkey_bool_t;
-#elif JKEY_BOOL_SIZE == 4
-typedef uint32_t jkey_bool_t;
-#else
-#error invalid JKEY_BOOL_SIZE
-#endif
-
 typedef struct json_key jkey_t;
 typedef struct json_key_buf jbuf_t;
 typedef int (*jbuf_traverse_cb)(jkey_t *jkey, int has_next, int depth, int argc, va_list arg);
@@ -579,10 +565,13 @@ void *jbuf_strptr_add(jbuf_t *b, char *key, char **ref)
         return cookie;
 }
 
-void *jbuf_strval_add(jbuf_t *b, char *key, uint32_t *ref, const char *map[], size_t map_cnt)
+#define jbuf_strval_add(_b, _key, _ref, _strmap) \
+        __jbuf_strval_add(_b, _key, &(_ref), sizeof(_ref), _strmap, ARRAY_SIZE(_strmap))
+
+void *__jbuf_strval_add(jbuf_t *b, char *key, void *ref, size_t refsz, const char *map[], size_t map_cnt)
 {
         jkey_t *k;
-        void *cookie = jbuf_key_add(b, JKEY_TYPE_UINT, key, ref, sizeof(uint32_t));
+        void *cookie = jbuf_key_add(b, JKEY_TYPE_UINT, key, ref, refsz);
         if (!cookie)
                 return NULL;
 
@@ -594,47 +583,36 @@ void *jbuf_strval_add(jbuf_t *b, char *key, uint32_t *ref, const char *map[], si
         return cookie;
 }
 
-void *jbuf_u8_add(jbuf_t *b, char *key, uint8_t *ref)
+#define jbuf_u8_add(_b, _key, _ref)     __jbuf_uint_add(_b, _key, &(_ref), sizeof(uint8_t))
+#define jbuf_u16_add(_b, _key, _ref)    __jbuf_uint_add(_b, _key, &(_ref), sizeof(uint16_t))
+#define jbuf_u32_add(_b, _key, _ref)    __jbuf_uint_add(_b, _key, &(_ref), sizeof(uint32_t))
+#define jbuf_u64_add(_b, _key, _ref)    __jbuf_uint_add(_b, _key, &(_ref), sizeof(uint64_t))
+
+#define jbuf_uint_add(_b, _key, _ref) \
+        __jbuf_uint_add(_b, _key, &(_ref), sizeof(_ref))
+
+void *__jbuf_uint_add(jbuf_t *b, char *key, void *ref, size_t refsz)
 {
-        return jbuf_key_add(b, JKEY_TYPE_UINT, key, ref, sizeof(uint8_t));
+        return jbuf_key_add(b, JKEY_TYPE_UINT, key, ref, refsz);
 }
 
-void *jbuf_u16_add(jbuf_t *b, char *key, uint16_t *ref)
+#define jbuf_s8_add(_b, _key, _ref)     __jbuf_sint_add(_b, _key, &(_ref), sizeof(int8_t))
+#define jbuf_s16_add(_b, _key, _ref)    __jbuf_sint_add(_b, _key, &(_ref), sizeof(int16_t))
+#define jbuf_s32_add(_b, _key, _ref)    __jbuf_sint_add(_b, _key, &(_ref), sizeof(int32_t))
+#define jbuf_s64_add(_b, _key, _ref)    __jbuf_sint_add(_b, _key, &(_ref), sizeof(int64_t))
+
+#define jbuf_sint_add(_b, _key, _ref) \
+        __jbuf_sint_add(_b, _key, &(_ref), sizeof(_ref))
+
+void *__jbuf_sint_add(jbuf_t *b, char *key, void *ref, size_t refsz)
 {
-        return jbuf_key_add(b, JKEY_TYPE_UINT, key, ref, sizeof(uint16_t));
+        return jbuf_key_add(b, JKEY_TYPE_INT, key, ref, refsz);
 }
 
-void *jbuf_u32_add(jbuf_t *b, char *key, uint32_t *ref)
-{
-        return jbuf_key_add(b, JKEY_TYPE_UINT, key, ref, sizeof(uint32_t));
-}
+#define jbuf_float_add(_b, _key, _ref) \
+        __jbuf_float_add(_b, _key, &_ref)
 
-void *jbuf_u64_add(jbuf_t *b, char *key, uint64_t *ref)
-{
-        return jbuf_key_add(b, JKEY_TYPE_UINT, key, ref, sizeof(uint64_t));
-}
-
-void *jbuf_s8_add(jbuf_t *b, char *key, int8_t *ref)
-{
-        return jbuf_key_add(b, JKEY_TYPE_INT, key, ref, sizeof(int8_t));
-}
-
-void *jbuf_s16_add(jbuf_t *b, char *key, int16_t *ref)
-{
-        return jbuf_key_add(b, JKEY_TYPE_INT, key, ref, sizeof(int16_t));
-}
-
-void *jbuf_s32_add(jbuf_t *b, char *key, int32_t *ref)
-{
-        return jbuf_key_add(b, JKEY_TYPE_INT, key, ref, sizeof(int32_t));
-}
-
-void *jbuf_s64_add(jbuf_t *b, char *key, int64_t *ref)
-{
-        return jbuf_key_add(b, JKEY_TYPE_INT, key, ref, sizeof(int64_t));
-}
-
-void *jbuf_float_add(jbuf_t *b, char *key, float *ref)
+void *__jbuf_float_add(jbuf_t *b, char *key, float *ref)
 {
         void *cookie = jbuf_key_add(b, JKEY_TYPE_DOUBLE, key, ref, sizeof(double));
         jkey_t *k = jbuf_key_get(b, cookie);
@@ -644,59 +622,39 @@ void *jbuf_float_add(jbuf_t *b, char *key, float *ref)
         return cookie;
 }
 
-void *jbuf_double_add(jbuf_t *b, char *key, double *ref)
+#define jbuf_double_add(_b, _key, _ref) \
+        __jbuf_double_add(_b, _key, &_ref)
+
+void *__jbuf_double_add(jbuf_t *b, char *key, double *ref)
 {
         return jbuf_key_add(b, JKEY_TYPE_DOUBLE, key, ref, sizeof(double));
 }
 
-void *jbuf_bool_add(jbuf_t *b, char *key, jkey_bool_t *ref)
+#define jbuf_bool_add(_b, _key, _ref) \
+        __jbuf_bool_add(_b, _key, &(_ref), sizeof(_ref))
+
+void *__jbuf_bool_add(jbuf_t *b, char *key, void *ref, size_t refsz)
 {
-        return jbuf_key_add(b, JKEY_TYPE_BOOL, key, ref, sizeof(jkey_bool_t));
+        return jbuf_key_add(b, JKEY_TYPE_BOOL, key, ref, refsz);
 }
 
-void *jbuf_hex_u32_add(jbuf_t *b, char *key, uint32_t *ref)
-{
-        void *cookie = jbuf_u32_add(b, key, ref);
-        if (!cookie)
-                return NULL;
+#define jbuf_hex_uint_add(_b, _key, _ref)                       \
+        do {                                                    \
+                void *cookie = jbuf_uint_add(_b, _key, _ref);   \
+                if (!cookie)                                    \
+                        break;                                  \
+                                                                \
+                jkey_int_base_set(_b, cookie, 16);              \
+        } while (0)
 
-        jkey_int_base_set(b, cookie, 16);
-
-        return cookie;
-}
-
-void *jbuf_hex_u64_add(jbuf_t *b, char *key, uint64_t *ref)
-{
-        void *cookie = jbuf_u64_add(b, key, ref);
-        if (!cookie)
-                return NULL;
-
-        jkey_int_base_set(b, cookie, 16);
-
-        return cookie;
-}
-
-void *jbuf_hex_s32_add(jbuf_t *b, char *key, int32_t *ref)
-{
-        void *cookie = jbuf_s32_add(b, key, ref);
-        if (!cookie)
-                return NULL;
-
-        jkey_int_base_set(b, cookie, 16);
-
-        return cookie;
-}
-
-void *jbuf_hex_s64_add(jbuf_t *b, char *key, int64_t *ref)
-{
-        void *cookie = jbuf_s64_add(b, key, ref);
-        if (!cookie)
-                return NULL;
-
-        jkey_int_base_set(b, cookie, 16);
-
-        return cookie;
-}
+#define jbuf_hex_sint_add(_b, _key, _ref)                       \
+        do {                                                    \
+                void *cookie = jbuf_sint_add(_b, _key, _ref);   \
+                if (!cookie)                                    \
+                        break;                                  \
+                                                                \
+                jkey_int_base_set(_b, cookie, 16);              \
+        } while (0)
 
 #define jbuf_offset_strbuf_add(_b, _key, _container, _member) \
         __jbuf_offset_strbuf_add(_b, _key, offsetof(_container, _member), sizeof_member(_container, _member))
@@ -713,11 +671,11 @@ void *__jbuf_offset_strbuf_add(jbuf_t *b, char *key, ssize_t offset, size_t byte
 }
 
 #define jbuf_offset_strval_add(_b, _key, _container, _member, _strmap) \
-        __jbuf_offset_strval_add(_b, _key, offsetof(_container, _member), _strmap, ARRAY_SIZE(_strmap))
+        __jbuf_offset_strval_add(_b, _key, offsetof(_container, _member), sizeof_member(_container, _member), _strmap, ARRAY_SIZE(_strmap))
 
-void *__jbuf_offset_strval_add(jbuf_t *b, char *key, ssize_t offset, const char *map[], size_t map_cnt)
+void *__jbuf_offset_strval_add(jbuf_t *b, char *key, ssize_t offset, size_t refsz, const char *map[], size_t map_cnt)
 {
-        void *cookie = jbuf_strval_add(b, key, NULL, map, map_cnt);
+        void *cookie = __jbuf_strval_add(b, key, NULL, refsz, map, map_cnt);
         if (!cookie)
                 return NULL;
 
@@ -768,11 +726,6 @@ static int jkey_bool_write(jkey_t *jkey, cJSON *node)
 {
         uint32_t val = (node->type == cJSON_True) ? 1 : 0;
         void *dst = NULL;
-
-        if (jkey->data.sz != sizeof(jkey_bool_t)) {
-                pr_err("data size %zu of key [%s] failed sanity check\n", jkey->data.sz, jkey->key);
-                return -EFAULT;
-        }
 
         jkey_data_ptr_deref(jkey, &dst, 0);
         if (!dst) {
@@ -1005,6 +958,11 @@ int jkey_cjson_input(jkey_t *jkey, cJSON *node)
 
         if (!jkey->data.ref) {
                 pr_dbg("key [%s] data ref is NULL\n", jkey->key);
+                return 0;
+        }
+
+        if (0 == is_cjson_type(jkey->cjson_type, node->type)) {
+                pr_dbg("key [%s] node type mismatched\n", jkey->key);
                 return 0;
         }
 
@@ -1681,29 +1639,24 @@ int jbuf_traverse_print_post(jkey_t *jkey, int has_next, int depth, int argc, va
         switch (jkey->type) {
         case JKEY_TYPE_UINT:
         {
+                char *hex_fmt = NULL;
                 uint64_t d = 0;
-                char *hex_fmt = (char *)"\"0x%016jx\"";
+
+                if (unlikely(ptr_unsigned_word_read(ref, jkey->data.sz, &d)))
+                        break;
 
                 switch (jkey->data.sz) {
                 case sizeof(uint8_t):
-                        d = *(uint8_t *)ref;
                         hex_fmt = (char *)"\"0x%02jx\"";
                         break;
                 case sizeof(uint16_t):
-                        d = *(uint16_t *)ref;
                         hex_fmt = (char *)"\"0x%04jx\"";
                         break;
                 case sizeof(uint32_t):
-                        d = *(uint32_t *)ref;
                         hex_fmt = (char *)"\"0x%08jx\"";
                         break;
-
                 case sizeof(uint64_t):
-                        d = *(uint64_t *)ref;
-                        break;
-
-                default:
-                        pr_err("does not support for size: %zu\n", jkey->data.sz);
+                        hex_fmt = (char *)"\"0x%016jx\"";
                         break;
                 }
 
@@ -1724,28 +1677,23 @@ int jbuf_traverse_print_post(jkey_t *jkey, int has_next, int depth, int argc, va
         case JKEY_TYPE_INT:
         {
                 int64_t d = 0;
-                char *hex_fmt = (char *)"\"0x%016jx\"";
+                char *hex_fmt = NULL;
+
+                if (unlikely(ptr_signed_word_read(ref, jkey->data.sz, &d)))
+                        break;
 
                 switch (jkey->data.sz) {
                 case sizeof(int8_t):
-                        d = *(int8_t *)ref;
                         hex_fmt = (char *)"\"0x%02jx\"";
                         break;
                 case sizeof(int16_t):
-                        d = *(int16_t *)ref;
                         hex_fmt = (char *)"\"0x%04jx\"";
                         break;
                 case sizeof(int32_t):
-                        d = *(int32_t *)ref;
                         hex_fmt = (char *)"\"0x%08jx\"";
                         break;
-
                 case sizeof(int64_t):
-                        d = *(int64_t *)ref;
-                        break;
-
-                default:
-                        pr_err("does not support for size: %zu\n", jkey->data.sz);
+                        hex_fmt = (char *)"\"0x%016jx\"";
                         break;
                 }
 
@@ -1769,9 +1717,16 @@ int jbuf_traverse_print_post(jkey_t *jkey, int has_next, int depth, int argc, va
                 break;
 
         case JKEY_TYPE_BOOL:
-                printf_wrap(buf, buf_pos, buf_len, "%s", *(jkey_bool_t *)jkey->data.ref ? "true" : "false");
+        {
+                uint64_t d = 0;
+
+                if (unlikely(ptr_unsigned_word_read(ref, jkey->data.sz, &d)))
+                        break;
+
+                printf_wrap(buf, buf_pos, buf_len, "%s", d ? "true" : "false");
 
                 break;
+        }
 
         case JKEY_TYPE_DOUBLE:
                 if (jkey->data.is_float)

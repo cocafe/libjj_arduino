@@ -8,9 +8,10 @@
 #include "utils.h"
 #include "string.h"
 
-#define HTTP_CFG_PARAM_INT(_name, _var) { __stringify(_name), &(_var), sizeof((_var)), 0, NULL, 0 }
-#define HTTP_CFG_PARAM_STR(_name, _var) { __stringify(_name),  (_var), sizeof((_var)), 1, NULL, 0 }
-#define HTTP_CFG_PARAM_STRMAP(_name, _var, _map) { __stringify(_name),  &(_var), sizeof((_var)), 0, _map, ARRAY_SIZE(_map) }
+#define HTTP_CFG_PARAM_INT(_name, _var) { __stringify(_name), &(_var), sizeof((_var)), 0, NULL, NULL, 0 }
+#define HTTP_CFG_PARAM_STR(_name, _var) { __stringify(_name),  (_var), sizeof((_var)), 1, NULL, NULL, 0 }
+#define HTTP_CFG_PARAM_STRMAP(_name, _var, _map) { __stringify(_name),  &(_var), sizeof((_var)), 0, _map, NULL, ARRAY_SIZE(_map) }
+#define HTTP_CFG_PARAM_STRVAL(_name, _var, _map) { __stringify(_name),  &(_var), sizeof((_var)), 0, NULL, _map, ARRAY_SIZE(_map) }
 
 struct http_cfg_param {
         const char *arg;
@@ -18,6 +19,7 @@ struct http_cfg_param {
         size_t size;
         uint8_t is_char;
         struct strval *map;
+        const char **map1;
         size_t mapsz;
 };
 
@@ -103,6 +105,21 @@ static int http_param_parse(WebServer &http_server, struct http_cfg_param *param
 
                                 for (unsigned j = 0; j < p->mapsz; j++) {
                                         if (is_str_equal((char *)arg.c_str(), (char *)(p->map[j].str), CASELESS)) {
+                                                WRITE_INT(p->val, p->size, p->map[j].val);
+                                                found = 1;
+                                                break;
+                                        }
+                                }
+
+                                if (found)
+                                        modified = 1;
+                                else
+                                        return -ENOENT;
+                        } else if (p->map1 && p->mapsz) { 
+                                int found = 0;
+
+                                for (unsigned j = 0; j < p->mapsz; j++) {
+                                        if (is_str_equal((char *)arg.c_str(), (char *)(p->map1[j]), CASELESS)) {
                                                 WRITE_INT(p->val, p->size, j);
                                                 found = 1;
                                                 break;

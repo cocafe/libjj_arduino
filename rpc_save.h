@@ -52,6 +52,15 @@ void rpc_save_add(void)
                 free(buf);
         });
 
+        http_rpc.on("/cfg_json_clear", HTTP_GET, [](){
+                uint8_t buf[8] = { };
+
+                if (spiffs_file_write(CONFIG_SAVE_JSON_PATH, buf, sizeof(buf)))
+                        http_rpc.send(200, "text/plain", "write error\n");
+                else
+                        http_rpc.send(200, "text/plain", "OK\n");
+        });
+
         http_rpc.on("/verify_fwhash", HTTP_GET, [](){
                 if (http_rpc.hasArg("set")) {
                         String data = http_rpc.arg("set");

@@ -51,19 +51,50 @@ static wifi_power_t __wifi_tx_power = WIFI_POWER_19_5dBm;
 static wifi_mode_t __wifi_mode = WIFI_OFF;
 static size_t wifi_idx = 0;
 
-struct strval cfg_wifi_txpwr[] = {
-        { "19.5dBm",            WIFI_POWER_19_5dBm      },
-        { "19dBm",              WIFI_POWER_19dBm        },
-        { "18.5dBm",            WIFI_POWER_18_5dBm      },
-        { "17dBm",              WIFI_POWER_17dBm        },
-        { "15dBm",              WIFI_POWER_15dBm        },
-        { "13dBm",              WIFI_POWER_13dBm        },
-        { "11dBm",              WIFI_POWER_11dBm        },
-        { "8.5dBm",             WIFI_POWER_8_5dBm       },
-        { "7dBm",               WIFI_POWER_7dBm         },
-        { "5dBm",               WIFI_POWER_5dBm         },
-        { "2dBm",               WIFI_POWER_2dBm         },
-        { "-1dBm",              WIFI_POWER_MINUS_1dBm   },
+enum {
+        ESP_WIFI_POWER_19_5dBm,
+        ESP_WIFI_POWER_19dBm,
+        ESP_WIFI_POWER_18_5dBm,
+        ESP_WIFI_POWER_17dBm,
+        ESP_WIFI_POWER_15dBm,
+        ESP_WIFI_POWER_13dBm,
+        ESP_WIFI_POWER_11dBm,
+        ESP_WIFI_POWER_8_5dBm,
+        ESP_WIFI_POWER_7dBm,
+        ESP_WIFI_POWER_5dBm,
+        ESP_WIFI_POWER_2dBm,
+        ESP_WIFI_POWER_MINUS_1dBm,
+        NUM_ESP_WIFI_TXPWR,
+};
+
+static const char *str_wifi_txpwr[NUM_ESP_WIFI_TXPWR] = {
+        [ESP_WIFI_POWER_19_5dBm]        = "19.5dBm",
+        [ESP_WIFI_POWER_19dBm]          = "19dBm",
+        [ESP_WIFI_POWER_18_5dBm]        = "18.5dBm",
+        [ESP_WIFI_POWER_17dBm]          = "17dBm",
+        [ESP_WIFI_POWER_15dBm]          = "15dBm",
+        [ESP_WIFI_POWER_13dBm]          = "13dBm",
+        [ESP_WIFI_POWER_11dBm]          = "11dBm",
+        [ESP_WIFI_POWER_8_5dBm]         = "8.5dBm",
+        [ESP_WIFI_POWER_7dBm]           = "7dBm",
+        [ESP_WIFI_POWER_5dBm]           = "5dBm",
+        [ESP_WIFI_POWER_2dBm]           = "2dBm",
+        [ESP_WIFI_POWER_MINUS_1dBm]     = "-1dBm",
+};
+
+static int cfg_wifi_txpwr_convert[NUM_ESP_WIFI_TXPWR] = {
+        [ESP_WIFI_POWER_19_5dBm]        = WIFI_POWER_19_5dBm,
+        [ESP_WIFI_POWER_19dBm]          = WIFI_POWER_19dBm,
+        [ESP_WIFI_POWER_18_5dBm]        = WIFI_POWER_18_5dBm,
+        [ESP_WIFI_POWER_17dBm]          = WIFI_POWER_17dBm,
+        [ESP_WIFI_POWER_15dBm]          = WIFI_POWER_15dBm,
+        [ESP_WIFI_POWER_13dBm]          = WIFI_POWER_13dBm,
+        [ESP_WIFI_POWER_11dBm]          = WIFI_POWER_11dBm,
+        [ESP_WIFI_POWER_8_5dBm]         = WIFI_POWER_8_5dBm,
+        [ESP_WIFI_POWER_7dBm]           = WIFI_POWER_7dBm,
+        [ESP_WIFI_POWER_5dBm]           = WIFI_POWER_5dBm,
+        [ESP_WIFI_POWER_2dBm]           = WIFI_POWER_2dBm,
+        [ESP_WIFI_POWER_MINUS_1dBm]     = WIFI_POWER_MINUS_1dBm,
 };
 
 struct wifi_nw_cfg {
@@ -74,7 +105,7 @@ struct wifi_nw_cfg {
         char local[32];
         char gw[32];
         char subnet[32];
-        int32_t tx_pwr;
+        uint8_t tx_pwr;
 };
 
 static struct wifi_nw_cfg __attribute__((unused)) wifi_sta_failsafe = {
@@ -106,24 +137,23 @@ static void __wifi_init(void)
 
 static inline void wifi_tx_power_print(int val)
 {
-        int found = 0;
-
-        for (int i = 0; i < ARRAY_SIZE(cfg_wifi_txpwr); i++) {
-                if (cfg_wifi_txpwr[i].val == val) {
-                        pr_info("tx power: %s\n", cfg_wifi_txpwr[i].str);
-                        return;
-                }
+        if (val >= ARRAY_SIZE(str_wifi_txpwr)) {
+                pr_info("unknown tx power\n");
+                return;
         }
 
-        if (!found)
-                pr_info("unknown tx power\n");
+        pr_info("tx power: %s\n", str_wifi_txpwr[val]);
 }
 
 static __attribute__((unused)) void wifi_sta_init(struct wifi_nw_cfg *nw)
 {
         lck_wifi_cb = xSemaphoreCreateMutex();
-        wifi_tx_power_print(nw->tx_pwr);
-        __wifi_tx_power = (wifi_power_t)nw->tx_pwr;
+
+        if (nw->tx_pwr < ARRAY_SIZE(str_wifi_txpwr)) {
+                wifi_tx_power_print(nw->tx_pwr);
+                __wifi_tx_power = (wifi_power_t)cfg_wifi_txpwr_convert[nw->tx_pwr];
+        }
+
         __wifi_mode = WIFI_STA;
         __wifi_init();
 }
@@ -136,8 +166,12 @@ static __attribute__((unused)) int wifi_ap_init(struct wifi_nw_cfg *nw)
                 return 1;
 
         lck_wifi_cb = xSemaphoreCreateMutex();
-        wifi_tx_power_print(nw->tx_pwr);
-        __wifi_tx_power = (wifi_power_t)nw->tx_pwr;
+
+        if (nw->tx_pwr < ARRAY_SIZE(str_wifi_txpwr)) {
+                wifi_tx_power_print(nw->tx_pwr);
+                __wifi_tx_power = (wifi_power_t)cfg_wifi_txpwr_convert[nw->tx_pwr];
+        }
+
         __wifi_mode = WIFI_AP;
         __wifi_init();
         WiFi.softAPConfig(local, gw, subnet);

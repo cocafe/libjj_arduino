@@ -84,8 +84,8 @@ void rpc_wifi_add(void)
                         int match = 0;
                         int i = 0;
 
-                        for (i = 0; i < ARRAY_SIZE(cfg_wifi_txpwr); i++) {
-                                if (is_str_equal((char *)cfg_wifi_txpwr[i].str, (char *)data.c_str(), CASELESS)) {
+                        for (i = 0; i < ARRAY_SIZE(str_wifi_txpwr); i++) {
+                                if (is_str_equal((char *)str_wifi_txpwr[i], (char *)data.c_str(), CASELESS)) {
                                         match = 1;
                                         break;
                                 }
@@ -96,19 +96,18 @@ void rpc_wifi_add(void)
                                 return;
                         }
 
-                        WiFi.setTxPower((wifi_power_t)cfg_wifi_txpwr[i].val);
-
-                        g_cfg.nw_cfg.tx_pwr = cfg_wifi_txpwr[i].val;
+                        g_cfg.nw_cfg.tx_pwr = i;
+                        WiFi.setTxPower((wifi_power_t)(cfg_wifi_txpwr_convert[i]));
 
                         http_rpc.send(200, "text/plain", "OK\n");
                 } else {
                         char buf[128] = { };
                         size_t c = 0;
 
-                        for (size_t i = 0; i < ARRAY_SIZE(cfg_wifi_txpwr); i++) {
+                        for (size_t i = 0; i < ARRAY_SIZE(str_wifi_txpwr); i++) {
                                 c += snprintf(&buf[c], sizeof(buf) - c, "%s %s\n",
-                                        cfg_wifi_txpwr[i].str,
-                                        g_cfg.nw_cfg.tx_pwr == cfg_wifi_txpwr[i].val ? "*" : "");
+                                        str_wifi_txpwr[i],
+                                        g_cfg.nw_cfg.tx_pwr == i ? "*" : "");
                         }
 
                         http_rpc.send(200, "text/plain", buf);
