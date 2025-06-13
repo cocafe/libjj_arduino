@@ -19,6 +19,39 @@ void rpc_save_add(void)
                 http_rpc.send(200, "text/plain", "OK\n");
         });
 
+        http_rpc.on("/cfg_json", HTTP_GET, [](){
+                jbuf_t jkey_cfg = { };
+
+                jbuf_config_make(&jkey_cfg, &g_cfg);
+
+                char *buf = jbuf_json_text_save(&jkey_cfg, NULL);
+
+                if (!buf)
+                        http_rpc.send(500, "text/plain", "ERROR\n");
+                else
+                        http_rpc.send(200, "text/plain", buf);
+
+                if (buf)
+                        free(buf);
+
+                jbuf_deinit(&jkey_cfg);
+        });
+
+        http_rpc.on("/cfg_json_file", HTTP_GET, [](){
+                int err;
+                size_t len;
+
+                char *buf = (char *)spiffs_file_read(CONFIG_SAVE_JSON_PATH, &err, &len);
+                if (err) {
+                        http_rpc.send(500, "text/plain", "read error\n");
+                        return;
+                }
+
+                http_rpc.send_P(200, "text/plain", buf, len);
+
+                free(buf);
+        });
+
         http_rpc.on("/verify_fwhash", HTTP_GET, [](){
                 if (http_rpc.hasArg("set")) {
                         String data = http_rpc.arg("set");

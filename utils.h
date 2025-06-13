@@ -5,6 +5,7 @@
 #include <stdint.h>
 #include <string.h>
 #include <endian.h>
+#include <memory.h>
 
 typedef uint32_t __u32;
 typedef uint64_t __u64;
@@ -15,6 +16,36 @@ typedef uint32_t __le32;
 typedef uint32_t __be32;
 typedef uint64_t __le64;
 typedef uint64_t __be64;
+
+#ifndef __min
+#define __min(a, b)                             \
+        ({                                      \
+                __typeof__((a)) _a = (a);       \
+                __typeof__((b)) _b = (b);       \
+                _a < _b ? _a : _b;              \
+        })
+#endif /* __min */
+
+#ifndef __max
+#define __max(a, b)                             \
+        ({                                      \
+                __typeof__((a)) _a = (a);       \
+                __typeof__((b)) _b = (b);       \
+                _a > _b ? _a : _b;              \
+        })
+#endif /* __max */
+
+#ifndef max
+#define max(a, b) (((a) > (b)) ? (a) : (b))
+#endif
+
+#ifndef min
+#define min(a, b) (((a) < (b)) ? (a) : (b))
+#endif
+
+#ifndef sizeof_member
+#define sizeof_member(type, member) sizeof(((type *)(0))->member)
+#endif
 
 /* Indirect stringification.  Doing two levels allows the parameter to be a
  * macro itself.  For example, compile with -DFOO=bar, __stringify(FOO)
@@ -264,6 +295,195 @@ static long long __attribute__((unused)) strtoll_wrap(const char *str, int base,
         }
 
         *err = 0;
+        return ret;
+}
+
+void *realloc_safe(void *old_ptr, size_t old_sz, size_t new_sz)
+{
+        void *new_ptr;
+
+        if (!old_ptr || !new_sz)
+                return old_ptr;
+
+        new_ptr = calloc(1, new_sz);
+        if (!new_ptr)
+                return NULL;
+
+        if (new_sz >= old_sz)
+                memcpy(new_ptr, old_ptr, old_sz);
+        else
+                memcpy(new_ptr, old_ptr, new_sz);
+
+        free(old_ptr);
+
+        return new_ptr;
+}
+
+static inline int ptr_word_write(void *data, size_t word_sz, int64_t val)
+{
+        switch (word_sz) {
+        case 1:
+                *(int8_t *)data = (int8_t)val;
+                break;
+
+        case 2:
+                *(int16_t *)data = (int16_t)val;
+                break;
+
+        case 4:
+                *(int32_t *)data = (int32_t)val;
+                break;
+
+        case 8:
+                *(int64_t *)data = val;
+                break;
+
+        default:
+                return -EINVAL;
+        }
+
+        return 0;
+}
+
+static inline int ptr_unsigned_word_write(void *data, size_t word_sz, uint64_t val)
+{
+        switch (word_sz) {
+        case 1:
+                *(uint8_t *)data = (uint8_t)val;
+                break;
+
+        case 2:
+                *(uint16_t *)data = (uint16_t)val;
+                break;
+
+        case 4:
+                *(uint32_t *)data = (uint32_t)val;
+                break;
+
+        case 8:
+                *(uint64_t *)data = val;
+                break;
+
+        default:
+                return -EINVAL;
+        }
+
+        return 0;
+}
+
+static inline int ptr_unsigned_word_read(void *data, size_t word_sz, uint64_t *val)
+{
+        switch (word_sz) {
+        case 1:
+                *val = *(uint8_t *)data;
+                break;
+
+        case 2:
+                *val = *(uint16_t *)data;
+                break;
+
+        case 4:
+                *val = *(uint32_t *)data;
+                break;
+
+        case 8:
+                *val = *(uint64_t *)data;
+                break;
+
+        default:
+                return -EINVAL;
+        }
+
+        return 0;
+}
+
+// perform arithmetic extend
+static inline int ptr_signed_word_read(void *data, size_t word_sz, int64_t *val)
+{
+        switch (word_sz) {
+        case 1:
+                *val = *(int8_t *)data;
+                break;
+
+        case 2:
+                *val = *(int16_t *)data;
+                break;
+
+        case 4:
+                *val = *(int32_t *)data;
+                break;
+
+        case 8:
+                *val = *(int64_t *)data;
+                break;
+
+        default:
+                return -EINVAL;
+        }
+
+        return 0;
+}
+
+int vprintf_resize(char **buf, size_t *pos, size_t *len, const char *fmt, va_list arg)
+{
+        va_list arg2;
+        char cbuf;
+        char *sbuf = *buf;
+        int _len, ret;
+
+        va_copy(arg2, arg);
+        _len = vsnprintf(&cbuf, sizeof(cbuf), fmt, arg2);
+        va_end(arg2);
+
+        if (_len < 0)
+                return _len;
+
+        if (!sbuf) {
+                size_t append_len = _len + 2;
+
+                sbuf = (char *)calloc(append_len, sizeof(char));
+                if (!sbuf)
+                        return -ENOMEM;
+
+                *buf = sbuf;
+                *len = append_len;
+                *pos = 0;
+        } else {
+                size_t append_len = _len + 2;
+                size_t new_len = *len + append_len;
+
+                // do realloc
+                if (*pos + append_len > *len) {
+                        sbuf = (char *)realloc_safe(*buf, *len, new_len);
+                        if (!sbuf)
+                                return -ENOMEM;
+
+                        *buf = sbuf;
+                        *len = new_len;
+                }
+        }
+
+        sbuf = &((*buf)[*pos]);
+
+        ret = vsnprintf(sbuf, *len - *pos, fmt, arg);
+        if (ret < 0) {
+                return ret;
+        }
+
+        *pos += ret;
+
+        return ret;
+}
+
+int snprintf_resize(char **buf, size_t *pos, size_t *len, const char *fmt, ...)
+{
+        va_list ap;
+        int ret;
+
+        va_start(ap, fmt);
+        ret = vprintf_resize(buf, pos, len, fmt, ap);
+        va_end(ap);
+
         return ret;
 }
 

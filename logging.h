@@ -22,6 +22,17 @@
                 ___pr_wrapped(msg, ##fmt);              \
         } while(0)
 
+#define pr_info_once(msg, fmt...)                       \
+        do {                                            \
+                static uint8_t __t = 0;                 \
+                if (__t)                                \
+                        break;                          \
+                                                        \
+                ___pr_wrapped("%s(): ", __func__);      \
+                ___pr_wrapped(msg, ##fmt);              \
+                __t = 1;                                \
+        } while(0)
+
 #define pr_none(msg, fmt...) do { } while (0)
 
 #define pr_err          pr_info

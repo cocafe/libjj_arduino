@@ -12,6 +12,12 @@
 
 #include "utils.h"
 #include "logging.h"
+#include "jkey.h"
+#include "json.h"
+
+#ifndef CONFIG_SAVE_JSON_PATH
+#define CONFIG_SAVE_JSON_PATH           ("/config.json")
+#endif
 
 #define SAVE_MAGIC                      (0x00C0CAFE)
 #define SAVE_PAGE                       (0)
@@ -33,6 +39,38 @@ struct save {
 
 static struct save g_save;
 static uint8_t current_fw_hash[32] = { };
+
+static int (*jbuf_cfg_make)(jbuf_t *, struct config *);
+
+static int config_json_load(struct save *save)
+{
+        jbuf_t jb = { };
+        int err;
+
+        if ((err = jbuf_cfg_make(&jb, &save->cfg)))
+                return err;
+
+        err = jbuf_json_file_load(&jb, CONFIG_SAVE_JSON_PATH);
+
+        jbuf_deinit(&jb);
+
+        return err;
+}
+
+static int config_json_save(struct save *save)
+{
+        jbuf_t jb = { };
+        int err;
+
+        if ((err = jbuf_cfg_make(&jb, &save->cfg)))
+                return err;
+
+        err = jbuf_json_file_save(&jb, CONFIG_SAVE_JSON_PATH);
+
+        jbuf_deinit(&jb);
+
+        return err;
+}
 
 static int save_fw_hash_verify(void)
 {
@@ -172,6 +210,10 @@ static void save_write(struct save *save)
         __save_write(SAVE_PAGE, save);
 
         pr_info("saved to flash\n");
+
+        if (jbuf_cfg_make && !config_json_save(&g_save)) {
+                pr_info("config json saved\n");
+        }
 }
 
 static void save_update(struct save *save, struct config *cfg)
@@ -189,9 +231,13 @@ static void save_create(struct save *save, struct config *cfg)
         memcpy(&save->cfg, cfg, sizeof(save->cfg));
 }
 
-static void save_init(void)
+static void save_init(int (*jbuf_maker)(jbuf_t *, struct config *))
 {
         uint32_t eeprom_size = ROUND_UP_POWER2(sizeof(struct save));
+
+        if (jbuf_maker) {
+                jbuf_cfg_make = jbuf_maker;
+        }
 
         EEPROM.begin(eeprom_size);
 
@@ -201,7 +247,15 @@ static void save_init(void)
 
         if (save_read(&g_save) != 0) {
                 pr_info("failed to read save from flash, create new one\n");
+
                 save_create(&g_save, &g_cfg_default);
+
+                if (jbuf_cfg_make) {
+                        if (!config_json_load(&g_save)) {
+                                pr_info("previous json config found, merged with it\n");
+                        }
+                }
+
                 save_write(&g_save);
         }
 
