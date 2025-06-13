@@ -1,5 +1,5 @@
-#ifndef __JJ_JKEY_H__
-#define __JJ_JKEY_H__
+#ifndef __LIBJJ_JKEY_H__
+#define __LIBJJ_JKEY_H__
 
 #include <stdint.h>
 #include <stdbool.h>
@@ -39,7 +39,7 @@ enum json_key_types {
 };
 
 struct json_key {
-        char                   *key;
+        const char             *key;
         unsigned                type;
         unsigned                cjson_type;
 
@@ -304,7 +304,7 @@ int __jbuf_key_add(jbuf_t *b, uint32_t type, jkey_t **curr)
         return 0;
 }
 
-void *jbuf_key_add(jbuf_t *b, int type, char *key, void *ref, size_t sz)
+void *jbuf_key_add(jbuf_t *b, int type, const char *key, void *ref, size_t sz)
 {
         jkey_t *k;
         int err;
@@ -379,12 +379,12 @@ void jkey_base_ref_parent_set(jbuf_t *b, void *cookie, ssize_t offset)
         k->obj.base_ref_parent = 1;
 }
 
-void *jbuf_obj_open(jbuf_t *b, char *key)
+void *jbuf_obj_open(jbuf_t *b, const char *key)
 {
         return jbuf_key_add(b, JKEY_TYPE_OBJECT, key, NULL, 0);
 }
 
-void *jbuf_objptr_open(jbuf_t *b, char *key, void *ref, size_t sz)
+void *jbuf_objptr_open(jbuf_t *b, const char *key, void *ref, size_t sz)
 {
         jkey_t *k;
         void *cookie = jbuf_key_add(b, JKEY_TYPE_OBJECT, key, NULL, sz);
@@ -407,22 +407,22 @@ void jbuf_obj_close(jbuf_t *b, void *cookie)
         k->child_cnt = len / sizeof(jkey_t);
 }
 
-void *jbuf_arr_open(jbuf_t *b, char *key)
+void *jbuf_arr_open(jbuf_t *b, const char *key)
 {
         return jbuf_key_add(b, JKEY_TYPE_RO_ARRAY, key, NULL, 0);
 }
 
-void *jbuf_fixed_arr_open(jbuf_t *b, char *key)
+void *jbuf_fixed_arr_open(jbuf_t *b, const char *key)
 {
         return jbuf_key_add(b, JKEY_TYPE_FIXED_ARRAY, key, NULL, 0);
 }
 
-void *jbuf_grow_arr_open(jbuf_t *b, char *key)
+void *jbuf_grow_arr_open(jbuf_t *b, const char *key)
 {
         return jbuf_key_add(b, JKEY_TYPE_GROW_ARRAY, key, NULL, 0);
 }
 
-void *jbuf_list_arr_open(jbuf_t *b, char *key)
+void *jbuf_list_arr_open(jbuf_t *b, const char *key)
 {
         return jbuf_key_add(b, JKEY_TYPE_LIST_ARRAY, key, NULL, 0);
 }
@@ -538,7 +538,7 @@ void jbuf_offset_list_arr_setup(jbuf_t *b,
 }
 
 // external ref (read) only char*
-void *jbuf_strref_add(jbuf_t *b, char *key, char *ref)
+void *jbuf_strref_add(jbuf_t *b, const char *key, char *ref)
 {
         return jbuf_key_add(b, JKEY_TYPE_STRREF, key, ref, 0);
 }
@@ -546,13 +546,13 @@ void *jbuf_strref_add(jbuf_t *b, char *key, char *ref)
 #define jbuf_strbuf_add(_b, _key, _ref) __jbuf_strbuf_add(_b, _key, _ref, sizeof(_ref))
 
 // external static size char[] buf
-void *__jbuf_strbuf_add(jbuf_t *b, char *key, char *ref, size_t bytes)
+void *__jbuf_strbuf_add(jbuf_t *b, const char *key, char *ref, size_t bytes)
 {
         return jbuf_key_add(b, JKEY_TYPE_STRBUF, key, ref, bytes);
 }
 
 // alloc internally char* for input
-void *jbuf_strptr_add(jbuf_t *b, char *key, char **ref)
+void *jbuf_strptr_add(jbuf_t *b, const char *key, char **ref)
 {
         void *cookie;
 
@@ -568,7 +568,7 @@ void *jbuf_strptr_add(jbuf_t *b, char *key, char **ref)
 #define jbuf_strval_add(_b, _key, _ref, _strmap) \
         __jbuf_strval_add(_b, _key, &(_ref), sizeof(_ref), _strmap, ARRAY_SIZE(_strmap))
 
-void *__jbuf_strval_add(jbuf_t *b, char *key, void *ref, size_t refsz, const char *map[], size_t map_cnt)
+void *__jbuf_strval_add(jbuf_t *b, const char *key, void *ref, size_t refsz, const char *map[], size_t map_cnt)
 {
         jkey_t *k;
         void *cookie = jbuf_key_add(b, JKEY_TYPE_UINT, key, ref, refsz);
@@ -591,7 +591,7 @@ void *__jbuf_strval_add(jbuf_t *b, char *key, void *ref, size_t refsz, const cha
 #define jbuf_uint_add(_b, _key, _ref) \
         __jbuf_uint_add(_b, _key, &(_ref), sizeof(_ref))
 
-void *__jbuf_uint_add(jbuf_t *b, char *key, void *ref, size_t refsz)
+void *__jbuf_uint_add(jbuf_t *b, const char *key, void *ref, size_t refsz)
 {
         return jbuf_key_add(b, JKEY_TYPE_UINT, key, ref, refsz);
 }
@@ -604,7 +604,7 @@ void *__jbuf_uint_add(jbuf_t *b, char *key, void *ref, size_t refsz)
 #define jbuf_sint_add(_b, _key, _ref) \
         __jbuf_sint_add(_b, _key, &(_ref), sizeof(_ref))
 
-void *__jbuf_sint_add(jbuf_t *b, char *key, void *ref, size_t refsz)
+void *__jbuf_sint_add(jbuf_t *b, const char *key, void *ref, size_t refsz)
 {
         return jbuf_key_add(b, JKEY_TYPE_INT, key, ref, refsz);
 }
@@ -612,7 +612,7 @@ void *__jbuf_sint_add(jbuf_t *b, char *key, void *ref, size_t refsz)
 #define jbuf_float_add(_b, _key, _ref) \
         __jbuf_float_add(_b, _key, &_ref)
 
-void *__jbuf_float_add(jbuf_t *b, char *key, float *ref)
+void *__jbuf_float_add(jbuf_t *b, const char *key, float *ref)
 {
         void *cookie = jbuf_key_add(b, JKEY_TYPE_DOUBLE, key, ref, sizeof(double));
         jkey_t *k = jbuf_key_get(b, cookie);
@@ -625,7 +625,7 @@ void *__jbuf_float_add(jbuf_t *b, char *key, float *ref)
 #define jbuf_double_add(_b, _key, _ref) \
         __jbuf_double_add(_b, _key, &_ref)
 
-void *__jbuf_double_add(jbuf_t *b, char *key, double *ref)
+void *__jbuf_double_add(jbuf_t *b, const char *key, double *ref)
 {
         return jbuf_key_add(b, JKEY_TYPE_DOUBLE, key, ref, sizeof(double));
 }
@@ -633,7 +633,7 @@ void *__jbuf_double_add(jbuf_t *b, char *key, double *ref)
 #define jbuf_bool_add(_b, _key, _ref) \
         __jbuf_bool_add(_b, _key, &(_ref), sizeof(_ref))
 
-void *__jbuf_bool_add(jbuf_t *b, char *key, void *ref, size_t refsz)
+void *__jbuf_bool_add(jbuf_t *b, const char *key, void *ref, size_t refsz)
 {
         return jbuf_key_add(b, JKEY_TYPE_BOOL, key, ref, refsz);
 }
@@ -659,7 +659,7 @@ void *__jbuf_bool_add(jbuf_t *b, char *key, void *ref, size_t refsz)
 #define jbuf_offset_strbuf_add(_b, _key, _container, _member) \
         __jbuf_offset_strbuf_add(_b, _key, offsetof(_container, _member), sizeof_member(_container, _member))
 
-void *__jbuf_offset_strbuf_add(jbuf_t *b, char *key, ssize_t offset, size_t bytes)
+void *__jbuf_offset_strbuf_add(jbuf_t *b, const char *key, ssize_t offset, size_t bytes)
 {
         void *cookie = __jbuf_strbuf_add(b, key, NULL, bytes);
         if (!cookie)
@@ -673,7 +673,7 @@ void *__jbuf_offset_strbuf_add(jbuf_t *b, char *key, ssize_t offset, size_t byte
 #define jbuf_offset_strval_add(_b, _key, _container, _member, _strmap) \
         __jbuf_offset_strval_add(_b, _key, offsetof(_container, _member), sizeof_member(_container, _member), _strmap, ARRAY_SIZE(_strmap))
 
-void *__jbuf_offset_strval_add(jbuf_t *b, char *key, ssize_t offset, size_t refsz, const char *map[], size_t map_cnt)
+void *__jbuf_offset_strval_add(jbuf_t *b, const char *key, ssize_t offset, size_t refsz, const char *map[], size_t map_cnt)
 {
         void *cookie = __jbuf_strval_add(b, key, NULL, refsz, map, map_cnt);
         if (!cookie)
@@ -2218,4 +2218,4 @@ int jbuf_deinit(jbuf_t *b)
         return 0;
 }
 
-#endif /* __JJ_JKEY_H__ */
+#endif /* __LIBJJ_JKEY_H__ */

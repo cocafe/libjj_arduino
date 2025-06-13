@@ -31,33 +31,10 @@ struct twai_cfg {
         uint16_t tx_timedout_ms;
 };
 
-enum {
-        TWAI_CAN_25KBPS,
-        TWAI_CAN_50KBPS,
-        TWAI_CAN_100KBPS,
-        TWAI_CAN_125KBPS,
-        TWAI_CAN_250KBPS,
-        TWAI_CAN_500KBPS,
-        TWAI_CAN_800KBPS,
-        TWAI_CAN_1000KBPS,
-        NUM_TWAI_CAN_BAUDRATES,       
-};
-
-struct strval cfg_twai_baudrate[] = {
-        { "CAN_25KBPS",         TWAI_CAN_25KBPS         },
-        { "CAN_50KBPS",         TWAI_CAN_50KBPS         },
-        { "CAN_100KBPS",        TWAI_CAN_100KBPS        },
-        { "CAN_125KBPS",        TWAI_CAN_125KBPS        },
-        { "CAN_250KBPS",        TWAI_CAN_250KBPS        },
-        { "CAN_500KBPS",        TWAI_CAN_500KBPS        },
-        { "CAN_500KBPS",        TWAI_CAN_800KBPS        },
-        { "CAN_1000KBPS",       TWAI_CAN_1000KBPS       },
-};
-
-struct strval cfg_twai_mode[] = {
-        { "TWAI_NORMAL",        TWAI_MODE_NORMAL        },
-        { "TWAI_NOACK",         TWAI_MODE_NO_ACK        },
-        { "TWAI_LISTENONLY",    TWAI_MODE_LISTEN_ONLY   },
+static const char *str_twai_mode[] = {
+        [TWAI_MODE_NORMAL]      = "TWAI_NORMAL",
+        [TWAI_MODE_NO_ACK]      = "TWAI_NO_ACK",
+        [TWAI_MODE_LISTEN_ONLY] = "TWAI_LISTEN_ONLY",
 };
 
 static uint16_t tx_timedout_ms = 200;
@@ -213,35 +190,35 @@ int TWAI_init(struct twai_cfg *cfg)
         twai_filter_config_t f_config = TWAI_FILTER_CONFIG_ACCEPT_ALL();
 
         switch (cfg->baudrate) {
-        case TWAI_CAN_25KBPS:
+        case CAN_BAUDRATE_25KBPS:
                 t_config = TWAI_TIMING_CONFIG_25KBITS();
                 break;
 
-        case TWAI_CAN_50KBPS:
+        case CAN_BAUDRATE_50KBPS:
                 t_config = TWAI_TIMING_CONFIG_50KBITS();
                 break;
 
-        case TWAI_CAN_100KBPS:
+        case CAN_BAUDRATE_100KBPS:
                 t_config = TWAI_TIMING_CONFIG_100KBITS();
                 break;
 
-        case TWAI_CAN_125KBPS:
+        case CAN_BAUDRATE_125KBPS:
                 t_config = TWAI_TIMING_CONFIG_125KBITS();
                 break;
 
-        case TWAI_CAN_250KBPS:
+        case CAN_BAUDRATE_250KBPS:
                 t_config = TWAI_TIMING_CONFIG_250KBITS();
                 break;
 
-        case TWAI_CAN_500KBPS:
+        case CAN_BAUDRATE_500KBPS:
                 t_config = TWAI_TIMING_CONFIG_500KBITS();
                 break;
 
-        case TWAI_CAN_800KBPS:
+        case CAN_BAUDRATE_800KBPS:
                 t_config = TWAI_TIMING_CONFIG_800KBITS();
                 break;
 
-        case TWAI_CAN_1000KBPS:
+        case CAN_BAUDRATE_1000KBPS:
                 t_config = TWAI_TIMING_CONFIG_1MBITS();
                 break;
 

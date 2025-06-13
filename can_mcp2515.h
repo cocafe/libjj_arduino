@@ -41,24 +41,25 @@ enum {
         NUM_MCP2515_MODES,
 };
 
-static uint8_t mcp2515_cfg_mode_convert[NUM_MCP2515_MODES] = {
+static int mcp2515_cfg_mode_convert[NUM_MCP2515_MODES] = {
         [MCP2515_MODE_NORMAL]     = MCP_NORMAL,
         [MCP2515_MODE_SLEEP]      = MCP_SLEEP,
         [MCP2515_MODE_LOOPBACK]   = MCP_LOOPBACK,
         [MCP2515_MODE_LISTENONLY] = MCP_LISTENONLY,
 };
 
-static uint8_t mcp2515_cfg_quartz_convert[NUM_MCP2515_QUARTZ_TYPES] = {
+static int mcp2515_cfg_quartz_convert[NUM_MCP2515_QUARTZ_TYPES] = {
         [MCP2515_QUARTZ_20MHZ] = MCP_20MHZ,
         [MCP2515_QUARTZ_16MHZ] = MCP_16MHZ,
         [MCP2515_QUARTZ_8MHZ]  = MCP_8MHZ,
 };
 
-static uint8_t mcp2515_cfg_baudrate_convert[NUM_CAN_BAUDRATES] = {
+static int mcp2515_cfg_baudrate_convert[NUM_CAN_BAUDRATES] = {
         [CAN_BAUDRATE_4K096BPS] = CAN_4K096BPS,
         [CAN_BAUDRATE_5KBPS]    = CAN_5KBPS,
         [CAN_BAUDRATE_10KBPS]   = CAN_10KBPS,
         [CAN_BAUDRATE_20KBPS]   = CAN_20KBPS,
+        [CAN_BAUDRATE_25KBPS]   = -1,
         [CAN_BAUDRATE_31K25BPS] = CAN_31K25BPS,
         [CAN_BAUDRATE_33K3BPS]  = CAN_33K3BPS,
         [CAN_BAUDRATE_40KBPS]   = CAN_40KBPS,
@@ -69,6 +70,7 @@ static uint8_t mcp2515_cfg_baudrate_convert[NUM_CAN_BAUDRATES] = {
         [CAN_BAUDRATE_200KBPS]  = CAN_200KBPS,
         [CAN_BAUDRATE_250KBPS]  = CAN_250KBPS,
         [CAN_BAUDRATE_500KBPS]  = CAN_500KBPS,
+        [CAN_BAUDRATE_800KBPS]  = -1,
         [CAN_BAUDRATE_1000KBPS] = CAN_1000KBPS,
 };
 
@@ -139,7 +141,7 @@ static can_device_t can_mcp2515 = {
 
 static int mcp2515_init(struct mcp2515_cfg *cfg)
 {
-        uint8_t baudrate, quartz, mode;
+        int baudrate, quartz, mode;
 
         if (!cfg)
                 return -ENODATA;
@@ -163,6 +165,11 @@ static int mcp2515_init(struct mcp2515_cfg *cfg)
         baudrate = mcp2515_cfg_baudrate_convert[cfg->baudrate];
         quartz = mcp2515_cfg_quartz_convert[cfg->quartz];
         mode = mcp2515_cfg_mode_convert[cfg->mode];
+
+        if (baudrate == -1) {
+                pr_info("unsupported baudrate\n");
+                return -EINVAL;
+        }
 
         if (CAN0.begin(MCP_ANY, baudrate, quartz) != CAN_OK) {
                 return -EIO;

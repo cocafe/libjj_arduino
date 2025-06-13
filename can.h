@@ -13,6 +13,7 @@ enum {
         CAN_BAUDRATE_5KBPS,
         CAN_BAUDRATE_10KBPS,
         CAN_BAUDRATE_20KBPS,
+        CAN_BAUDRATE_25KBPS,
         CAN_BAUDRATE_31K25BPS,
         CAN_BAUDRATE_33K3BPS,
         CAN_BAUDRATE_40KBPS,
@@ -23,6 +24,7 @@ enum {
         CAN_BAUDRATE_200KBPS,
         CAN_BAUDRATE_250KBPS,
         CAN_BAUDRATE_500KBPS,
+        CAN_BAUDRATE_800KBPS,
         CAN_BAUDRATE_1000KBPS,
         NUM_CAN_BAUDRATES,
 };
@@ -32,6 +34,7 @@ static const char *str_can_baudrates[] = {
         [CAN_BAUDRATE_5KBPS]    = "CAN_5KBPS",
         [CAN_BAUDRATE_10KBPS]   = "CAN_10KBPS",
         [CAN_BAUDRATE_20KBPS]   = "CAN_20KBPS",
+        [CAN_BAUDRATE_25KBPS]   = "CAN_25KBPS",
         [CAN_BAUDRATE_31K25BPS] = "CAN_31K25BPS",
         [CAN_BAUDRATE_33K3BPS]  = "CAN_33K3BPS",
         [CAN_BAUDRATE_40KBPS]   = "CAN_40KBPS",
@@ -42,6 +45,7 @@ static const char *str_can_baudrates[] = {
         [CAN_BAUDRATE_200KBPS]  = "CAN_200KBPS",
         [CAN_BAUDRATE_250KBPS]  = "CAN_250KBPS",
         [CAN_BAUDRATE_500KBPS]  = "CAN_500KBPS",
+        [CAN_BAUDRATE_800KBPS]  = "CAN_800KBPS",
         [CAN_BAUDRATE_1000KBPS] = "CAN_1000KBPS",
 };
 
