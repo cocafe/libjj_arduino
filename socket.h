@@ -16,7 +16,7 @@ struct udp_mc_cfg {
         char mcaddr[24];
 };
 
-static int __attribute__((unused)) udp_mc_sock_create(char *mc_addr, unsigned port, sockaddr_in *skaddr)
+static int __attribute__((unused)) udp_mc_sock_create(const char *if_addr, const char *mc_addr, unsigned port, sockaddr_in *skaddr)
 {
         int sock;
 
@@ -40,7 +40,7 @@ static int __attribute__((unused)) udp_mc_sock_create(char *mc_addr, unsigned po
 
         struct ip_mreq mreq;
         mreq.imr_multiaddr.s_addr = inet_addr(mc_addr);
-        mreq.imr_interface.s_addr = inet_addr(WiFi.localIP().toString().c_str());
+        mreq.imr_interface.s_addr = inet_addr(if_addr);
         if (setsockopt(sock, IPPROTO_IP, IP_ADD_MEMBERSHIP, &mreq, sizeof(mreq)) < 0) {
                 pr_err("setsockopt() failed\n");
                 return -EFAULT;

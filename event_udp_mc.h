@@ -180,9 +180,9 @@ static void task_event_udp_mc_recv(void *arg)
         }
 }
 
-static int event_udp_mc_sock_create(char *mc_addr, unsigned port)
+static int event_udp_mc_sock_create(const char *if_addr, const char *mc_addr, unsigned port)
 {
-        int sock = udp_mc_sock_create(mc_addr, port, &evt_udp_mc_skaddr);
+        int sock = udp_mc_sock_create(if_addr, mc_addr, port, &evt_udp_mc_skaddr);
 
         if (sock < 0)
                 return sock;
@@ -204,7 +204,7 @@ static void event_udp_mc_wifi_event_cb(int event)
 {
         switch (event) {
         case WIFI_EVENT_CONNECTED:
-                event_udp_mc_sock_create(evt_udp_mc_addr, evt_udp_mc_port);
+                event_udp_mc_sock_create(WiFi.localIP().toString().c_str(), evt_udp_mc_addr, evt_udp_mc_port);
                 break;
         
         case WIFI_EVENT_DISCONNECTED:
@@ -227,7 +227,13 @@ static void __attribute__((unused)) event_udp_mc_init(struct udp_mc_cfg *cfg, un
         lck_udp_event_cb = xSemaphoreCreateMutex();
         strncpy(evt_udp_mc_addr, cfg->mcaddr, sizeof(evt_udp_mc_addr));
         evt_udp_mc_port = cfg->port;
-        wifi_event_cb_register(event_udp_mc_wifi_event_cb);
+
+        if (wifi_mode_get() == WIFI_AP) {
+                event_udp_mc_sock_create(WiFi.softAPIP().toString().c_str(), evt_udp_mc_addr, evt_udp_mc_port);
+        } else { // STA, STA_AP
+                wifi_event_cb_register(event_udp_mc_wifi_event_cb);
+        }
+
         xTaskCreatePinnedToCore(task_event_udp_mc_recv, "udp_event", 4096, NULL, 1, NULL, cpu);
 }
 

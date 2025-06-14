@@ -97,9 +97,9 @@ static void task_racechrono_fwd_recv(void *arg)
         }
 }
 
-static int racechrono_udp_mc_create(char *mc_addr, unsigned port)
+static int racechrono_udp_mc_create(const char *if_addr, const char *mc_addr, unsigned port)
 {
-        int sock = udp_mc_sock_create(mc_addr, port, &rc_udp_mc_skaddr);
+        int sock = udp_mc_sock_create(if_addr, mc_addr, port, &rc_udp_mc_skaddr);
 
         if (sock < 0)
                 return sock;
@@ -120,7 +120,7 @@ static void racechrono_fwd_wifi_event_cb(int event)
 {
         switch (event) {
         case WIFI_EVENT_CONNECTED:
-                racechrono_udp_mc_create(rc_udp_mc_addr, rc_udp_mc_port);
+                racechrono_udp_mc_create(WiFi.localIP().toString().c_str(), rc_udp_mc_addr, rc_udp_mc_port);
                 break;
         
         case WIFI_EVENT_DISCONNECTED:
@@ -142,7 +142,12 @@ static void __attribute__((unused)) racechrono_fwd_init(struct udp_mc_cfg *cfg, 
 
         strncpy(rc_udp_mc_addr, cfg->mcaddr, sizeof(rc_udp_mc_addr));
         rc_udp_mc_port = cfg->port;
-        wifi_event_cb_register(racechrono_fwd_wifi_event_cb);
+
+        if (wifi_mode_get() == WIFI_AP) {
+                racechrono_udp_mc_create(WiFi.softAPIP().toString().c_str(), rc_udp_mc_addr, rc_udp_mc_port);
+        } else { // STA, STA_AP
+                wifi_event_cb_register(racechrono_fwd_wifi_event_cb);
+        }
 
         if (is_receiver)
                 xTaskCreatePinnedToCore(task_racechrono_fwd_recv, "rc_fwd", 4096, NULL, 1, NULL, CPU1);

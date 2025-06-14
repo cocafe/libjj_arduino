@@ -17,7 +17,7 @@ void rpc_save_add(void)
                 http_rpc.send(200, "text/plain", "OK\n");
         });
 
-        http_rpc.on("/cfg_json", HTTP_GET, [](){
+        http_rpc.on("/cfg_to_json", HTTP_GET, [](){
                 jbuf_t jkey_cfg = { };
 
                 if (!jbuf_cfg_make) {
@@ -36,6 +36,36 @@ void rpc_save_add(void)
 
                 if (buf)
                         free(buf);
+
+                jbuf_deinit(&jkey_cfg);
+        });
+
+        http_rpc.on("/cfg_from_json", HTTP_POST, [](){
+                if (!jbuf_cfg_make) {
+                        http_rpc.send(500, "text/plain", "unsupported\n");
+                        return;
+                }
+
+                if (!http_rpc.hasArg("plain")) {
+                        http_rpc.send(500, "text/plain", "no json received\n");
+                        return;
+                }
+
+                String _json = http_rpc.arg("plain");
+                jbuf_t jkey_cfg = { };
+
+                jbuf_cfg_make(&jkey_cfg, &g_cfg);
+
+                if (jbuf_json_text_load(&jkey_cfg, _json.c_str(), _json.length())) {
+                        http_rpc.send(500, "text/plain", "invalid json\n");
+                        jbuf_deinit(&jkey_cfg);
+                        return;
+                }
+
+                save_update(&g_save, &g_cfg);
+                save_write(&g_save);
+
+                http_rpc.send(200, "text/plain", "OK\n");
 
                 jbuf_deinit(&jkey_cfg);
         });
@@ -80,8 +110,6 @@ void rpc_save_add(void)
 
                 String _json = http_rpc.arg("plain");
                 jbuf_t jkey_cfg = { };
-
-                printf("%s\n", _json.c_str());
 
                 jbuf_cfg_make(&jkey_cfg, &g_cfg);
 

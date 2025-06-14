@@ -19,6 +19,21 @@ enum {
         NUM_WIFI_EVENTS,
 };
 
+enum {
+        ESP_WIFI_MODE_OFF,
+        ESP_WIFI_MODE_STA,
+        ESP_WIFI_MODE_AP,
+        ESP_WIFI_MODE_STA_AP,
+        NUM_ESP_WIFI_MODES,
+};
+
+static const char *str_wifi_modes[] = {
+        [ESP_WIFI_MODE_OFF]     = "OFF",
+        [ESP_WIFI_MODE_STA]     = "STA",
+        [ESP_WIFI_MODE_AP]      = "AP",
+        [ESP_WIFI_MODE_STA_AP]  = "STA_AP",
+};
+
 struct wifi_event_cb_ctx {
         void (*cb)(int event);
 };
@@ -122,6 +137,11 @@ static struct wifi_nw_cfg __attribute__((unused)) wifi_sta_failsafe = {
         "\0",
 };
 
+static int wifi_mode_get(void)
+{
+        return __wifi_mode;
+}
+
 static void wifi_event_call(int event)
 {
         for (int i = 0; i < ARRAY_SIZE(wifi_event_cbs); i++) {
@@ -148,17 +168,29 @@ static inline void wifi_tx_power_print(int val)
         pr_info("tx power: %s\n", str_wifi_txpwr[val]);
 }
 
-static __attribute__((unused)) void wifi_sta_init(struct wifi_nw_cfg *nw, int txpwr)
+static inline void wifi_tx_power_set(int txpwr)
 {
-        lck_wifi_cb = xSemaphoreCreateMutex();
-
         if (txpwr < ARRAY_SIZE(str_wifi_txpwr)) {
                 wifi_tx_power_print(txpwr);
                 __wifi_tx_power = (wifi_power_t)cfg_wifi_txpwr_convert[txpwr];
         }
+}
+
+static __attribute__((unused)) int wifi_sta_init(struct wifi_nw_cfg *nw, int txpwr)
+{
+        IPAddress local, gw, subnet;
+
+        if (!local.fromString(nw->local) || !gw.fromString(nw->gw) || !subnet.fromString(nw->subnet))
+                return -EINVAL;
+
+        lck_wifi_cb = xSemaphoreCreateMutex();
+
+        wifi_tx_power_set(txpwr);
 
         __wifi_mode = WIFI_STA;
         __wifi_init();
+
+        return 0;
 }
 
 static __attribute__((unused)) int wifi_ap_init(struct wifi_nw_cfg *nw, int txpwr)
@@ -166,19 +198,40 @@ static __attribute__((unused)) int wifi_ap_init(struct wifi_nw_cfg *nw, int txpw
         IPAddress local, gw, subnet;
 
         if (!local.fromString(nw->local) || !gw.fromString(nw->gw) || !subnet.fromString(nw->subnet))
-                return 1;
+                return -EINVAL;
 
         lck_wifi_cb = xSemaphoreCreateMutex();
 
-        if (txpwr < ARRAY_SIZE(str_wifi_txpwr)) {
-                wifi_tx_power_print(txpwr);
-                __wifi_tx_power = (wifi_power_t)cfg_wifi_txpwr_convert[txpwr];
-        }
+        wifi_tx_power_set(txpwr);
 
         __wifi_mode = WIFI_AP;
         __wifi_init();
         WiFi.softAPConfig(local, gw, subnet);
         WiFi.softAP(nw->ssid, nw->passwd);
+
+        return 0;
+}
+
+static __attribute__((unused)) int wifi_sta_ap_init(struct wifi_nw_cfg *sta, struct wifi_nw_cfg *ap, int txpwr)
+{
+        IPAddress local, gw, subnet;
+
+        if (!local.fromString(sta->local) || !gw.fromString(sta->gw) || !subnet.fromString(sta->subnet))
+                return -EINVAL;
+
+        // validate and use for AP
+        if (!local.fromString(ap->local) || !gw.fromString(ap->gw) || !subnet.fromString(ap->subnet))
+                return -EINVAL;
+
+        lck_wifi_cb = xSemaphoreCreateMutex();
+
+        wifi_tx_power_set(txpwr);
+
+        __wifi_mode = WIFI_AP_STA;
+        __wifi_init();
+
+        WiFi.softAPConfig(local, gw, subnet);
+        WiFi.softAP(ap->ssid, ap->passwd);
 
         return 0;
 }
@@ -201,7 +254,10 @@ static __attribute__((unused)) void wifi_connect(struct wifi_nw_cfg *cfg)
 static __attribute__((unused)) void wifi_reconnect(struct wifi_nw_cfg *cfg)
 {
         WiFi.disconnect(true);
-        WiFi.mode(WIFI_OFF);
+
+        if (__wifi_mode != WIFI_AP_STA)
+                WiFi.mode(WIFI_OFF);
+
         vTaskDelay(pdMS_TO_TICKS(500));
         __wifi_init();
         wifi_connect(cfg);

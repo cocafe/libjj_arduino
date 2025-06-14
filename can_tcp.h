@@ -398,10 +398,8 @@ static void task_can_tcp(void *arg)
         pr_info("started\n");
 
         while (1) {
-                while (WiFi.status() == WL_CONNECTED) {
-                        can_tcp_server_worker();
-                        vTaskDelay(pdMS_TO_TICKS(100));
-                }
+                can_tcp_server_worker();
+                vTaskDelay(pdMS_TO_TICKS(100));
         }
 }
 

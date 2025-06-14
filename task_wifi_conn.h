@@ -27,7 +27,7 @@ static void task_wifi_conn(void *arg)
                         }
                 }
 
-                pr_info("wifi connected, RSSI %d dBm\n", WiFi.RSSI());
+                pr_info("wifi connected, RSSI %d dBm, BSSID: %s\n", WiFi.RSSI(), WiFi.BSSIDstr().c_str());
                 wifi_event_call(WIFI_EVENT_CONNECTED);
 
 #ifdef WIFI_CONN_LED_BLINK
