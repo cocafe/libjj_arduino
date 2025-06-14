@@ -744,12 +744,12 @@ static int jkey_int_write(jkey_t *jkey, cJSON *node)
         void *dst = NULL;
 
         if (isnan(val)) {
-                pr_err("key [%s] failed to get number from cJSON\n", jkey->key);
+                pr_err("key [%s] failed to get number from cJSON\n", nullstr_guard(jkey->key));
                 return -EFAULT;
         }
 
         if (jkey->data.sz == 0) {
-                pr_err("data size %zu of key [%s] failed sanity check\n", jkey->data.sz, jkey->key);
+                pr_err("data size %zu of key [%s] failed sanity check\n", jkey->data.sz, nullstr_guard(jkey->key));
                 return -EFAULT;
         }
 
@@ -768,12 +768,12 @@ static int jkey_float_write(jkey_t *jkey, cJSON *node)
         void *dst = NULL;
 
         if (isnan(val)) {
-                pr_err("key [%s] failed to get number from cJSON\n", jkey->key);
+                pr_err("key [%s] failed to get number from cJSON\n", nullstr_guard(jkey->key));
                 return -EFAULT;
         }
 
         if (jkey->data.sz != sizeof(double)) {
-                pr_err("data size %zu of key [%s] failed sanity check\n", jkey->data.sz, jkey->key);
+                pr_err("data size %zu of key [%s] failed sanity check\n", jkey->data.sz, nullstr_guard(jkey->key));
                 return -EFAULT;
         }
 
@@ -837,14 +837,14 @@ static int jkey_string_write(jkey_t *jkey, cJSON *node)
         int err = 0;
 
         if (!json_str) {
-                pr_err("key [%s] failed to get string from cJSON\n", jkey->key);
+                pr_err("key [%s] failed to get string from cJSON\n", nullstr_guard(jkey->key));
                 return -EFAULT;
         }
 
         json_len = strlen(json_str);
 
         if (json_str[0] == '\0') {
-                pr_verbose("key [%s] got empty string\n", jkey->key);
+                pr_verbose("key [%s] got empty string\n", nullstr_guard(jkey->key));
                 return 0;
         }
 
@@ -871,7 +871,7 @@ static int jkey_string_write(jkey_t *jkey, cJSON *node)
                                                  (char **)jkey->strval.map,
                                                  jkey->strval.cnt);
                 } else {
-                        pr_err("cannot convert string to number for key [%s]\n", jkey->key);
+                        pr_err("cannot convert string to number for key [%s]\n", nullstr_guard(jkey->key));
                         return -EINVAL;
                 }
 
@@ -881,7 +881,7 @@ static int jkey_string_write(jkey_t *jkey, cJSON *node)
         case JKEY_TYPE_STRBUF:
         case JKEY_TYPE_STRPTR:
                 if (jkey->data.sz == 0) {
-                        pr_err("key [%s] data size is not inited\n", jkey->key);
+                        pr_err("key [%s] data size is not inited\n", nullstr_guard(jkey->key));
                         return -EINVAL;
                 }
 
@@ -890,7 +890,7 @@ static int jkey_string_write(jkey_t *jkey, cJSON *node)
 
                         if (jkey->type == JKEY_TYPE_STRBUF) {
                                 if (jkey->data.sz < json_len) {
-                                        pr_info("jkey [%s] cannot hold json string\n", jkey->key);
+                                        pr_info("jkey [%s] cannot hold json string\n", nullstr_guard(jkey->key));
                                         len = jkey->data.sz - 1;
                                 }
                         }
@@ -903,7 +903,7 @@ static int jkey_string_write(jkey_t *jkey, cJSON *node)
                 break;
 
         default:
-                pr_err("invalid jkey type: %d, key [%s]\n", jkey->type, jkey->key);
+                pr_err("invalid jkey type: %d, key [%s]\n", jkey->type, nullstr_guard(jkey->key));
                 return -EINVAL;
         }
 
@@ -942,7 +942,7 @@ int jkey_value_write(jkey_t *jkey, cJSON *node)
                 break;
 
         default:
-                pr_err("unsupported cjson type %u for key [%s]\n", node->type, jkey->key);
+                pr_err("unsupported cjson type %u for key [%s]\n", node->type, nullstr_guard(jkey->key));
                 err = -EINVAL;
                 break;
         }
@@ -959,12 +959,12 @@ int jkey_cjson_input(jkey_t *jkey, cJSON *node)
                 return 0;
 
         if (!jkey->data.ref) {
-                pr_dbg("key [%s] data ref is NULL\n", jkey->key);
+                pr_dbg("key [%s] data ref is NULL\n", nullstr_guard(jkey->key));
                 return 0;
         }
 
         if (0 == is_cjson_type(jkey->cjson_type, node->type)) {
-                pr_dbg("key [%s] node type mismatched\n", jkey->key);
+                pr_dbg("key [%s] node type mismatched\n", nullstr_guard(jkey->key));
                 return 0;
         }
 
@@ -1006,17 +1006,17 @@ static int jkey_array_key_check(jkey_t *arr)
                 return -ECANCELED;
 
         if (arr->child_cnt == 0) {
-                pr_err("array key [%s] does not have any child keys to parse itself\n", arr->key);
+                pr_err("array key [%s] does not have any child keys to parse itself\n", nullstr_guard(arr->key));
                 return -EINVAL;
         }
 
         if (arr->obj.base_ref == NULL) {
-                pr_info("array key [%s] did not define data reference\n", arr->key);
+                pr_info("array key [%s] did not define data reference\n", nullstr_guard(arr->key));
                 return -EINVAL;
         }
 
         if (arr->obj.sz == 0) {
-                pr_err("array key [%s] element size is 0\n", arr->key);
+                pr_err("array key [%s] element size is 0\n", nullstr_guard(arr->key));
                 return -EINVAL;
         }
 
@@ -1026,7 +1026,7 @@ static int jkey_array_key_check(jkey_t *arr)
 static int jkey_array_data_key_check(jkey_t *arr_key, jkey_t *data_key)
 {
         if (!data_key->data.ref_parent && !data_key->obj.base_ref_parent) {
-                pr_err("array [%s] data key should ref its parent\n", arr_key->key);
+                pr_err("array [%s] data key should ref its parent\n", nullstr_guard(arr_key->key));
                 return -EINVAL;
         }
 
@@ -1043,7 +1043,7 @@ static int jkey_base_ref_alloc(jkey_t *jkey, size_t base_sz)
                 return 0;
 
         if (!base_sz) {
-                pr_err("key [%s] allocate size is 0\n", jkey->key);
+                pr_err("key [%s] allocate size is 0\n", nullstr_guard(jkey->key));
                 return -EINVAL;
         }
 
@@ -1067,7 +1067,7 @@ static int jkey_fixed_array_alloc(jkey_t *arr) {
         size_t base_sz = arr->obj.arr.fixed.ele_cnt * arr->obj.sz;
 
         if (!arr->obj.arr.fixed.ele_cnt) {
-                pr_err("array [%s] did not define max element cnt\n", arr->key);
+                pr_err("array [%s] did not define max element cnt\n", nullstr_guard(arr->key));
                 return -EINVAL;
         }
 
@@ -1087,7 +1087,7 @@ static int jkey_fixed_grow_array_ref_update(jkey_t *arr_key, jkey_t *data_key, s
         void *base_ref = arr_key->obj.base_ref;
 
         if (0 == arr_key->obj.sz) {
-                pr_err("array [%s] invalid element size\n", arr_key->key);
+                pr_err("array [%s] invalid element size\n", nullstr_guard(arr_key->key));
                 return -EINVAL;
         }
 
@@ -1095,7 +1095,7 @@ static int jkey_fixed_grow_array_ref_update(jkey_t *arr_key, jkey_t *data_key, s
                 base_ref = *((uint8_t **)arr_key->obj.base_ref);
 
         if (base_ref == NULL) {
-                pr_dbg("array [%s] points to NULL\n", arr_key->key);
+                pr_dbg("array [%s] points to NULL\n", nullstr_guard(arr_key->key));
                 return -ENODATA;
         }
 
@@ -1119,20 +1119,20 @@ static int jkey_grow_array_realloc(jkey_t *arr, size_t idx)
         }
 
         if (!arr->obj.base_ref_ptr || !arr->obj.base_ref || !arr->obj.sz) {
-                pr_err("invalid grow array [%s]\n", arr->key);
+                pr_err("invalid grow array [%s]\n", nullstr_guard(arr->key));
                 return -EINVAL;
         }
 
         base_ref = *(uint8_t **)arr->obj.base_ref;
         if (base_ref == NULL) {
                 if (!arr->obj.base_ref_malloc) {
-                        pr_err("array [%s] refer NULL pointer and not do_malloc\n", arr->key);
+                        pr_err("array [%s] refer NULL pointer and not do_malloc\n", nullstr_guard(arr->key));
                         return -EINVAL;
                 }
 
                 base_ref = calloc(1, new_sz);
                 if (!base_ref) {
-                        pr_err("array [%s] failed to allocate %zu bytes\n", arr->key, new_sz);
+                        pr_err("array [%s] failed to allocate %zu bytes\n", nullstr_guard(arr->key), new_sz);
                         return -ENOMEM;
                 }
 
@@ -1142,7 +1142,7 @@ static int jkey_grow_array_realloc(jkey_t *arr, size_t idx)
 
                 base_ref = realloc_safe(base_ref, old_sz, new_sz);
                 if (!base_ref) {
-                        pr_err("failed to realloc() array [%s] data\n", arr->key);
+                        pr_err("failed to realloc() array [%s] data\n", nullstr_guard(arr->key));
                         return -ENOMEM;
                 }
         }
@@ -1158,7 +1158,7 @@ static int jkey_grow_array_cnt_incr(jkey_t *arr)
         size_t *extern_ele_cnt = arr->obj.arr.grow.ext_ele_cnt;
 
         if (!extern_ele_cnt) {
-                pr_err("grow array key [%s] did not define extern element counter\n", arr->key);
+                pr_err("grow array key [%s] did not define extern element counter\n", nullstr_guard(arr->key));
                 return -EINVAL;
         }
 
@@ -1174,18 +1174,18 @@ static int jkey_list_array_alloc(jkey_t *arr_key, void **container)
         void *new_ctnr;
 
         if (!head) {
-                pr_err("list array [%s] has NULL list_head\n", arr_key->key);
+                pr_err("list array [%s] has NULL list_head\n", nullstr_guard(arr_key->key));
                 return -EINVAL;
         }
 
         if (arr_key->obj.sz == 0) {
-                pr_err("list array [%s] container size is 0\n", arr_key->key);
+                pr_err("list array [%s] container size is 0\n", nullstr_guard(arr_key->key));
                 return -EINVAL;
         }
 
         new_ctnr = calloc(1, arr_key->obj.sz);
         if (!new_ctnr) {
-                pr_err("list array [%s] failed to allocate %zu bytes\n", arr_key->key, arr_key->obj.sz);
+                pr_err("list array [%s] failed to allocate %zu bytes\n", nullstr_guard(arr_key->key), arr_key->obj.sz);
                 return -ENOMEM;
         }
 
@@ -1315,7 +1315,7 @@ static void cjson_node_print(cJSON *node, int depth, const size_t *arr_idx)
         if (arr_idx)
                 printf("[%zu] ", *arr_idx);
         else if (node->string)
-                printf("\"%s\" ", node->string);
+                printf("\"%s\" ", nullstr_guard(node->string));
 
         switch (node->type) {
         case cJSON_False:
@@ -1400,7 +1400,7 @@ int jkey_cjson_load_recursive(jkey_t *jkey, cJSON *node, int depth)
                         cjson_node_print(child_node, depth + 1, &i);
 
                         if (!is_cjson_type(data_key->cjson_type, child_node->type)) {
-                                pr_dbg("array [%s] child node #%zu type mismatched, ignored\n", node->string, i);
+                                pr_dbg("array [%s] child node #%zu type mismatched, ignored\n", nullstr_guard(node->string), i);
                                 continue;
                         }
 
@@ -1409,7 +1409,7 @@ int jkey_cjson_load_recursive(jkey_t *jkey, cJSON *node, int depth)
 
                         if (arr_key->type == JKEY_TYPE_FIXED_ARRAY) {
                                 if (i >= arr_key->obj.arr.fixed.ele_cnt) {
-                                        pr_info("array [%s] input exceeds max element count allocated\n", node->string);
+                                        pr_info("array [%s] input exceeds max element count allocated\n", nullstr_guard(node->string));
                                         break;
                                 }
 
@@ -1442,7 +1442,7 @@ int jkey_cjson_load_recursive(jkey_t *jkey, cJSON *node, int depth)
                         } else {
                                 err = jkey_cjson_input(data_key, child_node);
                                 if (err) {
-                                        pr_err("failed to parse #%zu item of array [%s]\n", i, node->string);
+                                        pr_err("failed to parse #%zu item of array [%s]\n", i, nullstr_guard(node->string));
                                         return err;
                                 }
                         }
@@ -1479,7 +1479,7 @@ int jkey_cjson_load_recursive(jkey_t *jkey, cJSON *node, int depth)
                         child_key = jkey_child_key_find(jkey, child_node);
                         if (!child_key) {
                                 pr_dbg("child key [%s] is not found in object [%s]\n",
-                                       child_node->string, node->string);
+                                       nullstr_guard(child_node->string), nullstr_guard(node->string));
                                 continue;
                         }
 
@@ -1535,7 +1535,7 @@ int jbuf_traverse_print_pre(jkey_t *jkey, int has_next, int depth, int argc, va_
         printf_wrap(buf, buf_pos, buf_len, "%.*s", depth, json_indent);
 
         if (jkey->key)
-                printf_wrap(buf, buf_pos, buf_len, "\"%s\" : ", jkey->key);
+                printf_wrap(buf, buf_pos, buf_len, "\"%s\" : ", nullstr_guard(jkey->key));
 
         switch (jkey->type) {
         case JKEY_TYPE_OBJECT:
@@ -1625,7 +1625,6 @@ int jbuf_traverse_print_post(jkey_t *jkey, int has_next, int depth, int argc, va
         }
 
         if (!ref) {
-                pr_info("!ref\n");
                 printf_wrap(buf, buf_pos, buf_len, "null");
                 goto line_ending;
         }
@@ -1664,7 +1663,7 @@ int jbuf_traverse_print_post(jkey_t *jkey, int has_next, int depth, int argc, va
 
                 if (jkey->strval.map) {
                         if (d < jkey->strval.cnt)
-                                printf_wrap(buf, buf_pos, buf_len, "\"%s\"", jkey->strval.map[d]);
+                                printf_wrap(buf, buf_pos, buf_len, "\"%s\"", nullstr_guard(jkey->strval.map[d]));
                         else
                                 printf_wrap(buf, buf_pos, buf_len, "null");
                 } else if (jkey->data.int_base == 16) {
@@ -2113,7 +2112,7 @@ int jkey_base_ref_free(jkey_t *jkey)
 
         base_ref = *(uint8_t **)jkey->obj.base_ref;
         if (!base_ref) {
-                pr_dbg("key [%s] did not allocated data\n", jkey->key);
+                pr_dbg("key [%s] did not allocated data\n", nullstr_guard(jkey->key));
                 return 0;
         }
 

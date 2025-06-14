@@ -12,7 +12,6 @@ void jbuf_wifi_nw_cfg_add(jbuf_t *b, const char *key, struct wifi_nw_cfg *cfg)
         jbuf_strbuf_add(b, "local", cfg->local);
         jbuf_strbuf_add(b, "gw", cfg->gw);
         jbuf_strbuf_add(b, "subnet", cfg->subnet);
-        jbuf_strval_add(b, "tx_pwr", cfg->tx_pwr, str_wifi_txpwr);
 
         jbuf_obj_close(b, obj);
 }

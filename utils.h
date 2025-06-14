@@ -54,6 +54,8 @@ typedef uint64_t __be64;
 #define __stringify_1(x...)     #x
 #define __stringify(x...)       __stringify_1(x)
 
+#define nullstr_guard(x)        ((x) ? (x) : "(null)")
+
 #ifndef ARRAY_SIZE
 # define ARRAY_SIZE(x)           (int)(sizeof(x) / sizeof(x[0]))
 #endif

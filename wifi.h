@@ -110,7 +110,6 @@ struct wifi_nw_cfg {
         char local[32];
         char gw[32];
         char subnet[32];
-        uint8_t tx_pwr;
 };
 
 static struct wifi_nw_cfg __attribute__((unused)) wifi_sta_failsafe = {
@@ -121,7 +120,6 @@ static struct wifi_nw_cfg __attribute__((unused)) wifi_sta_failsafe = {
         "\0",
         "\0",
         "\0",
-        WIFI_POWER_2dBm,
 };
 
 static void wifi_event_call(int event)
@@ -150,20 +148,20 @@ static inline void wifi_tx_power_print(int val)
         pr_info("tx power: %s\n", str_wifi_txpwr[val]);
 }
 
-static __attribute__((unused)) void wifi_sta_init(struct wifi_nw_cfg *nw)
+static __attribute__((unused)) void wifi_sta_init(struct wifi_nw_cfg *nw, int txpwr)
 {
         lck_wifi_cb = xSemaphoreCreateMutex();
 
-        if (nw->tx_pwr < ARRAY_SIZE(str_wifi_txpwr)) {
-                wifi_tx_power_print(nw->tx_pwr);
-                __wifi_tx_power = (wifi_power_t)cfg_wifi_txpwr_convert[nw->tx_pwr];
+        if (txpwr < ARRAY_SIZE(str_wifi_txpwr)) {
+                wifi_tx_power_print(txpwr);
+                __wifi_tx_power = (wifi_power_t)cfg_wifi_txpwr_convert[txpwr];
         }
 
         __wifi_mode = WIFI_STA;
         __wifi_init();
 }
 
-static __attribute__((unused)) int wifi_ap_init(struct wifi_nw_cfg *nw)
+static __attribute__((unused)) int wifi_ap_init(struct wifi_nw_cfg *nw, int txpwr)
 {
         IPAddress local, gw, subnet;
 
@@ -172,9 +170,9 @@ static __attribute__((unused)) int wifi_ap_init(struct wifi_nw_cfg *nw)
 
         lck_wifi_cb = xSemaphoreCreateMutex();
 
-        if (nw->tx_pwr < ARRAY_SIZE(str_wifi_txpwr)) {
-                wifi_tx_power_print(nw->tx_pwr);
-                __wifi_tx_power = (wifi_power_t)cfg_wifi_txpwr_convert[nw->tx_pwr];
+        if (txpwr < ARRAY_SIZE(str_wifi_txpwr)) {
+                wifi_tx_power_print(txpwr);
+                __wifi_tx_power = (wifi_power_t)cfg_wifi_txpwr_convert[txpwr];
         }
 
         __wifi_mode = WIFI_AP;

@@ -254,16 +254,20 @@ static void save_init(int (*jbuf_maker)(jbuf_t *, struct config *))
         pr_info("sizeof save: %u, eeprom size: %lu\n", sizeof(struct save), eeprom_size);
 
         if (save_read(&g_save) != 0) {
+                uint8_t f = json_print_on_load;
+
                 pr_info("failed to read save from flash, create new one\n");
 
                 save_create(&g_save, &g_cfg_default);
 
+                json_print_on_load = 1;
                 if (!config_json_load(&g_save.cfg)) {
                         pr_info("factory json config found, config merged with it\n");
 
                         if (!config_json_save(&g_save.cfg))
                                 pr_info("factory json updated\n");
                 }
+                json_print_on_load = f;
 
                 save_write(&g_save);
         }

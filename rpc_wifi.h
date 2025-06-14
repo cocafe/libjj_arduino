@@ -3,7 +3,7 @@
 
 void rpc_wifi_add(void)
 {
-        http_rpc.on("/wifi_cfg", HTTP_GET, [](){
+        http_rpc.on("/wifi_sta_cfg", HTTP_GET, [](){
                 struct wifi_nw_cfg tmp = { };
                 struct http_cfg_param params[] = {
                         HTTP_CFG_PARAM_STR(ssid, tmp.ssid),
@@ -16,7 +16,7 @@ void rpc_wifi_add(void)
                 };
                 int modified = 0;
 
-                memcpy(&tmp, &g_cfg.nw_cfg, sizeof(tmp));
+                memcpy(&tmp, &g_cfg.nw_sta_cfg, sizeof(tmp));
 
                 if (http_param_help_print(http_rpc, params, ARRAY_SIZE(params)))
                         return;
@@ -47,7 +47,7 @@ void rpc_wifi_add(void)
                                 }
                         }
 
-                        memcpy(&g_cfg.nw_cfg, &tmp, sizeof(g_cfg.nw_cfg));
+                        memcpy(&g_cfg.nw_sta_cfg, &tmp, sizeof(g_cfg.nw_sta_cfg));
 
                         http_rpc.send(200, "text/plain", "OK\n");
                 } else {
@@ -55,13 +55,13 @@ void rpc_wifi_add(void)
                         size_t c = 0;
 
                         c += snprintf(&buf[c], sizeof(buf) - c, "{\n");
-                        c += snprintf(&buf[c], sizeof(buf) - c, "  \"ssid\": \"%s\",\n", g_cfg.nw_cfg.ssid);
-                        c += snprintf(&buf[c], sizeof(buf) - c, "  \"passwd\": \"%s\",\n", g_cfg.nw_cfg.passwd);
-                        c += snprintf(&buf[c], sizeof(buf) - c, "  \"dhcp\": %d,\n", g_cfg.nw_cfg.use_dhcp);
-                        c += snprintf(&buf[c], sizeof(buf) - c, "  \"local\": \"%s\",\n", g_cfg.nw_cfg.local);
-                        c += snprintf(&buf[c], sizeof(buf) - c, "  \"subnet\": \"%s\",\n", g_cfg.nw_cfg.subnet);
-                        c += snprintf(&buf[c], sizeof(buf) - c, "  \"gw\": \"%s\",\n", g_cfg.nw_cfg.gw);
-                        c += snprintf(&buf[c], sizeof(buf) - c, "  \"sta_timeout_sec\": %hu\n", g_cfg.nw_cfg.timeout_sec);
+                        c += snprintf(&buf[c], sizeof(buf) - c, "  \"ssid\": \"%s\",\n", g_cfg.nw_sta_cfg.ssid);
+                        c += snprintf(&buf[c], sizeof(buf) - c, "  \"passwd\": \"%s\",\n", g_cfg.nw_sta_cfg.passwd);
+                        c += snprintf(&buf[c], sizeof(buf) - c, "  \"dhcp\": %d,\n", g_cfg.nw_sta_cfg.use_dhcp);
+                        c += snprintf(&buf[c], sizeof(buf) - c, "  \"local\": \"%s\",\n", g_cfg.nw_sta_cfg.local);
+                        c += snprintf(&buf[c], sizeof(buf) - c, "  \"subnet\": \"%s\",\n", g_cfg.nw_sta_cfg.subnet);
+                        c += snprintf(&buf[c], sizeof(buf) - c, "  \"gw\": \"%s\",\n", g_cfg.nw_sta_cfg.gw);
+                        c += snprintf(&buf[c], sizeof(buf) - c, "  \"sta_timeout_sec\": %hu\n", g_cfg.nw_sta_cfg.timeout_sec);
                         c += snprintf(&buf[c], sizeof(buf) - c, "}\n");
 
                         http_rpc.send(200, "text/plain", buf);
@@ -94,7 +94,7 @@ void rpc_wifi_add(void)
                                 return;
                         }
 
-                        g_cfg.nw_cfg.tx_pwr = i;
+                        g_cfg.wifi_txpwr = i;
                         WiFi.setTxPower((wifi_power_t)(cfg_wifi_txpwr_convert[i]));
 
                         http_rpc.send(200, "text/plain", "OK\n");
@@ -105,7 +105,7 @@ void rpc_wifi_add(void)
                         for (size_t i = 0; i < ARRAY_SIZE(str_wifi_txpwr); i++) {
                                 c += snprintf(&buf[c], sizeof(buf) - c, "%s %s\n",
                                         str_wifi_txpwr[i],
-                                        g_cfg.nw_cfg.tx_pwr == i ? "*" : "");
+                                        g_cfg.wifi_txpwr == i ? "*" : "");
                         }
 
                         http_rpc.send(200, "text/plain", buf);
