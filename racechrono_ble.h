@@ -26,6 +26,7 @@ static uint64_t cnt_can_ble_send; // send to remote
 #ifdef CAN_BLE_LED_BLINK
 static uint8_t can_ble_txrx = 0;
 static uint8_t can_ble_led = CAN_BLE_LED_BLINK;
+static uint8_t can_ble_led_blink = 1;
 #endif // CAN_BLE_LED_BLINK
 
 using PidExtra = struct
@@ -127,6 +128,9 @@ static void task_can_ble_led_blink(void *arg)
                 can_ble_txrx = 0;
 
                 vTaskDelay(pdMS_TO_TICKS(500));
+
+                if (!can_ble_led_blink)
+                        continue;
 
                 if (can_ble_txrx) {
                         static uint8_t last_on = 0;

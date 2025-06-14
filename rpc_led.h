@@ -1,8 +1,6 @@
 #ifndef __LIBJJ_RPC_LED_H__
 #define __LIBJJ_RPC_LED_H__
 
-#include <WebServer.h>
-
 void rpc_led_add(void)
 {
 #ifdef HAVE_WS2812_LED
@@ -13,7 +11,7 @@ void rpc_led_add(void)
                         uint32_t i = strtoull_wrap(arg.c_str(), 10, &err);
                         
                         if (err || i > 255) {
-                                http_rpc.send(200, "text/plain", "Invalid value\n");
+                                http_rpc.send(500, "text/plain", "invalid value\n");
                                 return;
                         }
 

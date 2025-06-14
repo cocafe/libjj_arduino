@@ -1,8 +1,6 @@
 #ifndef __LIBJJ_RPC_WIFI_H__
 #define __LIBJJ_RPC_WIFI_H__
 
-#include <WebServer.h>
-
 void rpc_wifi_add(void)
 {
         http_rpc.on("/wifi_cfg", HTTP_GET, [](){

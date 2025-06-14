@@ -15,8 +15,9 @@
 #include "jkey.h"
 #include "json.h"
 
+// MUST start with '/'
 #ifndef CONFIG_SAVE_JSON_PATH
-#define CONFIG_SAVE_JSON_PATH           ("/config.json")
+#define CONFIG_SAVE_JSON_PATH           ("/factory.json")
 #endif
 
 #define SAVE_MAGIC                      (0x00C0CAFE)
@@ -42,12 +43,15 @@ static uint8_t current_fw_hash[32] = { };
 
 static int (*jbuf_cfg_make)(jbuf_t *, struct config *);
 
-static int config_json_load(struct save *save)
+static int config_json_load(struct config *cfg)
 {
         jbuf_t jb = { };
         int err;
 
-        if ((err = jbuf_cfg_make(&jb, &save->cfg)))
+        if (unlikely(!jbuf_cfg_make))
+                return -ENOTSUP;
+
+        if ((err = jbuf_cfg_make(&jb, cfg)))
                 return err;
 
         err = jbuf_json_file_load(&jb, CONFIG_SAVE_JSON_PATH);
@@ -57,12 +61,15 @@ static int config_json_load(struct save *save)
         return err;
 }
 
-static int config_json_save(struct save *save)
+static int config_json_save(struct config *cfg)
 {
         jbuf_t jb = { };
         int err;
 
-        if ((err = jbuf_cfg_make(&jb, &save->cfg)))
+        if (unlikely(!jbuf_cfg_make))
+                return -ENOTSUP;
+
+        if ((err = jbuf_cfg_make(&jb, cfg)))
                 return err;
 
         err = jbuf_json_file_save(&jb, CONFIG_SAVE_JSON_PATH);
@@ -70,6 +77,11 @@ static int config_json_save(struct save *save)
         jbuf_deinit(&jb);
 
         return err;
+}
+
+static int config_json_delete(void)
+{
+        return spiffs_file_delete(CONFIG_SAVE_JSON_PATH);
 }
 
 static int save_fw_hash_verify(void)
@@ -209,11 +221,7 @@ static void save_write(struct save *save)
 
         __save_write(SAVE_PAGE, save);
 
-        pr_info("saved to flash\n");
-
-        if (jbuf_cfg_make && !config_json_save(&g_save)) {
-                pr_info("config json saved\n");
-        }
+        pr_info("saved to EEPROM\n");
 }
 
 static void save_update(struct save *save, struct config *cfg)
@@ -250,10 +258,11 @@ static void save_init(int (*jbuf_maker)(jbuf_t *, struct config *))
 
                 save_create(&g_save, &g_cfg_default);
 
-                if (jbuf_cfg_make) {
-                        if (!config_json_load(&g_save)) {
-                                pr_info("previous json config found, merged with it\n");
-                        }
+                if (!config_json_load(&g_save.cfg)) {
+                        pr_info("factory json config found, config merged with it\n");
+
+                        if (!config_json_save(&g_save.cfg))
+                                pr_info("factory json updated\n");
                 }
 
                 save_write(&g_save);
@@ -279,11 +288,19 @@ static __attribute__((unused)) void save_reset_gpio_check(unsigned gpio_rst)
                 } else if (now - ts_pressed >= 3000) {
                         memcpy(&g_cfg, &g_cfg_default, sizeof(g_cfg));
                         save_update(&g_save, &g_cfg);
+
+                        // use factory config if found
+                        if (!config_json_load(&g_save.cfg)) {
+                                pr_info("factory json config found, config merged with it\n");
+                        }
+
                         save_write(&g_save);
 
                         pr_info("config reset performed\n");
 
                         while (digitalRead(gpio_rst) == LOW) {
+                                now = esp32_millis();
+
 #ifdef HAVE_WS2812_LED
                                 led_on(LED_WS2812, 255, 255, 0);
                                 delay(250);
@@ -297,6 +314,32 @@ static __attribute__((unused)) void save_reset_gpio_check(unsigned gpio_rst)
                                 led_off(LED_SIMPLE_AUX);
                                 delay(250);
 #endif // HAVE_WS2812_LED
+
+                                if (now - ts_pressed >= 10 * 1000) {
+                                        // delete factory.json
+                                        // config_json_delete();
+
+                                        // use program default config
+                                        memcpy(&g_cfg, &g_cfg_default, sizeof(g_cfg));
+                                        save_update(&g_save, &g_cfg);
+                                        save_write(&g_save);
+
+                                        while (digitalRead(gpio_rst) == LOW) {
+#ifdef HAVE_WS2812_LED
+                                                led_on(LED_WS2812, 255, 255, 255);
+                                                delay(250);
+                                                led_off(LED_WS2812);
+                                                delay(250);
+#else
+                                                led_on(LED_SIMPLE_MAIN, 0, 0, 0);
+                                                led_on(LED_SIMPLE_AUX, 0, 0, 0);
+                                                delay(125);
+                                                led_off(LED_SIMPLE_MAIN);
+                                                led_off(LED_SIMPLE_AUX);
+                                                delay(125);
+#endif // HAVE_WS2812_LED
+                                        }
+                                }
                         }
 
                         ESP.restart();

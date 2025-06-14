@@ -23,6 +23,11 @@ struct wifi_event_cb_ctx {
         void (*cb)(int event);
 };
 
+#ifdef WIFI_CONN_LED_BLINK
+uint8_t wifi_led = WIFI_CONN_LED_BLINK;
+uint8_t wifi_led_blink = 1;
+#endif
+
 static struct wifi_event_cb_ctx wifi_event_cbs[4] = { };
 static uint8_t wifi_event_cb_cnt;
 
@@ -209,10 +214,6 @@ static __attribute__((unused)) int wifi_first_connect(struct wifi_nw_cfg **cfgs,
         int idx = 0;
         int ok = 0;
 
-#ifdef WIFI_CONN_LED_BLINK
-        uint8_t wifi_led = WIFI_CONN_LED_BLINK;
-#endif
-
         while (!ok) {
                 struct wifi_nw_cfg *cfg = cfgs[idx];
                 int timeout = cfg->timeout_sec ? cfg->timeout_sec : WIFI_CONNECT_TIMEOUT_SEC;
@@ -230,10 +231,14 @@ static __attribute__((unused)) int wifi_first_connect(struct wifi_nw_cfg **cfgs,
                         }
 
 #ifdef WIFI_CONN_LED_BLINK
-                        led_on(wifi_led, 255, 0, 0);
-                        vTaskDelay(pdMS_TO_TICKS(500));
-                        led_off(wifi_led);
-                        vTaskDelay(pdMS_TO_TICKS(500));
+                        if (wifi_led_blink) {
+                                led_on(wifi_led, 255, 0, 0);
+                                vTaskDelay(pdMS_TO_TICKS(500));
+                                led_off(wifi_led);
+                                vTaskDelay(pdMS_TO_TICKS(500));
+                        } else {
+                                vTaskDelay(pdMS_TO_TICKS(1000));
+                        }
 #else
                         vTaskDelay(pdMS_TO_TICKS(1000));
 #endif // #ifdef WIFI_CONN_LED_BLINK

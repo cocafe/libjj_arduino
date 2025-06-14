@@ -1,8 +1,6 @@
 #ifndef __LIBJJ_RPC_TWAI_H__
 #define __LIBJJ_RPC_TWAI_H__
 
-#include <WebServer.h>
-
 void rpc_twai_add(void)
 {
 #ifdef CONFIG_HAVE_CAN_TWAI
@@ -12,7 +10,7 @@ void rpc_twai_add(void)
                 struct http_cfg_param params[] = {
                         HTTP_CFG_PARAM_INT(pin_tx, tmp.pin_tx),
                         HTTP_CFG_PARAM_INT(pin_rx, tmp.pin_rx),
-                        HTTP_CFG_PARAM_STRMAP(can_mode, tmp.mode, cfg_twai_mode),
+                        HTTP_CFG_PARAM_STRVAL(can_mode, tmp.mode, str_twai_mode),
                         HTTP_CFG_PARAM_INT(can_baudrate, tmp.baudrate),
                         HTTP_CFG_PARAM_INT(rx_qlen, tmp.rx_qlen),
 #ifdef CAN_TWAI_USE_RINGBUF
@@ -44,8 +42,8 @@ void rpc_twai_add(void)
                         c += snprintf(&buf[c], sizeof(buf) - c, "{\n");
                         c += snprintf(&buf[c], sizeof(buf) - c, "  \"pin_tx\": %hhu,\n", g_cfg.twai_cfg.pin_tx);
                         c += snprintf(&buf[c], sizeof(buf) - c, "  \"pin_rx\": %hhu,\n", g_cfg.twai_cfg.pin_rx);
-                        c += snprintf(&buf[c], sizeof(buf) - c, "  \"can_mode\": \"%s\",\n", cfg_twai_mode[g_cfg.twai_cfg.mode].str);
-                        c += snprintf(&buf[c], sizeof(buf) - c, "  \"can_baudrate\": \"%s\",\n", cfg_twai_baudrate[g_cfg.twai_cfg.baudrate].str);
+                        c += snprintf(&buf[c], sizeof(buf) - c, "  \"can_mode\": \"%s\",\n", str_twai_mode[g_cfg.twai_cfg.mode]);
+                        c += snprintf(&buf[c], sizeof(buf) - c, "  \"can_baudrate\": \"%s\",\n", str_can_baudrates[g_cfg.twai_cfg.baudrate]);
                         c += snprintf(&buf[c], sizeof(buf) - c, "  \"rx_qlen\": %hhu,\n", g_cfg.twai_cfg.rx_qlen);
 #ifdef CAN_TWAI_USE_RINGBUF
                         c += snprintf(&buf[c], sizeof(buf) - c, "  \"rx_cpuid\": %hhu,\n", g_cfg.twai_cfg.rx_cpuid);

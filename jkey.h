@@ -17,6 +17,8 @@
 #define JBUF_INIT_ALLOC_KEYS            (20)
 #define JBUF_GROW_ARR_REALLOC_INCR      (5)
 
+static uint8_t json_print_on_load = 0;
+
 typedef struct json_key jkey_t;
 typedef struct json_key_buf jbuf_t;
 typedef int (*jbuf_traverse_cb)(jkey_t *jkey, int has_next, int depth, int argc, va_list arg);
@@ -1301,8 +1303,8 @@ static jkey_t *jkey_child_key_find(jkey_t *parent, cJSON *child_node)
 
 static void cjson_node_print(cJSON *node, int depth, const size_t *arr_idx)
 {
-        // if (!json_print)
-        //         return;
+        if (!json_print_on_load)
+                return;
 
         // \0 is padded with [] declaration
         if (depth >= (sizeof(json_indent) - 1))

@@ -52,6 +52,7 @@ static uint64_t cnt_can_tcp_send;       // send to remote
 #ifdef CAN_TCP_LED_BLINK
 static uint8_t can_tcp_txrx = 0;
 static uint8_t can_tcp_led = CAN_TCP_LED_BLINK;
+static uint8_t can_tcp_led_blink = 1;
 
 static void task_can_tcp_led_blink(void *arg)
 {
@@ -59,6 +60,9 @@ static void task_can_tcp_led_blink(void *arg)
                 can_tcp_txrx = 0;
 
                 vTaskDelay(pdMS_TO_TICKS(500));
+
+                if (!can_tcp_led_blink)
+                        continue;
 
                 if (!curr_can_tcp_client)
                         continue;

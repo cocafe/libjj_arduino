@@ -1,8 +1,6 @@
 #ifndef __LIBJJ_RPC_SPIFFS_H__
 #define __LIBJJ_RPC_SPIFFS_H__
 
-#include <WebServer.h>
-
 void rpc_spiffs_add(void)
 {
         if (!have_spiffs)

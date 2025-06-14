@@ -1,8 +1,6 @@
 #ifndef __LIBJJ_RPC_ESP_H__
 #define __LIBJJ_RPC_ESP_H__
 
-#include <WebServer.h>
-
 void rpc_esp32_add(void)
 {
         http_rpc.on("/esp32_reset", HTTP_GET, [](){
@@ -23,7 +21,7 @@ void rpc_esp32_add(void)
                         sampling_ms = strtoull_wrap(_val.c_str(), 10, &err);
 
                         if (err) {
-                                http_rpc.send(200, "text/plain", "Invalid value\n");
+                                http_rpc.send(500, "text/plain", "invalid value\n");
                                 return;
                         }
                 }
@@ -35,7 +33,7 @@ void rpc_esp32_add(void)
                         bufsz = strtoull_wrap(_val.c_str(), 10, &err);
 
                         if (err) {
-                                http_rpc.send(200, "text/plain", "Invalid value\n");
+                                http_rpc.send(500, "text/plain", "invalid value\n");
                                 return;
                         }
                 }

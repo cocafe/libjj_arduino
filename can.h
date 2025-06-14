@@ -129,6 +129,7 @@ static void task_can_recv(void *arg)
 #ifdef CAN_LED_BLINK
 static uint8_t can_txrx = 0;
 static uint8_t can_led = CAN_LED_BLINK;
+static uint8_t can_led_blink = 1;
 
 static void task_can_led_blink(void *arg)
 {
@@ -136,6 +137,9 @@ static void task_can_led_blink(void *arg)
                 can_txrx = 0;
 
                 vTaskDelay(pdMS_TO_TICKS(500));
+
+                if (!can_led_blink)
+                        continue;
 
                 if (can_txrx) {
                         static uint8_t last_on = 0;

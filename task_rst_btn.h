@@ -19,7 +19,7 @@ static void task_rst_btn(void *arg)
                         if (ts_pressed == 0) {
                                 ts_pressed = now;
                                 continue;
-                        } else if (now - ts_pressed >= 1000) {
+                        } else if (now - ts_pressed >= 5 * 1000) {
                                 while (digitalRead(GPIO_BTN_RST) == LOW) {
 #ifdef HAVE_WS2812_LED
                                         led_on(LED_WS2812, 255, 0, 255);
@@ -27,6 +27,8 @@ static void task_rst_btn(void *arg)
                                         led_off(LED_WS2812);
                                         vTaskDelay(pdMS_TO_TICKS(250));
 #else
+                                        // TODO: pause other led blink task
+
                                         led_on(LED_SIMPLE_MAIN, 0, 0, 0);
                                         led_on(LED_SIMPLE_AUX, 0, 0, 0);
                                         vTaskDelay(pdMS_TO_TICKS(250));

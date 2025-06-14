@@ -1,8 +1,6 @@
 #ifndef __LIBJJ_RPC_UDPMC_H__
 #define __LIBJJ_RPC_UDPMC_H__
 
-#include <WebServer.h>
-
 static void rpc_udp_mc_cfg(WebServer &http_rpc, struct udp_mc_cfg *cfg)
 {
         struct udp_mc_cfg tmp;

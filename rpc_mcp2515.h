@@ -1,8 +1,6 @@
 #ifndef __LIBJJ_RPC_MCP2515_H__
 #define __LIBJJ_RPC_MCP2515_H__
 
-#include <WebServer.h>
-
 void rpc_mcp2515_add(void)
 {
 #ifdef CONFIG_HAVE_CAN_MCP2515

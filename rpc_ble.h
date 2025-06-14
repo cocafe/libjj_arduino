@@ -1,8 +1,6 @@
 #ifndef __LIBJJ_RPC_BLE_H__
 #define __LIBJJ_RPC_BLE_H__
 
-#include <WebServer.h>
-
 void rpc_ble_add(void)
 {
         http_rpc.on("/ble_cfg", HTTP_GET, [](){

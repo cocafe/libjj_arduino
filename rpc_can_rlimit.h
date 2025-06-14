@@ -1,8 +1,6 @@
 #ifndef __LIBJJ_RPC_CAN_RLIMIT_H__
 #define __LIBJJ_RPC_CAN_RLIMIT_H__
 
-#include <WebServer.h>
-
 void rpc_can_rlimit_add(void)
 {
 #ifdef CONFIG_HAVE_CANTCP_RLIMIT

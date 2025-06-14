@@ -85,6 +85,17 @@ int spiffs_file_write(const char *path, uint8_t *buf, size_t bufsz)
         return err;
 }
 
+int spiffs_file_delete(const char *path)
+{
+        if (unlikely(!have_spiffs))
+                return -ENODEV;
+        
+        if (SPIFFS.remove(path))
+                return 0;
+        
+        return -EIO;
+}
+
 void spiffs_init(void)
 {
         if (!SPIFFS.begin(CONFIG_FORMAT_SPIFFS_IF_FAILED)) {

@@ -1,8 +1,6 @@
 #ifndef __LIBJJ_RPC_CAN_H__
 #define __LIBJJ_RPC_CAN_H__
 
-#include <WebServer.h>
-
 void rpc_can_add(void)
 {
         http_rpc.on("/can_stats", HTTP_GET, [](){

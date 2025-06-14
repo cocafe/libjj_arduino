@@ -226,6 +226,14 @@ int TWAI_init(struct twai_cfg *cfg)
                 return -EINVAL;
         }
 
+        if (cfg->mode >= ARRAY_SIZE(str_twai_mode)) {
+                pr_info("invalid mode\n");
+                return -EINVAL;
+        }
+
+        pr_info("baudrate: %s\n", str_can_baudrates[cfg->baudrate]);
+        pr_info("mode: %s\n", str_twai_mode[cfg->mode]);
+
         twai_driver_install(&g_config, &t_config, &f_config);
 
         if (twai_start() != ESP_OK) {

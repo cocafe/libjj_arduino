@@ -3,10 +3,6 @@
 
 static void task_wifi_conn(void *arg)
 {
-#ifdef WIFI_CONN_LED_BLINK
-        uint8_t wifi_led = WIFI_CONN_LED_BLINK;
-#endif
-
         pr_info("started\n");
 
         while (1) {
@@ -17,10 +13,14 @@ static void task_wifi_conn(void *arg)
 
                         while (WiFi.status() != WL_CONNECTED) {
 #ifdef WIFI_CONN_LED_BLINK
-                                led_on(wifi_led, 255, 0, 0);
-                                vTaskDelay(pdMS_TO_TICKS(500));
-                                led_off(wifi_led);
-                                vTaskDelay(pdMS_TO_TICKS(500));
+                                if (wifi_led_blink) {
+                                        led_on(wifi_led, 255, 0, 0);
+                                        vTaskDelay(pdMS_TO_TICKS(500));
+                                        led_off(wifi_led);
+                                        vTaskDelay(pdMS_TO_TICKS(500));
+                                } else {
+                                        vTaskDelay(pdMS_TO_TICKS(1000));
+                                }
 #else
                                 vTaskDelay(pdMS_TO_TICKS(1000));
 #endif // #ifdef WIFI_CONN_LED_BLINK
