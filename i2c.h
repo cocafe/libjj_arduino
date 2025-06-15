@@ -86,7 +86,7 @@ static void __i2cdetect(TwoWire *wire, int (*__snprintf)(char *buffer, size_t bu
         c += __snprintf(&buf[c], len - c, "\n");
 }
 
-static int __attribute__((unused)) i2cdetect(unsigned bus, char *buf, size_t len)
+static int __unused i2cdetect(unsigned bus, char *buf, size_t len)
 {
         TwoWire *wire;
 
@@ -109,7 +109,7 @@ static int __attribute__((unused)) i2cdetect(unsigned bus, char *buf, size_t len
         return 0;
 }
 
-static void __attribute__((unused)) i2c_init(void)
+static void __unused i2c_init(void)
 {
         int pin_sda0 = GPIO_I2C_SDA0, pin_scl0 = GPIO_I2C_SCL0;
 
@@ -132,12 +132,12 @@ static void __attribute__((unused)) i2c_init(void)
         delay(300);
 }
 
-static int __attribute__((unused)) i2c_lock(void)
+static int __unused i2c_lock(void)
 {
         return xSemaphoreTake(lck_i2c, portMAX_DELAY) == pdTRUE ? 0 : -1;
 }
 
-static void __attribute__((unused)) i2c_unlock(void)
+static void __unused i2c_unlock(void)
 {
         xSemaphoreGive(lck_i2c);
 }

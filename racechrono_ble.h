@@ -153,7 +153,7 @@ static void task_can_ble_led_blink(void *arg)
 }
 #endif // CAN_BLE_LED_BLINK
 
-static __attribute__((unused)) void task_ble_conn_start(unsigned cpu)
+static __unused void task_ble_conn_start(unsigned cpu)
 {
         xTaskCreatePinnedToCore(task_ble_conn_update, "ble_conn", 4096, NULL, 1, NULL, cpu);
 #ifdef CAN_BLE_LED_BLINK
@@ -184,7 +184,7 @@ static void can_ble_frame_send(can_frame_t *f)
         }
 }
 
-static void __attribute__((unused)) ble_init(struct ble_cfg *cfg)
+static void __unused ble_init(struct ble_cfg *cfg)
 {
         if (cfg) {
                 strncpy(ble_device_prefix, cfg->devname, sizeof(ble_device_prefix));

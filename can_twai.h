@@ -71,7 +71,7 @@ static int TWAI_send(uint32_t can_id, uint8_t len, uint8_t *data)
         return 0;
 }
 
-static int __attribute__((unused)) TWAI_recv_once(can_frame_t *f, int timedout_ms)
+static int __unused TWAI_recv_once(can_frame_t *f, int timedout_ms)
 {
         twai_message_t msg = { };
 
@@ -110,7 +110,7 @@ static int __attribute__((unused)) TWAI_recv_once(can_frame_t *f, int timedout_m
         return 0;
 }
 
-static int __attribute__((unused)) TWAI_recv(can_frame_t *f)
+static int __unused TWAI_recv(can_frame_t *f)
 {
         return TWAI_recv_once(f, -1);
 }

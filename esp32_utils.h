@@ -28,7 +28,7 @@ static inline uint64_t esp32_millis(void)
         return esp_timer_get_time() / 1000;
 }
 
-static inline __attribute__((unused)) uint64_t esp32_microsecs(void)
+static inline __unused uint64_t esp32_microsecs(void)
 {
         return esp_timer_get_time();
 }

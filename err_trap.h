@@ -10,7 +10,7 @@ static void err_trap()
         }
 }
 
-static void __attribute__((unused)) errtrap_print(const char *buf)
+static void __unused errtrap_print(const char *buf)
 {
         printf(buf);
         fflush(stdout);

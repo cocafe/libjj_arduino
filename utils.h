@@ -17,6 +17,10 @@ typedef uint32_t __be32;
 typedef uint64_t __le64;
 typedef uint64_t __be64;
 
+#ifndef __unused
+#define __unused __attribute__((unused))
+#endif
+
 #ifndef __min
 #define __min(a, b)                             \
         ({                                      \
@@ -173,7 +177,7 @@ static inline int ___snprintf_to_vprintf(char *buffer, size_t bufsz, const char 
         return ret;
 }
 
-static int __attribute__((unused)) is_str_equal(char *a, char *b, int caseless)
+static int __unused is_str_equal(char *a, char *b, int caseless)
 {
         enum {
                 NOT_EQUAL = 0,
@@ -208,7 +212,7 @@ static int __attribute__((unused)) is_str_equal(char *a, char *b, int caseless)
         return NOT_EQUAL;
 }
 
-static void __attribute__((unused)) hexdump(const void *data, size_t size) {
+static void __unused hexdump(const void *data, size_t size) {
         char ascii[17];
         size_t i, j;
         ascii[16] = '\0';
@@ -238,7 +242,7 @@ static void __attribute__((unused)) hexdump(const void *data, size_t size) {
         }
 }
 
-static void __attribute__((unused)) hexdump_addr(const void *data, size_t size, uint32_t prefix_addr)
+static void __unused hexdump_addr(const void *data, size_t size, uint32_t prefix_addr)
 {
         char ascii[17];
         size_t i, j;
@@ -272,7 +276,7 @@ static void __attribute__((unused)) hexdump_addr(const void *data, size_t size, 
         }
 }
 
-static unsigned long long __attribute__((unused)) strtoull_wrap(const char *str, int base, int *err)
+static unsigned long long __unused strtoull_wrap(const char *str, int base, int *err)
 {
         char *endptr;
         unsigned long long ret = strtoull(str, &endptr, base);
@@ -286,7 +290,7 @@ static unsigned long long __attribute__((unused)) strtoull_wrap(const char *str,
         return ret;
 }
 
-static long long __attribute__((unused)) strtoll_wrap(const char *str, int base, int *err)
+static long long __unused strtoll_wrap(const char *str, int base, int *err)
 {
         char *endptr;
         long long ret = strtoull(str, &endptr, base);

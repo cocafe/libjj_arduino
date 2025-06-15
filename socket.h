@@ -16,7 +16,7 @@ struct udp_mc_cfg {
         char mcaddr[24];
 };
 
-static int __attribute__((unused)) udp_mc_sock_create(const char *if_addr, const char *mc_addr, unsigned port, sockaddr_in *skaddr)
+static int __unused udp_mc_sock_create(const char *if_addr, const char *mc_addr, unsigned port, sockaddr_in *skaddr)
 {
         int sock;
 

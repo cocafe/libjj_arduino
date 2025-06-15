@@ -162,12 +162,12 @@ static void task_can_led_blink(void *arg)
 }
 #endif // CAN_LED_BLINK
 
-static __attribute__((unused)) void can_init(void)
+static __unused void can_init(void)
 {
         lck_can_cb = xSemaphoreCreateMutex();
 }
 
-static __attribute__((unused)) int task_can_start(unsigned task_cpu)
+static __unused int task_can_start(unsigned task_cpu)
 {
         if (can_dev) {
 #ifdef CAN_LED_BLINK

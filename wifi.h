@@ -27,7 +27,7 @@ enum {
         NUM_ESP_WIFI_MODES,
 };
 
-static const char *str_wifi_modes[] = {
+static __unused const char *str_wifi_modes[] = {
         [ESP_WIFI_MODE_OFF]     = "OFF",
         [ESP_WIFI_MODE_STA]     = "STA",
         [ESP_WIFI_MODE_AP]      = "AP",
@@ -48,7 +48,7 @@ static uint8_t wifi_event_cb_cnt;
 
 static SemaphoreHandle_t lck_wifi_cb;
 
-static int wifi_event_cb_register(void (*cb)(int event))
+static __unused int wifi_event_cb_register(void (*cb)(int event))
 {
         int err = 0;
 
@@ -69,7 +69,7 @@ unlock:
 
 static wifi_power_t __wifi_tx_power = WIFI_POWER_19_5dBm;
 static wifi_mode_t __wifi_mode = WIFI_OFF;
-static size_t wifi_idx = 0;
+static __unused size_t wifi_idx = 0;
 
 enum {
         ESP_WIFI_POWER_19_5dBm,
@@ -127,7 +127,7 @@ struct wifi_nw_cfg {
         char subnet[32];
 };
 
-static struct wifi_nw_cfg __attribute__((unused)) wifi_sta_failsafe = {
+static struct wifi_nw_cfg __unused wifi_sta_failsafe = {
         "0xC0CAFE",
         "jijijiji",
         10,
@@ -137,12 +137,12 @@ static struct wifi_nw_cfg __attribute__((unused)) wifi_sta_failsafe = {
         "\0",
 };
 
-static int wifi_mode_get(void)
+static __unused int wifi_mode_get(void)
 {
         return __wifi_mode;
 }
 
-static void wifi_event_call(int event)
+static __unused void wifi_event_call(int event)
 {
         for (int i = 0; i < ARRAY_SIZE(wifi_event_cbs); i++) {
                 if (wifi_event_cbs[i].cb)
@@ -176,7 +176,7 @@ static inline void wifi_tx_power_set(int txpwr)
         }
 }
 
-static __attribute__((unused)) int wifi_sta_init(struct wifi_nw_cfg *nw, int txpwr)
+static __unused int wifi_sta_init(struct wifi_nw_cfg *nw, int txpwr)
 {
         IPAddress local, gw, subnet;
 
@@ -193,7 +193,7 @@ static __attribute__((unused)) int wifi_sta_init(struct wifi_nw_cfg *nw, int txp
         return 0;
 }
 
-static __attribute__((unused)) int wifi_ap_init(struct wifi_nw_cfg *nw, int txpwr)
+static __unused int wifi_ap_init(struct wifi_nw_cfg *nw, int txpwr)
 {
         IPAddress local, gw, subnet;
 
@@ -212,7 +212,7 @@ static __attribute__((unused)) int wifi_ap_init(struct wifi_nw_cfg *nw, int txpw
         return 0;
 }
 
-static __attribute__((unused)) int wifi_sta_ap_init(struct wifi_nw_cfg *sta, struct wifi_nw_cfg *ap, int txpwr)
+static __unused int wifi_sta_ap_init(struct wifi_nw_cfg *sta, struct wifi_nw_cfg *ap, int txpwr)
 {
         IPAddress local, gw, subnet;
 
@@ -236,7 +236,7 @@ static __attribute__((unused)) int wifi_sta_ap_init(struct wifi_nw_cfg *sta, str
         return 0;
 }
 
-static __attribute__((unused)) void wifi_connect(struct wifi_nw_cfg *cfg)
+static __unused void wifi_connect(struct wifi_nw_cfg *cfg)
 {
         if (!cfg->use_dhcp) {
                 IPAddress local, gw, subnet;
@@ -251,7 +251,7 @@ static __attribute__((unused)) void wifi_connect(struct wifi_nw_cfg *cfg)
         WiFi.begin(cfg->ssid, cfg->passwd);
 }
 
-static __attribute__((unused)) void wifi_reconnect(struct wifi_nw_cfg *cfg)
+static __unused void wifi_reconnect(struct wifi_nw_cfg *cfg)
 {
         WiFi.disconnect(true);
 
@@ -263,7 +263,7 @@ static __attribute__((unused)) void wifi_reconnect(struct wifi_nw_cfg *cfg)
         wifi_connect(cfg);
 }
 
-static __attribute__((unused)) int wifi_first_connect(struct wifi_nw_cfg **cfgs, size_t cfg_cnt)
+static __unused int wifi_first_connect(struct wifi_nw_cfg **cfgs, size_t cfg_cnt)
 {
         int idx = 0;
         int ok = 0;

@@ -275,7 +275,7 @@ static void save_init(int (*jbuf_maker)(jbuf_t *, struct config *))
         memcpy(&g_cfg, &g_save.cfg, sizeof(g_cfg));
 }
 
-static __attribute__((unused)) void save_reset_gpio_check(unsigned gpio_rst)
+static __unused void save_reset_gpio_check(unsigned gpio_rst)
 {
         static uint32_t ts_pressed = 0;
 

@@ -50,7 +50,7 @@ static void task_rst_btn(void *arg)
         }
 }
 
-static __attribute__((unused)) void task_rst_btn_start(unsigned cpu)
+static __unused void task_rst_btn_start(unsigned cpu)
 {
         vTaskDelay(pdMS_TO_TICKS(100));
         xTaskCreatePinnedToCore(task_rst_btn, "rst_btn", 4096, NULL, 1, NULL, cpu);

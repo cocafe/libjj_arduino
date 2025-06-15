@@ -44,7 +44,7 @@ static void task_wifi_conn(void *arg)
         }
 }
 
-static __attribute__((unused)) void task_wifi_conn_start(unsigned cpu)
+static __unused void task_wifi_conn_start(unsigned cpu)
 {
         xTaskCreatePinnedToCore(task_wifi_conn, "wifi_conn", 4096, NULL, 1, NULL, cpu);
 }

@@ -27,7 +27,7 @@ static uint64_t cnt_can_udp_recv; // from remote multicast
 static uint64_t cnt_can_udp_send_error;
 static uint64_t cnt_can_udp_send; // send to remote multicase
 
-static int __attribute__((unused)) racechrono_udp_mc_send(can_frame_t *f)
+static int __unused racechrono_udp_mc_send(can_frame_t *f)
 {
         int sock = READ_ONCE(rc_udp_mc_sock);
 
@@ -132,7 +132,7 @@ static void racechrono_fwd_wifi_event_cb(int event)
         }
 }
 
-static void __attribute__((unused)) racechrono_fwd_init(struct udp_mc_cfg *cfg, int is_receiver)
+static void __unused racechrono_fwd_init(struct udp_mc_cfg *cfg, int is_receiver)
 {
         if (!cfg)
                 return;

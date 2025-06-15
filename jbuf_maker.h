@@ -16,6 +16,7 @@ void jbuf_wifi_nw_cfg_add(jbuf_t *b, const char *key, struct wifi_nw_cfg *cfg)
         jbuf_obj_close(b, obj);
 }
 
+#ifdef __LIBJJ_EVENT_UDP_MC_H__
 void jbuf_udpmc_cfg_add(jbuf_t *b, const char *key, struct udp_mc_cfg *cfg)
 {
         void *obj = jbuf_obj_open(b, key);
@@ -26,6 +27,7 @@ void jbuf_udpmc_cfg_add(jbuf_t *b, const char *key, struct udp_mc_cfg *cfg)
 
         jbuf_obj_close(b, obj);
 }
+#endif
 
 #ifdef CONFIG_HAVE_CAN_MCP2515
 void jbuf_mcp2515_cfg_add(jbuf_t *b, const char *key, struct mcp2515_cfg *cfg)

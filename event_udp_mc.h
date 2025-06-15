@@ -50,7 +50,7 @@ static uint8_t udp_event_cb_cnt;
 
 static SemaphoreHandle_t lck_udp_event_cb;
 
-static int __attribute__((unused)) udp_event_cb_register(void (*cb)(uint8_t event, void *data, unsigned dlen))
+static int __unused udp_event_cb_register(void (*cb)(uint8_t event, void *data, unsigned dlen))
 {
         int err = 0;
 
@@ -102,7 +102,7 @@ static int __event_udp_mc_send(udp_event_t *pkt)
         return 0;
 }
 
-static int __attribute__((unused)) event_udp_mc_send(uint8_t event, uint8_t *data, unsigned dlen)
+static int __unused event_udp_mc_send(uint8_t event, uint8_t *data, unsigned dlen)
 {
         udp_event_t *pkt = (udp_event_t *)malloc(sizeof(udp_event_t) + dlen);
         int rc;
@@ -216,7 +216,7 @@ static void event_udp_mc_wifi_event_cb(int event)
         }
 }
 
-static void __attribute__((unused)) event_udp_mc_init(struct udp_mc_cfg *cfg, unsigned cpu)
+static void __unused event_udp_mc_init(struct udp_mc_cfg *cfg, unsigned cpu)
 {
         if (!cfg)
                 return;
@@ -256,7 +256,7 @@ static void task_event_up_dev_hb(void *arg)
         }
 }
 
-static void __attribute__((unused)) task_event_udp_dev_hb_start(char *devname, unsigned cpu)
+static void __unused task_event_udp_dev_hb_start(char *devname, unsigned cpu)
 {
         xTaskCreatePinnedToCore(task_event_up_dev_hb, "dev_hb", 4096, devname, 1, NULL, cpu);
 }

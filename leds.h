@@ -6,12 +6,10 @@
 #include "utils.h"
 
 #ifndef GPIO_LED_MAIN
-#warning GPIO_LED_MAIN is not defined
 #define GPIO_LED_MAIN                   (-1)
 #endif
 
 #ifndef GPIO_LED_AUX
-#warning GPIO_LED_AUX is not defined
 #define GPIO_LED_AUX                    (-1)
 #endif
 
@@ -124,7 +122,7 @@ static inline void __ws2812_led_flash(uint8_t idx, uint8_t r, uint8_t g, uint8_t
         }
 }
 
-static __attribute__((unused)) inline void led_ws2812_brightness_set(unsigned level)
+static __unused inline void led_ws2812_brightness_set(unsigned level)
 {
         FastLED.setBrightness(level > 255 ? 255 : level);
 }
@@ -186,7 +184,7 @@ static void led_off(unsigned which)
         }
 }
 
-static __attribute__((unused)) void led_init(void)
+static __unused void led_init(void)
 {
         for (int i = 0; i < ARRAY_SIZE(led_cfgs); i++) {
                 struct led_cfg *led = &led_cfgs[i];

@@ -2,7 +2,8 @@
 #define __LIBJJ_OBDII_H__
 
 #include <stdint.h>
-#include "canframe.h"
+
+#include "can.h"
 
 extern "C" {
 
@@ -27,7 +28,7 @@ static unsigned obd_metric_expire_ms = 1000;
 
 #ifdef OBDII_DEBUG_QUERY_MS
 #define OBD_PID(_name, _pid, _len, _cb)                                 \
-static __attribute__((unused)) obd_pid_t obd_##_name = {                \
+static __unused obd_pid_t obd_##_name = {                \
         .name = __stringify(_name),                                     \
         .pid = _pid,                                                    \
         .dlen = _len,                                                   \
@@ -39,7 +40,7 @@ static __attribute__((unused)) obd_pid_t obd_##_name = {                \
 }
 #else
 #define OBD_PID(_name, _pid, _len, _cb)                                 \
-static __attribute__((unused)) obd_pid_t obd_##_name = {                \
+static __unused obd_pid_t obd_##_name = {                \
         .name = __stringify(_name),                                     \
         .pid = _pid,                                                    \
         .dlen = _len,                                                   \
@@ -229,7 +230,7 @@ static int can_fc_frame_send(uint32_t can_id, uint8_t fs, uint8_t bs, uint8_t st
         hdr->blk_size = bs;
         hdr->st = st;
 
-        return can_send(can_id, sizeof(buf), buf);
+        return can_dev->send(can_id, sizeof(buf), buf);
 }
 
 static int can_fc_cts_send(uint32_t can_id)
@@ -237,7 +238,7 @@ static int can_fc_cts_send(uint32_t can_id)
         return can_fc_frame_send(can_id, CAN_FC_STATUS_CTS, CAN_FC_BS_ALL, CAN_FC_ST_FAST);
 }
 
-static int can_frame_obd_pid_input(can_frame_t *f)
+static int obd_pid_can_frame_input(can_frame_t *f)
 {
         uint32_t now = esp32_millis();
         obd_pid_t *p;
@@ -257,11 +258,13 @@ static int can_frame_obd_pid_input(can_frame_t *f)
         }
 
         p = obd_pid_bkt[pid];
-        if (!p)
+        if (!p) {
+                pr_verbose("unsupported or disabled pid 0x%02x\n", pid);
                 return -ENOTSUP;
+        }
 
         //
-        // <MODE> <PID> <DATAn...>
+        // OBD-II PAYLOAD: <MODE> <PID> <DATAn...>
         //
 
         dlc_want = 1 + 1 + p->dlen;
@@ -285,12 +288,12 @@ static int can_frame_obd_pid_input(can_frame_t *f)
         return 0;
 }
 
-static inline void can_frame_obd_input(can_frame_t *f)
+static inline void obd_can_frame_input(can_frame_t *f)
 {
-        can_frame_obd_pid_input(f);
+        obd_pid_can_frame_input(f);
 }
 
-static void can_isotp_frame_obd_input(can_frame_t *f)
+static __unused void obd_can_isotp_frame_input(can_frame_t *f)
 {
         static union {
                 uint8_t data[sizeof(can_frame_t) + 256];
@@ -303,14 +306,14 @@ static void can_isotp_frame_obd_input(can_frame_t *f)
         frame_type = f->data[0] >> 4;
         switch (frame_type) {
         case CAN_FRAME_SF: {
-                uint8_t buf[CAN_FRAME_DLC] = { };
                 struct can_hdr_sf *sf = (struct can_hdr_sf *)&f->data;
                 uint8_t dlc = sf->dlc;
-                memcpy(buf, &f->data[1], dlc);
-                memcpy(&f->data[0], buf, dlc);
+
+                memmove(&f->data[0], &f->data[1], dlc - 1);
+                f->data[dlc - 1] = 0x00;
                 f->dlc = dlc;
 
-                can_frame_obd_input(f);
+                obd_can_frame_input(f);
 
                 break;
         }
@@ -354,7 +357,7 @@ static void can_isotp_frame_obd_input(can_frame_t *f)
 
                 if (mf_pos >= mf_dlc_want) {
                         mf->dlc = mf_pos;
-                        can_frame_obd_input(mf);
+                        obd_can_frame_input(mf);
 
                         mf_dlc_want = 0;
                         mf_pos = 0;
@@ -368,6 +371,18 @@ static void can_isotp_frame_obd_input(can_frame_t *f)
 
         default:
                 pr_err("unknown can frame type: 0x%02x\n", frame_type);
+                break;
+        }
+}
+
+static void obd_can_frame_recv(can_frame_t *f)
+{
+        switch (f->id) {
+        case 0x7E8 ... 0x7EF:
+                obd_can_isotp_frame_input(f);
+                break;
+
+        default:
                 break;
         }
 }
@@ -395,7 +410,7 @@ static int obd_pid_query_send(obd_pid_t *p)
         p->ts_last_send = now;
 #endif
 
-        return can_send(CAN_ID_BROADCAST, 8, payload);
+        return can_dev->send(CAN_ID_BROADCAST, 8, payload);
 }
 
 static int obd_pid_init(obd_pid_t **list, size_t cnt)
@@ -403,6 +418,11 @@ static int obd_pid_init(obd_pid_t **list, size_t cnt)
         for (size_t i = 0; i < cnt; i++) {
                 obd_pid_t *p = list[i];
                 obd_pid_bkt[p->pid] = p;
+                pr_info("pid 0x%02x enabled\n", p->pid);
+        }
+
+        if (can_dev) {
+                can_recv_cb_register(obd_can_frame_recv);
         }
 
         return 0;

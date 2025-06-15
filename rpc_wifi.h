@@ -3,6 +3,7 @@
 
 void rpc_wifi_add(void)
 {
+#ifndef CONFIG_WIFI_AP_ONLY
         http_rpc.on("/wifi_sta_cfg", HTTP_GET, [](){
                 struct wifi_nw_cfg tmp = { };
                 struct http_cfg_param params[] = {
@@ -75,6 +76,7 @@ void rpc_wifi_add(void)
 
                 http_rpc.send(200, "text/plain", buf);
         });
+#endif
 
         http_rpc.on("/wifi_tx_power", HTTP_GET, [](){
                 if (http_rpc.hasArg("set")) {
