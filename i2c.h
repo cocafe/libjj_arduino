@@ -98,6 +98,7 @@ static int __unused i2cdetect(unsigned bus, char *buf, size_t len)
 #if SOC_I2C_NUM > 1
         case 1:
                 wire = &Wire1;
+                break;
 #endif
 
         default:
