@@ -9,14 +9,6 @@
 #include "libjj/logging.h"
 #include "libjj/socket.h"
 
-#ifndef __LIBJJ_CAN_TCP_H__
-#error include can_tcp.h first
-#endif
-
-#ifndef __LIBJJ_RACECHRONO_BLE_H__
-#error include racechrono_ble.h first
-#endif
-
 static char rc_udp_mc_addr[24] = "239.0.0.1";
 static int rc_udp_mc_port = 4090;
 static int rc_udp_mc_sock = -1;
@@ -77,7 +69,9 @@ static int racechrono_udp_mc_recv(void)
                 return -EINVAL;
         }
 
+#ifdef __LIBJJ_RACECHRONO_BLE_H__
         can_ble_frame_send(f);
+#endif
         cnt_can_udp_recv++;
 
         return 0;

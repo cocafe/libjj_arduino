@@ -171,7 +171,7 @@ static __unused int task_can_start(unsigned task_cpu)
 {
         if (can_dev) {
 #ifdef CAN_LED_BLINK
-                xTaskCreatePinnedToCore(task_can_led_blink, "led_blink_can", 1024, NULL, 1, NULL, task_cpu)
+                xTaskCreatePinnedToCore(task_can_led_blink, "led_blink_can", 1024, NULL, 1, NULL, task_cpu);
 #endif
                 xTaskCreatePinnedToCore(task_can_recv, "can_recv", 4096, NULL, 1, NULL, task_cpu);
         } else {
