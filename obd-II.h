@@ -7,6 +7,9 @@
 
 extern "C" {
 
+static SemaphoreHandle_t obd_isotp_recv_done;
+static uint8_t is_isotp_waiting;
+
 struct obd_pid {
         const char             *name;
         uint8_t                 pid;
@@ -359,6 +362,10 @@ static __unused void obd_can_isotp_frame_input(can_frame_t *f)
                         mf->dlc = mf_pos;
                         obd_can_frame_input(mf);
 
+                        if (READ_ONCE(is_isotp_waiting)) {
+                                xSemaphoreGive(obd_isotp_recv_done);
+                        }
+
                         mf_dlc_want = 0;
                         mf_pos = 0;
                 }
@@ -387,10 +394,26 @@ static void obd_can_frame_recv(can_frame_t *f)
         }
 }
 
+static int obd_isotp_flow_wait(unsigned ms)
+{
+        int err = 0;
+
+        WRITE_ONCE(is_isotp_waiting, 1);
+        if (xSemaphoreTake(obd_isotp_recv_done, pdMS_TO_TICKS(ms)) == pdFALSE) {
+                pr_dbg("failed to wait isotp flow done\n");
+                err = -ETIMEDOUT;
+        }
+        WRITE_ONCE(is_isotp_waiting, 0);
+
+        return err;
+}
+
+// XXX: need lock if access by multiple threads
 static int obd_pid_query_send(obd_pid_t *p)
 {
         uint32_t now = esp32_millis();
         uint8_t payload[8] = { };
+        int err;
 
         if (unlikely(p->pid == OBD_PID_DUMMY))
                 return 0;
@@ -410,11 +433,21 @@ static int obd_pid_query_send(obd_pid_t *p)
         p->ts_last_send = now;
 #endif
 
-        return can_dev->send(CAN_ID_BROADCAST, 8, payload);
+        err = can_dev->send(CAN_ID_BROADCAST, 8, payload);
+        if (unlikely(err))
+                return err;
+
+        if (unlikely(p->dlen > 6)) {
+                obd_isotp_flow_wait(75);
+        }
+
+        return 0;
 }
 
 static int obd_pid_init(obd_pid_t **list, size_t cnt)
 {
+        obd_isotp_recv_done = xSemaphoreCreateBinary();
+
         for (size_t i = 0; i < cnt; i++) {
                 obd_pid_t *p = list[i];
                 obd_pid_bkt[p->pid] = p;
