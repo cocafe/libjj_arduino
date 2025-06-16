@@ -8,6 +8,8 @@ static void task_rst_btn(void *arg)
 
         pr_info("started\n");
 
+        pinMode(GPIO_BTN_RST, INPUT_PULLUP);
+
         while (1) {
                 ts_pressed = 0;
 
@@ -46,7 +48,7 @@ static void task_rst_btn(void *arg)
                         vTaskDelay(pdMS_TO_TICKS(500));
                 }
 
-                vTaskDelay(pdMS_TO_TICKS(3000));
+                vTaskDelay(pdMS_TO_TICKS(1000));
         }
 }
 
