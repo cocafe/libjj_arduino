@@ -280,14 +280,17 @@ static int can_frames_input(uint8_t *buf, int len)
                         return -EINVAL;
                 }
 
+                // XXX: when use TWAI
+                //      send may block for a long while
+                //      then TCP window will be full
                 can_dev->send(le32toh(f->id), f->dlc, f->data);
 
 #if 0
-                pr_info("tcp recv: id: 0x%04lx len: %lu ", id, dlen);
-                for (uint8_t i = 0; i < dlen; i++) {
-                        pr_info("0x%02x ", f->data[i]);
+                pr_raw("tcp recv: id: 0x%04lx len: %u ", le32toh(f->id), f->dlc);
+                for (uint8_t i = 0; i < f->dlc; i++) {
+                        pr_raw("0x%02x ", f->data[i]);
                 }
-                pr_info("\n");
+                pr_raw("\n");
 #endif
 
 #ifdef CAN_TCP_LED_BLINK
@@ -313,8 +316,9 @@ static void can_tcp_recv_cb(can_frame_t *f)
                 return;
         }
 
-        if (!curr_can_tcp_client || !curr_can_tcp_client->connected())
+        if (!curr_can_tcp_client || !curr_can_tcp_client->connected()) {
                 goto unlock;
+        }
 
         f->magic = htole32(CAN_DATA_MAGIC);
         f->id = htole32(f->id);
@@ -324,11 +328,11 @@ static void can_tcp_recv_cb(can_frame_t *f)
         cnt_can_tcp_send++;
 
 #if 0
-        pr_info("tcp send: id: 0x%04lx len: %lu ", id, dlen);
-        for (uint8_t i = 0; i < dlen; i++) {
-                pr_info("0x%02x ", f->data[i]);
+        pr_raw("tcp send: id: 0x%04lx len: %u ", le32toh(f->id), f->dlc);
+        for (uint8_t i = 0; i < f->dlc; i++) {
+                pr_raw("0x%02x ", f->data[i]);
         }
-        pr_info("\n");
+        pr_raw("\n");
 #endif
 
 #ifdef CAN_TCP_LED_BLINK
@@ -346,9 +350,19 @@ static void can_tcp_server_worker(void)
         if (client) {
                 static uint8_t buf[(sizeof(can_frame_t) + 8) * 10] = { };
                 static int pos = 0;
+                int sockfd = client.fd();
 
                 pr_info("client connected\n");
-                client.setTimeout(1000);
+
+                // {
+                //         int bufsize = 8192;
+                //         setsockopt(sockfd, SOL_SOCKET, SO_SNDBUF, &bufsize, sizeof(bufsize));
+                //         setsockopt(sockfd, SOL_SOCKET, SO_RCVBUF, &bufsize, sizeof(bufsize));
+                // }
+
+                // for client.readBytes()
+                // client.setTimeout(1000);
+
                 pos = 0;
 
                 if (xSemaphoreTake(lck_can_tcp_client, portMAX_DELAY) == pdTRUE) {
@@ -359,7 +373,16 @@ static void can_tcp_server_worker(void)
                 while (client.connected()) {
                         int n, c;
 
-                        n = client.readBytes(&buf[pos], sizeof(buf) - pos);
+                        // return 0 on timedout
+                        // n = client.readBytes(&buf[pos], sizeof(buf) - pos);
+
+                        // return 0 on no data, this shit does not block
+                        // n = client.read(&buf[pos], sizeof(buf) - pos);
+
+                        // this posix dude blocks
+                        n = recv(sockfd, &buf[pos], sizeof(buf) - pos, 0);
+
+                        pr_info("n = %d\n", n);
 
                         if (n > 0) {
                                 pos += n;
@@ -376,7 +399,7 @@ static void can_tcp_server_worker(void)
                                         pos = 0;
                                 }
                         } else {
-                                pr_verbose("client.readBytes() timedout or error, n = %d\n", n);
+                                pr_verbose("client raed timedout or error, n = %d\n", n);
                         }
                 }
 
@@ -385,9 +408,9 @@ static void can_tcp_server_worker(void)
 #endif
 
                 if (xSemaphoreTake(lck_can_tcp_client, portMAX_DELAY) == pdTRUE) {
+                        pr_info("client disconnected\n");
                         curr_can_tcp_client = NULL;
                         client.stop();
-                        pr_info("client disconnected\n");
                         xSemaphoreGive(lck_can_tcp_client);
                 }
         }
@@ -399,7 +422,7 @@ static void task_can_tcp(void *arg)
 
         while (1) {
                 can_tcp_server_worker();
-                vTaskDelay(pdMS_TO_TICKS(100));
+                vTaskDelay(pdMS_TO_TICKS(1));
         }
 }
 
@@ -409,7 +432,7 @@ static void task_can_tcp_server_start(unsigned cpu)
                 lck_can_tcp_client = xSemaphoreCreateMutex();
                 can_recv_cb_register(can_tcp_recv_cb);
                 can_tcp_server.begin();
-                xTaskCreatePinnedToCore(task_can_tcp, "can_tcp", 4096, NULL, 1, NULL, cpu);
+                xTaskCreatePinnedToCore(task_can_tcp, "can_tcp", 8192, NULL, 1, NULL, cpu);
 #ifdef CAN_TCP_LED_BLINK
                 xTaskCreatePinnedToCore(task_can_tcp_led_blink, "led_blink_tcp", 1024, NULL, 1, NULL, cpu);
 #endif

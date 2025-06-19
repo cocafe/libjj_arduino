@@ -233,6 +233,7 @@ int TWAI_init(struct twai_cfg *cfg)
 
         pr_info("baudrate: %s\n", str_can_baudrates[cfg->baudrate]);
         pr_info("mode: %s\n", str_twai_mode[cfg->mode]);
+        pr_info("tx_timedout_ms: %d\n", cfg->tx_timedout_ms);
 
         twai_driver_install(&g_config, &t_config, &f_config);
 
