@@ -308,6 +308,7 @@ next_frame:
 static void can_tcp_recv_cb(can_frame_t *f)
 {
         int sockfd = READ_ONCE(can_tcp_client_fd);
+        int n;
 
         if (sockfd < 0) {
                 return;
@@ -322,9 +323,17 @@ static void can_tcp_recv_cb(can_frame_t *f)
         f->magic = htole32(CAN_DATA_MAGIC);
         f->id = htole32(f->id);
 
-        if (send(sockfd, (uint8_t *)f, (size_t)(sizeof(can_frame_t) + f->dlc), 0) < 0) {
-                pr_verbose("send(): %d %s\n", errno, strerror(abs(errno)));
+        if ((n = send(sockfd, (uint8_t *)f, (size_t)(sizeof(can_frame_t) + f->dlc), 0)) < 0) {
+                if (errno == EINTR) {
+                        return;
+                }
+
+                pr_dbg("send(): n: %d err: %d %s\n", n, errno, strerror(abs(errno)));
                 cnt_can_tcp_send_error++;
+
+                shutdown(sockfd, SHUT_RDWR);
+                close(sockfd);
+
                 return;
         }
 
@@ -396,7 +405,16 @@ static void can_tcp_server_worker(void)
                                         pos = 0;
                                 }
                         } else {
-                                pr_verbose("client raed timedout or error, n = %d\n", n);
+                                if (errno == EINTR) {
+                                        continue;
+                                } else if (errno == EAGAIN) {
+                                        pr_dbg("client read timedout, n = %d\n", n);
+                                        vTaskDelay(pdMS_TO_TICKS(100));
+                                        continue;
+                                } else {
+                                        pr_dbg("recv(): n: %d err: %d %s\n", n, errno, strerror(abs(errno)));
+                                        break;
+                                }
                         }
                 }
 
