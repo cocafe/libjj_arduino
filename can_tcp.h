@@ -42,7 +42,7 @@ static uint8_t can_rlimit_enabled = 1;
 static uint8_t can_rlimit_update_hz_default = 20;
 #endif // CONFIG_HAVE_CANTCP_RLIMIT
 
-static WiFiServer can_tcp_server(CONFIG_CANTCP_SERVER_PORT);
+static NetworkServer can_tcp_server(CONFIG_CANTCP_SERVER_PORT);
 static int can_tcp_client_fd = -1;
 
 static uint64_t cnt_can_tcp_recv_error;
@@ -354,7 +354,7 @@ static void can_tcp_recv_cb(can_frame_t *f)
 
 static void can_tcp_server_worker(void)
 {
-        WiFiClient client = can_tcp_server.accept();
+        NetworkClient client = can_tcp_server.accept();
 
         if (client) {
                 static uint8_t buf[(sizeof(can_frame_t) + 8) * 10] = { };
@@ -369,8 +369,27 @@ static void can_tcp_server_worker(void)
                 //         setsockopt(sockfd, SOL_SOCKET, SO_RCVBUF, &bufsize, sizeof(bufsize));
                 // }
 
+                // {
+                //         int sndbuf = 0;
+                //         int rcvbuf = 0;
+                //         socklen_t optlen = sizeof(int);
+
+                //         if (getsockopt(sockfd, SOL_SOCKET, SO_SNDBUF, &sndbuf, &optlen) == 0) {
+                //                 pr_info("SO_SNDBUF: %d bytes\n", sndbuf);
+                //         }
+
+                //         if (getsockopt(sockfd, SOL_SOCKET, SO_RCVBUF, &rcvbuf, &optlen) == 0) {
+                //                 pr_info("SO_RCVBUF: %d bytes\n", rcvbuf);
+                //         }
+                // }
+
                 // for client.readBytes()
                 // client.setTimeout(1000);
+
+                // disable TCP Nagle
+                // send small pkt asap
+                // but will increase memory pressure
+                // client.setNoDelay(true);
 
                 WRITE_ONCE(can_tcp_client_fd, sockfd);
 
@@ -408,7 +427,7 @@ static void can_tcp_server_worker(void)
                                 if (errno == EINTR) {
                                         continue;
                                 } else if (errno == EAGAIN) {
-                                        pr_dbg("client read timedout, n = %d\n", n);
+                                        pr_dbg("recv() timedout, n = %d\n", n);
                                         vTaskDelay(pdMS_TO_TICKS(100));
                                         continue;
                                 } else {
@@ -443,6 +462,7 @@ static void task_can_tcp_server_start(unsigned cpu)
         if (can_dev) {
                 can_recv_cb_register(can_tcp_recv_cb);
                 can_tcp_server.begin();
+                // can_tcp_server.setNoDelay(true);
                 xTaskCreatePinnedToCore(task_can_tcp, "can_tcp", 4096, NULL, 1, NULL, cpu);
 #ifdef CAN_TCP_LED_BLINK
                 xTaskCreatePinnedToCore(task_can_tcp_led_blink, "led_blink_tcp", 1024, NULL, 1, NULL, cpu);
