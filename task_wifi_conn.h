@@ -15,14 +15,14 @@ static void task_wifi_conn(void *arg)
 #ifdef WIFI_CONN_LED_BLINK
                                 if (wifi_led_blink) {
                                         led_on(wifi_led, 255, 0, 0);
-                                        vTaskDelay(pdMS_TO_TICKS(500));
+                                        vTaskDelay(pdMS_TO_TICKS(250));
                                         led_off(wifi_led);
-                                        vTaskDelay(pdMS_TO_TICKS(500));
+                                        vTaskDelay(pdMS_TO_TICKS(250));
                                 } else {
-                                        vTaskDelay(pdMS_TO_TICKS(1000));
+                                        vTaskDelay(pdMS_TO_TICKS(500));
                                 }
 #else
-                                vTaskDelay(pdMS_TO_TICKS(1000));
+                                vTaskDelay(pdMS_TO_TICKS(500));
 #endif // #ifdef WIFI_CONN_LED_BLINK
                         }
                 }

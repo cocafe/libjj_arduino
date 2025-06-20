@@ -43,9 +43,10 @@ static uint8_t can_rlimit_update_hz_default = 20;
 #endif // CONFIG_HAVE_CANTCP_RLIMIT
 
 static WiFiServer can_tcp_server(CONFIG_CANTCP_SERVER_PORT);
-static WiFiClient *curr_can_tcp_client = NULL;
-static SemaphoreHandle_t lck_can_tcp_client = NULL;
+static int can_tcp_client_fd = -1;
+
 static uint64_t cnt_can_tcp_recv_error;
+static uint64_t cnt_can_tcp_send_error;
 static uint64_t cnt_can_tcp_recv;       // from remote
 static uint64_t cnt_can_tcp_send;       // send to remote
 
@@ -64,7 +65,7 @@ static void task_can_tcp_led_blink(void *arg)
                 if (!can_tcp_led_blink)
                         continue;
 
-                if (!curr_can_tcp_client)
+                if (can_tcp_client_fd < 0)
                         continue;
 
                 if (can_tcp_txrx) {
@@ -306,24 +307,26 @@ next_frame:
 
 static void can_tcp_recv_cb(can_frame_t *f)
 {
+        int sockfd = READ_ONCE(can_tcp_client_fd);
+
+        if (sockfd < 0) {
+                return;
+        }
+
 #ifdef CONFIG_HAVE_CANTCP_RLIMIT
         if (is_can_id_ratelimited(f->id, esp32_millis())) {
                 return;
         }
 #endif
 
-        if (xSemaphoreTake(lck_can_tcp_client, portMAX_DELAY) != pdTRUE) {
-                return;
-        }
-
-        if (!curr_can_tcp_client || !curr_can_tcp_client->connected()) {
-                goto unlock;
-        }
-
         f->magic = htole32(CAN_DATA_MAGIC);
         f->id = htole32(f->id);
 
-        curr_can_tcp_client->write((uint8_t *)f, (size_t)(sizeof(can_frame_t) + f->dlc));
+        if (send(sockfd, (uint8_t *)f, (size_t)(sizeof(can_frame_t) + f->dlc), 0) < 0) {
+                pr_verbose("send(): %d %s\n", errno, strerror(abs(errno)));
+                cnt_can_tcp_send_error++;
+                return;
+        }
 
         cnt_can_tcp_send++;
 
@@ -338,9 +341,6 @@ static void can_tcp_recv_cb(can_frame_t *f)
 #ifdef CAN_TCP_LED_BLINK
         can_tcp_txrx = 1;
 #endif
-
-unlock:
-        xSemaphoreGive(lck_can_tcp_client);
 }
 
 static void can_tcp_server_worker(void)
@@ -363,12 +363,9 @@ static void can_tcp_server_worker(void)
                 // for client.readBytes()
                 // client.setTimeout(1000);
 
-                pos = 0;
+                WRITE_ONCE(can_tcp_client_fd, sockfd);
 
-                if (xSemaphoreTake(lck_can_tcp_client, portMAX_DELAY) == pdTRUE) {
-                        curr_can_tcp_client = &client;
-                        xSemaphoreGive(lck_can_tcp_client);
-                }
+                pos = 0;
 
                 while (client.connected()) {
                         int n, c;
@@ -407,12 +404,9 @@ static void can_tcp_server_worker(void)
                 led_off(can_tcp_led);
 #endif
 
-                if (xSemaphoreTake(lck_can_tcp_client, portMAX_DELAY) == pdTRUE) {
-                        pr_info("client disconnected\n");
-                        curr_can_tcp_client = NULL;
-                        client.stop();
-                        xSemaphoreGive(lck_can_tcp_client);
-                }
+                pr_info("client disconnected\n");
+                WRITE_ONCE(can_tcp_client_fd, -1);
+                client.stop();
         }
 }
 
@@ -429,10 +423,9 @@ static void task_can_tcp(void *arg)
 static void task_can_tcp_server_start(unsigned cpu)
 {
         if (can_dev) {
-                lck_can_tcp_client = xSemaphoreCreateMutex();
                 can_recv_cb_register(can_tcp_recv_cb);
                 can_tcp_server.begin();
-                xTaskCreatePinnedToCore(task_can_tcp, "can_tcp", 8192, NULL, 1, NULL, cpu);
+                xTaskCreatePinnedToCore(task_can_tcp, "can_tcp", 4096, NULL, 1, NULL, cpu);
 #ifdef CAN_TCP_LED_BLINK
                 xTaskCreatePinnedToCore(task_can_tcp_led_blink, "led_blink_tcp", 1024, NULL, 1, NULL, cpu);
 #endif

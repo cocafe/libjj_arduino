@@ -87,6 +87,8 @@ void rpc_esp32_add(void)
                 c += snprintf(&buf[c], sizeof(buf) - c, "esp_stats{t=\"uptime\"} %ju\n", esp32_millis() / 1000);
                 c += snprintf(&buf[c], sizeof(buf) - c, "esp_stats{t=\"tempC\"} %.2f\n", tempC);
                 c += snprintf(&buf[c], sizeof(buf) - c, "esp_stats{t=\"cpu_usage\"} %d\n", cpu);
+                c += snprintf(&buf[c], sizeof(buf) - c, "esp_stats{t=\"free_heap\"} %lu\n", esp_get_free_heap_size());
+                c += snprintf(&buf[c], sizeof(buf) - c, "esp_stats{t=\"min_free_heap\"} %lu\n", esp_get_minimum_free_heap_size());
 
                 http_rpc.send(200, "text/plain", buf);
         });

@@ -275,7 +275,7 @@ static __unused int wifi_first_connect(struct wifi_nw_cfg **cfgs, size_t cfg_cnt
                 wifi_reconnect(cfg);
 
                 pr_info("connecting to SSID \"%s\" ...\n", cfg->ssid);
-                for (int i = 0; i < timeout; i++) {
+                for (int i = 0; i < timeout * 2; i++) {
                         if (WiFi.status() == WL_CONNECTED) {
                                 ok = 1;
 #ifdef WIFI_CONN_LED_BLINK
@@ -287,14 +287,14 @@ static __unused int wifi_first_connect(struct wifi_nw_cfg **cfgs, size_t cfg_cnt
 #ifdef WIFI_CONN_LED_BLINK
                         if (wifi_led_blink) {
                                 led_on(wifi_led, 255, 0, 0);
-                                vTaskDelay(pdMS_TO_TICKS(500));
+                                vTaskDelay(pdMS_TO_TICKS(250));
                                 led_off(wifi_led);
-                                vTaskDelay(pdMS_TO_TICKS(500));
+                                vTaskDelay(pdMS_TO_TICKS(250));
                         } else {
-                                vTaskDelay(pdMS_TO_TICKS(1000));
+                                vTaskDelay(pdMS_TO_TICKS(500));
                         }
 #else
-                        vTaskDelay(pdMS_TO_TICKS(1000));
+                        vTaskDelay(pdMS_TO_TICKS(500));
 #endif // #ifdef WIFI_CONN_LED_BLINK
                 }
 
