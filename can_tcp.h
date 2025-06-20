@@ -45,6 +45,8 @@ static uint8_t can_rlimit_update_hz_default = 20;
 static NetworkServer can_tcp_server(CONFIG_CANTCP_SERVER_PORT);
 static int can_tcp_client_fd = -1;
 
+static uint64_t cnt_can_tcp_send_bytes;
+static uint64_t cnt_can_tcp_recv_bytes;
 static uint64_t cnt_can_tcp_recv_error;
 static uint64_t cnt_can_tcp_send_error;
 static uint64_t cnt_can_tcp_recv;       // from remote
@@ -338,6 +340,7 @@ static void can_tcp_recv_cb(can_frame_t *f)
         }
 
         cnt_can_tcp_send++;
+        cnt_can_tcp_send_bytes += n;
 
 #if 0
         pr_raw("tcp send: id: 0x%04lx len: %u ", le32toh(f->id), f->dlc);
@@ -361,13 +364,13 @@ static void can_tcp_server_worker(void)
                 static int pos = 0;
                 int sockfd = client.fd();
 
-                pr_info("client connected\n");
+                pr_info("client %s:%u connected\n", client.remoteIP().toString().c_str(), client.remotePort());
 
-                // {
-                //         int bufsize = 8192;
-                //         setsockopt(sockfd, SOL_SOCKET, SO_SNDBUF, &bufsize, sizeof(bufsize));
-                //         setsockopt(sockfd, SOL_SOCKET, SO_RCVBUF, &bufsize, sizeof(bufsize));
-                // }
+                {
+                        int bufsize = 4096;
+                        setsockopt(sockfd, SOL_SOCKET, SO_SNDBUF, &bufsize, sizeof(bufsize));
+                        setsockopt(sockfd, SOL_SOCKET, SO_RCVBUF, &bufsize, sizeof(bufsize));
+                }
 
                 // {
                 //         int sndbuf = 0;
@@ -407,7 +410,19 @@ static void can_tcp_server_worker(void)
                         // this posix dude blocks
                         n = recv(sockfd, &buf[pos], sizeof(buf) - pos, 0);
 
-                        pr_info("n = %d\n", n);
+                        // {
+                        //         static uint32_t s = 0;
+                        //         static uint32_t last_ts = 0;
+                        //         uint32_t now = esp32_millis();
+
+                        //         s += n;
+
+                        //         if (now - last_ts >= 10 * 1000) {
+                        //                 pr_info("in 10 secs, received %lu bytes, %lu B/s\n", s, s / 10);
+                        //                 last_ts = now;
+                        //                 s = 0;
+                        //         }
+                        // }
 
                         if (n > 0) {
                                 pos += n;
@@ -423,6 +438,8 @@ static void can_tcp_server_worker(void)
                                 } else { // c <= 0: got error, drop all
                                         pos = 0;
                                 }
+
+                                cnt_can_tcp_recv_bytes += n;
                         } else {
                                 if (errno == EINTR) {
                                         continue;
