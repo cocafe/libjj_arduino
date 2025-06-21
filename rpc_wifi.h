@@ -113,6 +113,52 @@ void rpc_wifi_add(void)
                         http_rpc.send(200, "text/plain", buf);
                 }
         });
+
+        http_rpc.on("/wifi_ps", HTTP_GET, [](){
+                if (http_rpc.hasArg("set")) {
+                        String data = http_rpc.arg("set");
+                        int match = 0;
+                        int i = 0;
+
+                        for (i = 0; i < ARRAY_SIZE(str_wifi_ps_modes); i++) {
+                                if (is_str_equal((char *)str_wifi_ps_modes[i], (char *)data.c_str(), CASELESS)) {
+                                        match = 1;
+                                        break;
+                                }
+                        }
+
+                        if (!match) {
+                                http_rpc.send(404, "text/plain", "Invalid value\n");
+                                return;
+                        }
+
+                        if (esp_wifi_set_ps((wifi_ps_type_t)i) != ESP_OK)
+                                http_rpc.send(200, "text/plain", "error\n");
+                        else
+                                http_rpc.send(200, "text/plain", "OK\n");
+                } else {
+                        char buf[32] = { };
+                        wifi_ps_type_t val;
+
+                        if (esp_wifi_get_ps(&val) != ESP_OK) {
+                                http_rpc.send(200, "text/plain", "error\n");
+                                return;
+                        }
+
+                        if (val < 0 || val >= ARRAY_SIZE(str_wifi_ps_modes)) {
+                                snprintf(buf, sizeof(buf), "%d\n", val);
+                                return;
+                        } else {
+                                size_t c = 0;
+
+                                for (int i = 0; i < ARRAY_SIZE(str_wifi_ps_modes); i++) {
+                                        c += snprintf(&buf[c], sizeof(buf) - c, "%s %s\n", str_wifi_ps_modes[i], val == i ? "*" : "");
+                                }
+                        }
+
+                        http_rpc.send(200, "text/plain", buf);
+                }
+        });
 }
 
 #endif // __LIBJJ_RPC_WIFI_H__

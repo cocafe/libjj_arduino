@@ -35,7 +35,7 @@ static void task_wifi_conn(void *arg)
 #endif
 
                 while (WiFi.status() == WL_CONNECTED) {
-                        vTaskDelay(pdMS_TO_TICKS(5000));
+                        xSemaphoreTake(sem_wifi_wait, pdMS_TO_TICKS(5000));
                 }
 
                 pr_info("wifi connection lost\n");

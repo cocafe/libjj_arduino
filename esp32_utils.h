@@ -8,6 +8,7 @@
 
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
+#include <Arduino.h>
 
 #include <esp_random.h>
 
@@ -33,6 +34,8 @@ static inline __unused uint64_t esp32_microsecs(void)
         return esp_timer_get_time();
 }
 
+// arduino esp32 board lib v3.0.9 idf v5.1.4 does not have task traces
+#if ESP_IDF_VERSION_MAJOR >= 5 && ESP_IDF_VERSION_MINOR > 1
 static TaskStatus_t *esp32_top_stats_snapshot(UBaseType_t *task_cnt, unsigned long *ulTotalRunTime)
 {
         TaskStatus_t *pxTaskStatusArray;
@@ -240,6 +243,26 @@ static int esp32_cpu_usage_get(unsigned sampling_ms)
 
         return 100ULL * (total_delta - idle_delta) / total_delta;
 }
+#else
+static int esp32_top_stats_print(unsigned sampling_ms, int (*__snprintf)(char *buffer, size_t bufsz, const char *format, ...), char *buf, size_t bufsz)
+{
+        if (buf)
+                buf[0] = '\0';
+
+
+        return 0;
+}
+
+static int esp32_top_snapshot_print(int (*__snprintf)(char *buffer, size_t bufsz, const char *format, ...), char *buf, size_t bufsz)
+{
+        if (buf)
+                buf[0] = '\0';
+
+        return 0;
+}
+
+static int esp32_cpu_usage_get(unsigned sampling_ms) { return 0; }
+#endif
 
 static temperature_sensor_handle_t esp32_tsens;
 

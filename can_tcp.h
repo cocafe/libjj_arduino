@@ -368,31 +368,20 @@ static void can_tcp_server_worker(void)
 
                 {
                         int bufsize = 4096;
+
                         setsockopt(sockfd, SOL_SOCKET, SO_SNDBUF, &bufsize, sizeof(bufsize));
                         setsockopt(sockfd, SOL_SOCKET, SO_RCVBUF, &bufsize, sizeof(bufsize));
                 }
 
-                // {
-                //         int sndbuf = 0;
-                //         int rcvbuf = 0;
-                //         socklen_t optlen = sizeof(int);
-
-                //         if (getsockopt(sockfd, SOL_SOCKET, SO_SNDBUF, &sndbuf, &optlen) == 0) {
-                //                 pr_info("SO_SNDBUF: %d bytes\n", sndbuf);
-                //         }
-
-                //         if (getsockopt(sockfd, SOL_SOCKET, SO_RCVBUF, &rcvbuf, &optlen) == 0) {
-                //                 pr_info("SO_RCVBUF: %d bytes\n", rcvbuf);
-                //         }
-                // }
-
                 // for client.readBytes()
                 // client.setTimeout(1000);
 
+#ifdef CONFIG_CANTCP_NO_DELAY
                 // disable TCP Nagle
                 // send small pkt asap
                 // but will increase memory pressure
-                // client.setNoDelay(true);
+                client.setNoDelay(true);
+#endif
 
                 WRITE_ONCE(can_tcp_client_fd, sockfd);
 
@@ -409,20 +398,6 @@ static void can_tcp_server_worker(void)
 
                         // this posix dude blocks
                         n = recv(sockfd, &buf[pos], sizeof(buf) - pos, 0);
-
-                        // {
-                        //         static uint32_t s = 0;
-                        //         static uint32_t last_ts = 0;
-                        //         uint32_t now = esp32_millis();
-
-                        //         s += n;
-
-                        //         if (now - last_ts >= 10 * 1000) {
-                        //                 pr_info("in 10 secs, received %lu bytes, %lu B/s\n", s, s / 10);
-                        //                 last_ts = now;
-                        //                 s = 0;
-                        //         }
-                        // }
 
                         if (n > 0) {
                                 pos += n;
@@ -441,14 +416,18 @@ static void can_tcp_server_worker(void)
 
                                 cnt_can_tcp_recv_bytes += n;
                         } else {
+                                pr_dbg("recv(): n: %d err: %d %s\n", n, errno, strerror(abs(errno)));
+
                                 if (errno == EINTR) {
                                         continue;
                                 } else if (errno == EAGAIN) {
                                         pr_dbg("recv() timedout, n = %d\n", n);
                                         vTaskDelay(pdMS_TO_TICKS(100));
                                         continue;
-                                } else {
-                                        pr_dbg("recv(): n: %d err: %d %s\n", n, errno, strerror(abs(errno)));
+                                } else if (errno == ECONNABORTED) { // err code 113 here, which should be 103 in posix
+                                        WiFi.disconnect(true);
+                                        wifi_connection_check_post();
+                                } else { // other errors
                                         break;
                                 }
                         }
@@ -479,7 +458,9 @@ static void task_can_tcp_server_start(unsigned cpu)
         if (can_dev) {
                 can_recv_cb_register(can_tcp_recv_cb);
                 can_tcp_server.begin();
-                // can_tcp_server.setNoDelay(true);
+#ifdef CONFIG_CANTCP_NO_DELAY
+                can_tcp_server.setNoDelay(true);
+#endif
                 xTaskCreatePinnedToCore(task_can_tcp, "can_tcp", 4096, NULL, 1, NULL, cpu);
 #ifdef CAN_TCP_LED_BLINK
                 xTaskCreatePinnedToCore(task_can_tcp_led_blink, "led_blink_tcp", 1024, NULL, 1, NULL, cpu);

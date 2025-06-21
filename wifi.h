@@ -3,7 +3,10 @@
 
 #include <stdio.h>
 
+#include <esp_wifi.h>
+
 #include <WiFi.h>
+
 #include <freertos/semphr.h>
 
 #include "utils.h"
@@ -11,6 +14,8 @@
 #include "logging.h"
 
 #define WIFI_CONNECT_TIMEOUT_SEC        (60)
+
+static SemaphoreHandle_t sem_wifi_wait;
 
 enum {
         WIFI_EVENT_CONNECTED,
@@ -32,6 +37,12 @@ static __unused const char *str_wifi_modes[] = {
         [ESP_WIFI_MODE_STA]     = "STA",
         [ESP_WIFI_MODE_AP]      = "AP",
         [ESP_WIFI_MODE_STA_AP]  = "STA_AP",
+};
+
+static const char *str_wifi_ps_modes[] = {
+        [WIFI_PS_NONE]          = "NONE",
+        [WIFI_PS_MIN_MODEM]     = "PS_MIN",     // enabled PS
+        [WIFI_PS_MAX_MODEM]     = "PS_MAX",     // MAX PS
 };
 
 struct wifi_event_cb_ctx {
@@ -156,6 +167,8 @@ static void __wifi_init(void)
         WiFi.setSleep(false);
         WiFi.setTxPower(__wifi_tx_power);
         WiFi.mode(__wifi_mode);
+        esp_wifi_set_ps(WIFI_PS_NONE);
+        esp_wifi_set_dynamic_cs(true);
 }
 
 static inline void wifi_tx_power_print(int val)
@@ -184,11 +197,14 @@ static __unused int wifi_sta_init(struct wifi_nw_cfg *nw, int txpwr)
                 return -EINVAL;
 
         lck_wifi_cb = xSemaphoreCreateMutex();
+        sem_wifi_wait = xSemaphoreCreateBinary();
 
         wifi_tx_power_set(txpwr);
 
         __wifi_mode = WIFI_STA;
         __wifi_init();
+
+        WiFi.setAutoReconnect(true);
 
         return 0;
 }
@@ -224,12 +240,14 @@ static __unused int wifi_sta_ap_init(struct wifi_nw_cfg *sta, struct wifi_nw_cfg
                 return -EINVAL;
 
         lck_wifi_cb = xSemaphoreCreateMutex();
+        sem_wifi_wait = xSemaphoreCreateBinary();
 
         wifi_tx_power_set(txpwr);
 
         __wifi_mode = WIFI_AP_STA;
         __wifi_init();
 
+        WiFi.setAutoReconnect(true);
         WiFi.softAPConfig(local, gw, subnet);
         WiFi.softAP(ap->ssid, ap->passwd);
 
@@ -254,12 +272,6 @@ static __unused void wifi_connect(struct wifi_nw_cfg *cfg)
 static __unused void wifi_reconnect(struct wifi_nw_cfg *cfg)
 {
         WiFi.disconnect(true);
-
-        if (__wifi_mode != WIFI_AP_STA)
-                WiFi.mode(WIFI_OFF);
-
-        vTaskDelay(pdMS_TO_TICKS(500));
-        __wifi_init();
         wifi_connect(cfg);
 }
 
@@ -308,6 +320,11 @@ static __unused int wifi_first_connect(struct wifi_nw_cfg **cfgs, size_t cfg_cnt
         pr_info("connected and bind to SSID \"%s\"\n", cfgs[idx]->ssid);
 
         return idx;
+}
+
+static __unused void wifi_connection_check_post(void)
+{
+        xSemaphoreGive(sem_wifi_wait);
 }
 
 #endif // __LIBJJ_WIFI_H__
