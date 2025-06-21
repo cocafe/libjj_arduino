@@ -7,6 +7,7 @@
 #include <RaceChrono.h>
 
 #include "logging.h"
+#include "esp32_utils.h"
 #include "can.h"
 
 #ifndef BLE_DEFAULT_UPDATE_RATE_HZ
@@ -31,8 +32,8 @@ static uint8_t can_ble_led_blink = 1;
 
 using PidExtra = struct
 {
-        uint32_t updateIntervalHz = 1000000UL / racechrono_ble_update_rate_hz;
-        uint32_t lastMessageTime = 0;
+        uint32_t update_intv_ms = (racechrono_ble_update_rate_hz == 0) ? 0 : (1000 / racechrono_ble_update_rate_hz);
+        uint32_t ts_last_send = 0;
 };
 RaceChronoPidMap<PidExtra> pidMap;
 
@@ -56,9 +57,12 @@ public:
                 if (pidMap.allowOnePid(pid, updateIntervalMs)) {
                         void *entry = pidMap.getEntryId(pid);
                         PidExtra *pidExtra = pidMap.getExtra(entry);
-                        pidExtra->lastMessageTime = esp_timer_get_time();
-                        pidExtra->updateIntervalHz = 1000000UL / racechrono_ble_update_rate_hz;
-                        pr_info("pid: 0x%03lx update interval %u Hz\n", pid, racechrono_ble_update_rate_hz);
+                        pidExtra->ts_last_send = 0;
+                        pidExtra->update_intv_ms = (racechrono_ble_update_rate_hz == 0) ? 0 : (1000 / racechrono_ble_update_rate_hz);
+                        if (racechrono_ble_update_rate_hz != 0)
+                                pr_info("pid: 0x%03lx update interval %u Hz\n", pid, racechrono_ble_update_rate_hz);
+                        else
+                                pr_info("pid: 0x%03lx unlimited update interval\n", pid);
                 } else {
                         pr_err("unable to handle this request\n");
                 }
@@ -172,10 +176,11 @@ static void can_ble_frame_send(can_frame_t *f)
                 return;
 
         PidExtra *extra = pidMap.getExtra(entry);
-        if ((esp_timer_get_time() - extra->lastMessageTime) >= extra->updateIntervalHz) {
+        uint32_t now = esp32_millis();
+        if ((now - extra->ts_last_send) >= extra->update_intv_ms) {
                 RaceChronoBle.sendCanData(f->id, f->data, f->dlc);
 
-                extra->lastMessageTime += extra->updateIntervalHz;
+                extra->ts_last_send = now;
                 cnt_can_ble_send++;
 
 #ifdef CAN_BLE_LED_BLINK
