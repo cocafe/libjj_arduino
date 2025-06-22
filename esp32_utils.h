@@ -244,7 +244,7 @@ static int esp32_cpu_usage_get(unsigned sampling_ms)
         return 100ULL * (total_delta - idle_delta) / total_delta;
 }
 #else
-static int esp32_top_stats_print(unsigned sampling_ms, int (*__snprintf)(char *buffer, size_t bufsz, const char *format, ...), char *buf, size_t bufsz)
+static __unused inline int esp32_top_stats_print(unsigned sampling_ms, int (*__snprintf)(char *buffer, size_t bufsz, const char *format, ...), char *buf, size_t bufsz)
 {
         if (buf)
                 buf[0] = '\0';
@@ -253,7 +253,7 @@ static int esp32_top_stats_print(unsigned sampling_ms, int (*__snprintf)(char *b
         return 0;
 }
 
-static int esp32_top_snapshot_print(int (*__snprintf)(char *buffer, size_t bufsz, const char *format, ...), char *buf, size_t bufsz)
+static __unused inline int esp32_top_snapshot_print(int (*__snprintf)(char *buffer, size_t bufsz, const char *format, ...), char *buf, size_t bufsz)
 {
         if (buf)
                 buf[0] = '\0';
@@ -261,7 +261,7 @@ static int esp32_top_snapshot_print(int (*__snprintf)(char *buffer, size_t bufsz
         return 0;
 }
 
-static int esp32_cpu_usage_get(unsigned sampling_ms) { return 0; }
+static __unused inline int esp32_cpu_usage_get(unsigned sampling_ms) { return 0; }
 #endif
 
 static temperature_sensor_handle_t esp32_tsens;
