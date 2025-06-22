@@ -56,7 +56,7 @@ static int __unused udp_mc_sock_create(const char *if_addr, const char *mc_addr,
 
 static int udp_mc_sock_close(int sock)
 {
-        if (sock < -1)
+        if (sock < 0)
                 return -ENODATA;
 
         shutdown(sock, SHUT_RDWR);
