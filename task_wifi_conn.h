@@ -3,7 +3,13 @@
 
 static void task_wifi_conn(void *arg)
 {
-        pr_info("started\n");
+        vTaskDelay(pdMS_TO_TICKS(1000));
+
+        WiFi.onEvent(wifi_sys_event_cb, ARDUINO_EVENT_WIFI_STA_CONNECTED);
+        WiFi.onEvent(wifi_sys_event_cb, ARDUINO_EVENT_WIFI_STA_DISCONNECTED);
+        WiFi.onEvent(wifi_sys_event_cb, ARDUINO_EVENT_WIFI_STA_GOT_IP);
+
+        wifi_idx = wifi_first_connect(wifi_configs, ARRAY_SIZE(wifi_configs));
 
         while (1) {
                 struct wifi_nw_cfg *wifi_cfg = wifi_configs[wifi_idx];
@@ -35,7 +41,6 @@ static void task_wifi_conn(void *arg)
                 }
 
                 pr_info("wifi connected, RSSI %d dBm, BSSID: %s\n", WiFi.RSSI(), WiFi.BSSIDstr().c_str());
-                wifi_event_call(WIFI_EVENT_CONNECTED);
 
 #ifdef WIFI_CONN_LED_BLINK
                 led_on(wifi_led, 0, 0, 255);
@@ -45,9 +50,8 @@ static void task_wifi_conn(void *arg)
                         xSemaphoreTake(sem_wifi_wait, pdMS_TO_TICKS(5000));
                 }
 
-                pr_info("wifi connection lost\n");
+                pr_info("wifi connection lost, reconnect now\n");
                 wifi_reconnect(wifi_cfg);
-                wifi_event_call(WIFI_EVENT_DISCONNECTED);
         }
 }
 

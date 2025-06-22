@@ -196,15 +196,18 @@ static int event_udp_mc_sock_create(const char *if_addr, const char *mc_addr, un
 static void event_udp_mc_sock_close(void)
 {
         if (!udp_mc_sock_close(READ_ONCE(evt_udp_mc_sock))) {
-                evt_udp_mc_sock = -1;
+                pr_info("\n");
+                WRITE_ONCE(evt_udp_mc_sock, -1);
         }
 }
 
 static void event_udp_mc_wifi_event_cb(int event)
 {
         switch (event) {
-        case WIFI_EVENT_CONNECTED:
-                event_udp_mc_sock_create(WiFi.localIP().toString().c_str(), evt_udp_mc_addr, evt_udp_mc_port);
+        case WIFI_EVENT_IP_GOT:
+                if (READ_ONCE(evt_udp_mc_sock) < 0) {
+                        event_udp_mc_sock_create(WiFi.localIP().toString().c_str(), evt_udp_mc_addr, evt_udp_mc_port);
+                }
                 break;
         
         case WIFI_EVENT_DISCONNECTED:

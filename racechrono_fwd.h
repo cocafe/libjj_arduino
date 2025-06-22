@@ -106,15 +106,20 @@ static int racechrono_udp_mc_create(const char *if_addr, const char *mc_addr, un
 
 static void racechrono_udp_mc_close(void)
 {
-        if (!udp_mc_sock_close(READ_ONCE(rc_udp_mc_sock)))
-                rc_udp_mc_sock = -1;
+        if (!udp_mc_sock_close(READ_ONCE(rc_udp_mc_sock))) {
+                pr_info("\n");
+                WRITE_ONCE(rc_udp_mc_sock, -1);
+        }
 }
 
 static void racechrono_fwd_wifi_event_cb(int event)
 {
         switch (event) {
-        case WIFI_EVENT_CONNECTED:
-                racechrono_udp_mc_create(WiFi.localIP().toString().c_str(), rc_udp_mc_addr, rc_udp_mc_port);
+        case WIFI_EVENT_IP_GOT:
+                if (READ_ONCE(rc_udp_mc_sock) < 0) {
+                        racechrono_udp_mc_create(WiFi.localIP().toString().c_str(), rc_udp_mc_addr, rc_udp_mc_port);
+                }
+
                 break;
         
         case WIFI_EVENT_DISCONNECTED:

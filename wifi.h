@@ -21,6 +21,7 @@ enum {
         WIFI_EVENT_CONNECTED,
         WIFI_EVENT_CONNECTING,
         WIFI_EVENT_DISCONNECTED,
+        WIFI_EVENT_IP_GOT,
         NUM_WIFI_EVENTS,
 };
 
@@ -164,10 +165,20 @@ static __unused int wifi_mode_get(void)
 
 static __unused void wifi_event_call(int event)
 {
+        pr_dbg("event: %d\n", event);
+
         for (int i = 0; i < ARRAY_SIZE(wifi_event_cbs); i++) {
                 if (wifi_event_cbs[i].cb)
                         wifi_event_cbs[i].cb(event);
         }
+}
+
+static int wifi_early_init(void)
+{
+        lck_wifi_cb = xSemaphoreCreateMutex();
+        sem_wifi_wait = xSemaphoreCreateBinary();
+
+        return 0;
 }
 
 static void __wifi_init(void)
@@ -206,9 +217,6 @@ static __unused int wifi_sta_init(struct wifi_nw_cfg *nw, int txpwr)
         if (!local.fromString(nw->local) || !gw.fromString(nw->gw) || !subnet.fromString(nw->subnet))
                 return -EINVAL;
 
-        lck_wifi_cb = xSemaphoreCreateMutex();
-        sem_wifi_wait = xSemaphoreCreateBinary();
-
         wifi_tx_power_set(txpwr);
 
         __wifi_mode = WIFI_STA;
@@ -225,8 +233,6 @@ static __unused int wifi_ap_init(struct wifi_nw_cfg *nw, int txpwr)
 
         if (!local.fromString(nw->local) || !gw.fromString(nw->gw) || !subnet.fromString(nw->subnet))
                 return -EINVAL;
-
-        lck_wifi_cb = xSemaphoreCreateMutex();
 
         wifi_tx_power_set(txpwr);
 
@@ -248,9 +254,6 @@ static __unused int wifi_sta_ap_init(struct wifi_nw_cfg *sta, struct wifi_nw_cfg
         // validate and use for AP
         if (!local.fromString(ap->local) || !gw.fromString(ap->gw) || !subnet.fromString(ap->subnet))
                 return -EINVAL;
-
-        lck_wifi_cb = xSemaphoreCreateMutex();
-        sem_wifi_wait = xSemaphoreCreateBinary();
 
         wifi_tx_power_set(txpwr);
 
@@ -335,6 +338,35 @@ static __unused int wifi_first_connect(struct wifi_nw_cfg **cfgs, size_t cfg_cnt
 static __unused void wifi_connection_check_post(void)
 {
         xSemaphoreGive(sem_wifi_wait);
+}
+
+void wifi_sys_event_cb(arduino_event_id_t event)
+{
+        switch (event) {
+        case ARDUINO_EVENT_WIFI_STA_CONNECTED:
+                wifi_event_call(WIFI_EVENT_CONNECTED);
+                break;
+
+        // XXX: if already disconnected,
+        //      this event still will be called again
+        //      if WiFi.disconnect(true) is called
+        case ARDUINO_EVENT_WIFI_STA_DISCONNECTED:
+                wifi_event_call(WIFI_EVENT_DISCONNECTED);
+                break;
+
+        case ARDUINO_EVENT_WIFI_STA_GOT_IP:
+                wifi_event_call(WIFI_EVENT_IP_GOT);
+                break;
+
+        case ARDUINO_EVENT_WIFI_STA_LOST_IP:
+        case ARDUINO_EVENT_WIFI_READY:
+        case ARDUINO_EVENT_WIFI_SCAN_DONE:
+        case ARDUINO_EVENT_WIFI_STA_START:
+        case ARDUINO_EVENT_WIFI_STA_STOP:
+        case ARDUINO_EVENT_WIFI_STA_AUTHMODE_CHANGE:
+        default:
+                break;
+        }
 }
 
 #endif // __LIBJJ_WIFI_H__
