@@ -83,6 +83,9 @@ static wifi_mode_t __wifi_mode = WIFI_OFF;
 static __unused size_t wifi_idx = 0;
 
 enum {
+        ESP_WIFI_POWER_21dBm,
+        ESP_WIFI_POWER_20_5dBm,
+        ESP_WIFI_POWER_20dBm,
         ESP_WIFI_POWER_19_5dBm,
         ESP_WIFI_POWER_19dBm,
         ESP_WIFI_POWER_18_5dBm,
@@ -99,6 +102,9 @@ enum {
 };
 
 static const char *str_wifi_txpwr[NUM_ESP_WIFI_TXPWR] = {
+        [ESP_WIFI_POWER_21dBm]          = "21dBm",
+        [ESP_WIFI_POWER_20_5dBm]        = "20.5dBm",
+        [ESP_WIFI_POWER_20dBm]          = "20dBm",
         [ESP_WIFI_POWER_19_5dBm]        = "19.5dBm",
         [ESP_WIFI_POWER_19dBm]          = "19dBm",
         [ESP_WIFI_POWER_18_5dBm]        = "18.5dBm",
@@ -114,6 +120,9 @@ static const char *str_wifi_txpwr[NUM_ESP_WIFI_TXPWR] = {
 };
 
 static int cfg_wifi_txpwr_convert[NUM_ESP_WIFI_TXPWR] = {
+        [ESP_WIFI_POWER_21dBm]          = WIFI_POWER_21dBm,
+        [ESP_WIFI_POWER_20_5dBm]        = WIFI_POWER_20_5dBm,
+        [ESP_WIFI_POWER_20dBm]          = WIFI_POWER_20dBm,
         [ESP_WIFI_POWER_19_5dBm]        = WIFI_POWER_19_5dBm,
         [ESP_WIFI_POWER_19dBm]          = WIFI_POWER_19dBm,
         [ESP_WIFI_POWER_18_5dBm]        = WIFI_POWER_18_5dBm,
@@ -163,7 +172,8 @@ static __unused void wifi_event_call(int event)
 
 static void __wifi_init(void)
 {
-        WiFi.useStaticBuffers(true);
+        WiFi.useStaticBuffers(CONFIG_WIFI_USE_STATIC_BUF);
+        WiFi.enableLongRange(CONFIG_WIFI_USE_LONG_RANGE);
         WiFi.setSleep(false);
         WiFi.setTxPower(__wifi_tx_power);
         WiFi.mode(__wifi_mode);
@@ -204,7 +214,7 @@ static __unused int wifi_sta_init(struct wifi_nw_cfg *nw, int txpwr)
         __wifi_mode = WIFI_STA;
         __wifi_init();
 
-        WiFi.setAutoReconnect(true);
+        WiFi.setAutoReconnect(false);
 
         return 0;
 }
@@ -247,7 +257,7 @@ static __unused int wifi_sta_ap_init(struct wifi_nw_cfg *sta, struct wifi_nw_cfg
         __wifi_mode = WIFI_AP_STA;
         __wifi_init();
 
-        WiFi.setAutoReconnect(true);
+        WiFi.setAutoReconnect(false);
         WiFi.softAPConfig(local, gw, subnet);
         WiFi.softAP(ap->ssid, ap->passwd);
 

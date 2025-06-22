@@ -312,7 +312,7 @@ static void can_tcp_recv_cb(can_frame_t *f)
         int sockfd = READ_ONCE(can_tcp_client_fd);
         int n;
 
-        if (sockfd < 0) {
+        if (READ_ONCE(sockfd) < 0) {
                 return;
         }
 
@@ -335,6 +335,7 @@ static void can_tcp_recv_cb(can_frame_t *f)
 
                 shutdown(sockfd, SHUT_RDWR);
                 close(sockfd);
+                WRITE_ONCE(can_tcp_client_fd, -1);
 
                 return;
         }

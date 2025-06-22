@@ -10,6 +10,7 @@ static void task_wifi_conn(void *arg)
 
                 if (WiFi.status() != WL_CONNECTED) {
                         pr_info("connecting to SSID \"%s\" ...\n", wifi_cfg->ssid);
+                        uint32_t ts_start_connect = esp32_millis();
 
                         while (WiFi.status() != WL_CONNECTED) {
 #ifdef WIFI_CONN_LED_BLINK
@@ -24,6 +25,12 @@ static void task_wifi_conn(void *arg)
 #else
                                 vTaskDelay(pdMS_TO_TICKS(500));
 #endif // #ifdef WIFI_CONN_LED_BLINK
+
+                                if (esp32_millis() - ts_start_connect >= (wifi_cfg->timeout_sec * 1000)) {
+                                        pr_info("connection timed out, try again\n");
+                                        ts_start_connect = esp32_millis();
+                                        wifi_reconnect(wifi_cfg);
+                                }
                         }
                 }
 

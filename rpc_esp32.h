@@ -9,6 +9,7 @@ void rpc_esp32_add(void)
                 ESP.restart();
         });
 
+#if ESP_IDF_VERSION_MAJOR >= 5 && ESP_IDF_VERSION_MINOR > 1
         http_rpc.on("/esp32_top", HTTP_GET, [](){
                 char *buf;
                 unsigned sampling_ms = 500;
@@ -54,6 +55,7 @@ void rpc_esp32_add(void)
 
                 free(buf);
         });
+#endif
 
         http_rpc.on("/esp32_tsens", HTTP_GET, [](){
                 char buf[8] = { };
@@ -71,22 +73,27 @@ void rpc_esp32_add(void)
         http_rpc.on("/esp32_stats", HTTP_GET, [](){
                 char buf[512] = { };
                 float tempC = 0.0;
-                int cpu = 0;
                 size_t c = 0;
 
                 if (esp32_tsens_get(&tempC)) {
                         tempC = NAN;
                 }
 
+#if ESP_IDF_VERSION_MAJOR >= 5 && ESP_IDF_VERSION_MINOR > 1
+                int cpu = 0;
+
                 if ((cpu = esp32_cpu_usage_get(100)) < 0) {
                         cpu = -1;
                 }
+#endif
 
                 c += snprintf(&buf[c], sizeof(buf) - c, "# HELP esp_stats\n");
                 c += snprintf(&buf[c], sizeof(buf) - c, "# TYPE esp_stats gauge\n");
                 c += snprintf(&buf[c], sizeof(buf) - c, "esp_stats{t=\"uptime\"} %ju\n", esp32_millis() / 1000);
                 c += snprintf(&buf[c], sizeof(buf) - c, "esp_stats{t=\"tempC\"} %.2f\n", tempC);
+#if ESP_IDF_VERSION_MAJOR >= 5 && ESP_IDF_VERSION_MINOR > 1
                 c += snprintf(&buf[c], sizeof(buf) - c, "esp_stats{t=\"cpu_usage\"} %d\n", cpu);
+#endif
                 c += snprintf(&buf[c], sizeof(buf) - c, "esp_stats{t=\"free_heap\"} %lu\n", esp_get_free_heap_size());
                 c += snprintf(&buf[c], sizeof(buf) - c, "esp_stats{t=\"min_free_heap\"} %lu\n", esp_get_minimum_free_heap_size());
 

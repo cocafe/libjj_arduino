@@ -101,13 +101,24 @@ void rpc_wifi_add(void)
 
                         http_rpc.send(200, "text/plain", "OK\n");
                 } else {
-                        char buf[128] = { };
+                        char buf[256] = { };
                         size_t c = 0;
+                        int r = -1;
 
-                        for (size_t i = 0; i < ARRAY_SIZE(str_wifi_txpwr); i++) {
-                                c += snprintf(&buf[c], sizeof(buf) - c, "%s %s\n",
+                        wifi_power_t curr = WiFi.getTxPower();
+
+                        for (int i = 0; i < ARRAY_SIZE(cfg_wifi_txpwr_convert); i++) {
+                                if (cfg_wifi_txpwr_convert[i] == curr) {
+                                        r = i;
+                                        break;
+                                }
+                        }
+
+                        for (int i = 0; i < ARRAY_SIZE(str_wifi_txpwr); i++) {
+                                c += snprintf(&buf[c], sizeof(buf) - c, "%s %s %s\n",
                                         str_wifi_txpwr[i],
-                                        g_cfg.wifi_txpwr == i ? "*" : "");
+                                        g_cfg.wifi_txpwr == i ? "[*]" : "",
+                                        r == i ? "[v]" : "");
                         }
 
                         http_rpc.send(200, "text/plain", buf);
