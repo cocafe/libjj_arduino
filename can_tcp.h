@@ -45,12 +45,13 @@ static uint8_t can_rlimit_update_hz_default = 20;
 static NetworkServer can_tcp_server(CONFIG_CANTCP_SERVER_PORT);
 static int can_tcp_client_fd = -1;
 
+static uint64_t cnt_can_tcp_send;       // send to remote
 static uint64_t cnt_can_tcp_send_bytes;
-static uint64_t cnt_can_tcp_recv_bytes;
-static uint64_t cnt_can_tcp_recv_error;
 static uint64_t cnt_can_tcp_send_error;
 static uint64_t cnt_can_tcp_recv;       // from remote
-static uint64_t cnt_can_tcp_send;       // send to remote
+static uint64_t cnt_can_tcp_recv_bytes;
+static uint64_t cnt_can_tcp_recv_error;
+static uint64_t cnt_can_tcp_recv_invalid;
 
 #ifdef CAN_TCP_LED_BLINK
 static uint8_t can_tcp_txrx = 0;
@@ -259,7 +260,7 @@ static int can_frames_input(uint8_t *buf, int len)
 
                 if (!ret) {
                         // pr_info("%s(): invalid packet\n", __func__);
-                        cnt_can_tcp_recv_error++;
+                        cnt_can_tcp_recv_invalid++;
                         return -EINVAL;
                 }
 
@@ -279,7 +280,7 @@ static int can_frames_input(uint8_t *buf, int len)
                         goto next_frame;
 
                 if (!is_valid_can_frame(f)) {
-                        cnt_can_tcp_recv_error++;
+                        cnt_can_tcp_recv_invalid++;
                         return -EINVAL;
                 }
 
@@ -417,18 +418,26 @@ static void can_tcp_server_worker(void)
 
                                 cnt_can_tcp_recv_bytes += n;
                         } else {
-                                pr_dbg("recv(): n: %d err: %d %s\n", n, errno, strerror(abs(errno)));
-
-                                if (errno == EINTR) {
+                                if (errno == EINTR)
                                         continue;
-                                } else if (errno == EAGAIN) {
+
+                                pr_dbg("recv(): n: %d err: %d %s\n", n, errno, strerror(abs(errno)));
+                                cnt_can_tcp_recv_error++;
+
+                                if (errno == EAGAIN) {
                                         pr_dbg("recv() timedout, n = %d\n", n);
                                         vTaskDelay(pdMS_TO_TICKS(100));
+
                                         continue;
-                                } else if (errno == ECONNABORTED) { // err code 113 here, which should be 103 in posix
-                                        WiFi.disconnect(true);
-                                        wifi_connection_check_post();
-                                } else { // other errors
+                                } else {
+                                        // err code 113 here, which should be 103 in posix
+                                        // XXX: wifi stack got error?!
+                                        if (errno == ECONNABORTED) {
+                                                WiFi.disconnect(true);
+                                                wifi_connection_check_post();
+                                        }
+
+                                        // close connection now
                                         break;
                                 }
                         }

@@ -165,7 +165,7 @@ static __unused int wifi_mode_get(void)
 
 static __unused void wifi_event_call(int event)
 {
-        pr_dbg("event: %d\n", event);
+        pr_verbose("event: %d\n", event);
 
         for (int i = 0; i < ARRAY_SIZE(wifi_event_cbs); i++) {
                 if (wifi_event_cbs[i].cb)
