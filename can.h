@@ -106,6 +106,8 @@ static void task_can_recv(void *arg)
         pr_info("started\n");
 
         while (1) {
+                uint8_t aggr = 0;
+
                 while (can_dev->recv(f) == 0) {
 #if 0
                         pr_raw("canbus recv: id: 0x%04lx len: %hhu ", f->id, f->dlc);
@@ -116,12 +118,19 @@ static void task_can_recv(void *arg)
 #endif
 
                         for (int i = 0; i < ARRAY_SIZE(can_recv_cbs); i++) {
-                                if (can_recv_cbs[i].cb)
+                                if (can_recv_cbs[i].cb) {
                                         can_recv_cbs[i].cb(f);
+                                        aggr++;
+                                }
                         }
 
                         // XXX: to avoid starvation of other tasks
-                        taskYIELD();
+                        // taskYIELD();
+
+                        if (aggr >= 10) {
+                                vTaskDelay(pdMS_TO_TICKS(1));
+                                aggr = 0;
+                        }
                 }
 
                 vTaskDelay(pdMS_TO_TICKS(1));
