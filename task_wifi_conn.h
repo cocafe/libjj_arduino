@@ -40,8 +40,9 @@ static void task_wifi_conn(void *arg)
                         }
                 }
 
+                wifi_sta_cfg_apply_once(&g_cfg.wifi_cfg);
+                esp_wifi_force_wakeup_acquire();
                 pr_info("wifi connected, RSSI %d dBm, BSSID: %s\n", WiFi.RSSI(), WiFi.BSSIDstr().c_str());
-                WiFi.setTxPower(__wifi_tx_power);
 
 #ifdef WIFI_CONN_LED_BLINK
                 led_on(wifi_led, 0, 0, 255);
@@ -52,6 +53,7 @@ static void task_wifi_conn(void *arg)
                 }
 
                 pr_info("wifi connection lost, reconnect now\n");
+                esp_wifi_force_wakeup_release();
                 wifi_reconnect(wifi_cfg);
         }
 }

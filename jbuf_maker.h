@@ -1,6 +1,21 @@
 #ifndef __LIBJJ_JBUF_MAKER_H__
 #define __LIBJJ_JBUF_MAKER_H__
 
+void jbuf_wifi_cfg_add(jbuf_t *b, const char *key, struct wifi_cfg *cfg)
+{
+        void *obj = jbuf_obj_open(b, key);
+
+        jbuf_strval_add(b, "mode", cfg->mode, str_wifi_modes);
+        jbuf_strval_add(b, "tx_pwr", cfg->tx_power, str_wifi_txpwr);
+        jbuf_strval_add(b, "ps", cfg->ps_mode, str_wifi_ps_modes);
+        jbuf_uint_add(b, "inactive_sec", cfg->inactive_sec);
+        jbuf_bool_add(b, "long_range", cfg->long_range);
+        jbuf_bool_add(b, "static_buf", cfg->static_buf);
+        jbuf_bool_add(b, "dynamic_cs", cfg->dynamic_cs);
+
+        jbuf_obj_close(b, obj);
+}
+
 void jbuf_wifi_nw_cfg_add(jbuf_t *b, const char *key, struct wifi_nw_cfg *cfg)
 {
         void *obj = jbuf_obj_open(b, key);

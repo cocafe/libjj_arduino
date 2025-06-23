@@ -46,6 +46,16 @@ static const char *str_wifi_ps_modes[] = {
         [WIFI_PS_MAX_MODEM]     = "PS_MAX",     // MAX PS
 };
 
+struct wifi_cfg {
+        uint16_t inactive_sec;
+        uint8_t mode;
+        uint8_t tx_power;
+        uint8_t long_range;
+        uint8_t ps_mode;
+        uint8_t static_buf;
+        uint8_t dynamic_cs;
+};
+
 struct wifi_event_cb_ctx {
         void (*cb)(int event);
 };
@@ -181,15 +191,25 @@ static int wifi_early_init(void)
         return 0;
 }
 
-static void __wifi_init(void)
+static void __wifi_init(struct wifi_cfg *cfg)
 {
-        WiFi.useStaticBuffers(CONFIG_WIFI_USE_STATIC_BUF);
-        WiFi.enableLongRange(CONFIG_WIFI_USE_LONG_RANGE);
-        WiFi.setSleep(false);
+        WiFi.persistent(false);
+        WiFi.useStaticBuffers(!!cfg->static_buf);
+        WiFi.enableLongRange(!!cfg->long_range);
         WiFi.setTxPower(__wifi_tx_power);
         WiFi.mode(__wifi_mode);
-        esp_wifi_set_ps(WIFI_PS_NONE);
-        esp_wifi_set_dynamic_cs(true);
+        WiFi.setSleep(cfg->ps_mode == WIFI_PS_NONE ? false : true);
+        esp_wifi_set_ps((wifi_ps_type_t)cfg->ps_mode);
+        esp_wifi_set_dynamic_cs(!!cfg->dynamic_cs);
+}
+
+static void wifi_sta_cfg_apply_once(struct wifi_cfg *cfg)
+{
+        WiFi.setTxPower(__wifi_tx_power);
+        WiFi.setSleep(cfg->ps_mode == WIFI_PS_NONE ? false : true);
+        esp_wifi_set_ps((wifi_ps_type_t)cfg->ps_mode);
+        esp_wifi_set_dynamic_cs(!!cfg->dynamic_cs);
+        esp_wifi_set_inactive_time(WIFI_IF_STA, cfg->inactive_sec);
 }
 
 static inline void wifi_tx_power_print(int val)
@@ -210,41 +230,41 @@ static inline void wifi_tx_power_set(int txpwr)
         }
 }
 
-static __unused int wifi_sta_init(struct wifi_nw_cfg *nw, int txpwr)
+static __unused int wifi_sta_init(struct wifi_cfg *cfg, struct wifi_nw_cfg *nw)
 {
         IPAddress local, gw, subnet;
 
         if (!local.fromString(nw->local) || !gw.fromString(nw->gw) || !subnet.fromString(nw->subnet))
                 return -EINVAL;
 
-        wifi_tx_power_set(txpwr);
+        wifi_tx_power_set(cfg->tx_power);
 
         __wifi_mode = WIFI_STA;
-        __wifi_init();
+        __wifi_init(cfg);
 
         WiFi.setAutoReconnect(false);
 
         return 0;
 }
 
-static __unused int wifi_ap_init(struct wifi_nw_cfg *nw, int txpwr)
+static __unused int wifi_ap_init(struct wifi_cfg *cfg, struct wifi_nw_cfg *nw)
 {
         IPAddress local, gw, subnet;
 
         if (!local.fromString(nw->local) || !gw.fromString(nw->gw) || !subnet.fromString(nw->subnet))
                 return -EINVAL;
 
-        wifi_tx_power_set(txpwr);
+        wifi_tx_power_set(cfg->tx_power);
 
         __wifi_mode = WIFI_AP;
-        __wifi_init();
+        __wifi_init(cfg);
         WiFi.softAPConfig(local, gw, subnet);
         WiFi.softAP(nw->ssid, nw->passwd);
 
         return 0;
 }
 
-static __unused int wifi_sta_ap_init(struct wifi_nw_cfg *sta, struct wifi_nw_cfg *ap, int txpwr)
+static __unused int wifi_sta_ap_init(struct wifi_cfg *cfg, struct wifi_nw_cfg *sta, struct wifi_nw_cfg *ap)
 {
         IPAddress local, gw, subnet;
 
@@ -255,10 +275,10 @@ static __unused int wifi_sta_ap_init(struct wifi_nw_cfg *sta, struct wifi_nw_cfg
         if (!local.fromString(ap->local) || !gw.fromString(ap->gw) || !subnet.fromString(ap->subnet))
                 return -EINVAL;
 
-        wifi_tx_power_set(txpwr);
+        wifi_tx_power_set(cfg->tx_power);
 
         __wifi_mode = WIFI_AP_STA;
-        __wifi_init();
+        __wifi_init(cfg);
 
         WiFi.setAutoReconnect(false);
         WiFi.softAPConfig(local, gw, subnet);

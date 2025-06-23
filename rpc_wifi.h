@@ -96,7 +96,7 @@ void rpc_wifi_add(void)
                                 return;
                         }
 
-                        g_cfg.wifi_txpwr = i;
+                        g_cfg.wifi_cfg.tx_power = i;
                         WiFi.setTxPower((wifi_power_t)(cfg_wifi_txpwr_convert[i]));
 
                         http_rpc.send(200, "text/plain", "OK\n");
@@ -117,7 +117,7 @@ void rpc_wifi_add(void)
                         for (int i = 0; i < ARRAY_SIZE(str_wifi_txpwr); i++) {
                                 c += snprintf(&buf[c], sizeof(buf) - c, "%s %s %s\n",
                                         str_wifi_txpwr[i],
-                                        g_cfg.wifi_txpwr == i ? "[*]" : "",
+                                        g_cfg.wifi_cfg.tx_power == i ? "[*]" : "",
                                         r == i ? "[v]" : "");
                         }
 
@@ -167,6 +167,38 @@ void rpc_wifi_add(void)
                                 }
                         }
 
+                        http_rpc.send(200, "text/plain", buf);
+                }
+        });
+
+        // http_rpc.on("/wifi_stats", HTTP_GET, [](){
+        //         if (esp_wifi_statis_dump(0xFFFFFFFF) == ESP_OK)
+        //                 http_rpc.send(200, "text/plain", "OK\n");
+        //         else
+        //                 http_rpc.send(200, "text/plain", "error\n");
+        // });
+
+        http_rpc.on("/wifi_sta_inactive_time", HTTP_GET, [](){
+                if (http_rpc.hasArg("set")) {
+                        String data = http_rpc.arg("set");
+                        int err = 0;
+                        unsigned i = strtoull_wrap(data.c_str(), 16, &err);
+
+                        if (esp_wifi_set_inactive_time(WIFI_IF_STA, i) == ESP_OK) {
+                                http_rpc.send(200, "text/plain", "OK\n");
+                        } else {
+                                http_rpc.send(200, "text/plain", "error\n");
+                        }
+                } else {
+                        char buf[16] = { };
+                        uint16_t sec = 0;
+
+                        if (esp_wifi_get_inactive_time(WIFI_IF_STA, &sec) != ESP_OK) {
+                                http_rpc.send(200, "text/plain", "error\n");
+                                return;
+                        }
+
+                        snprintf(buf, sizeof(buf), "%u\n", sec);
                         http_rpc.send(200, "text/plain", buf);
                 }
         });
