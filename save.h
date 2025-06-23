@@ -6,6 +6,7 @@
 
 #include <esp_ota_ops.h>
 #include <esp_image_format.h>
+#include <nvs_flash.h>
 
 #include <EEPROM.h>
 #include <CRC32.h>
@@ -275,6 +276,21 @@ static void save_init(int (*jbuf_maker)(jbuf_t *, struct config *))
         memcpy(&g_cfg, &g_save.cfg, sizeof(g_cfg));
 }
 
+static int nvs_erase(void)
+{
+        esp_err_t err = nvs_flash_erase();
+
+        if (err != ESP_OK) {
+                pr_err("NVS erase failed: %d\n", err);
+                return -EIO;
+        }
+
+        pr_info("NVS erased successfully\n");
+        nvs_flash_init();
+
+        return 0;
+}
+
 static __unused void save_reset_gpio_check(unsigned gpio_rst)
 {
         static uint32_t ts_pressed = 0;
@@ -327,6 +343,8 @@ static __unused void save_reset_gpio_check(unsigned gpio_rst)
                                         memcpy(&g_cfg, &g_cfg_default, sizeof(g_cfg));
                                         save_update(&g_save, &g_cfg);
                                         save_write(&g_save);
+
+                                        nvs_erase();
 
                                         while (digitalRead(gpio_rst) == LOW) {
 #ifdef HAVE_WS2812_LED
