@@ -200,7 +200,6 @@ static void __wifi_init(struct wifi_cfg *cfg)
         WiFi.mode(__wifi_mode);
         WiFi.setSleep(cfg->ps_mode == WIFI_PS_NONE ? false : true);
         esp_wifi_set_ps((wifi_ps_type_t)cfg->ps_mode);
-        esp_wifi_set_dynamic_cs(!!cfg->dynamic_cs);
 }
 
 static void wifi_sta_cfg_apply_once(struct wifi_cfg *cfg)

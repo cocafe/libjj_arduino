@@ -63,4 +63,44 @@ static __unused void task_wifi_conn_start(unsigned cpu)
         xTaskCreatePinnedToCore(task_wifi_conn, "wifi_conn", 4096, NULL, 1, NULL, cpu);
 }
 
+static void task_wifi_ap_blink(void *arg)
+{
+        uint8_t last_sta_num = 0;
+
+        while (1) {
+                uint8_t sta_num = WiFi.softAPgetStationNum();
+
+                if (!wifi_led_blink) {
+                        vTaskDelay(pdMS_TO_TICKS(1000));
+                        continue;
+                }
+
+                if (sta_num == 0) {
+                        static uint8_t pattern[] = { 1, 0, 0, 0, 0, 0 };
+                        static uint8_t i = 0;
+
+                        if (pattern[i]) {
+                                led_on(wifi_led, 0, 255, 0);
+                        } else {
+                                led_off(wifi_led);
+                        }
+
+                        i++;
+                        if (i >= ARRAY_SIZE(pattern))
+                                i = 0;
+                } else {
+                        if (last_sta_num == 0)
+                                led_on(wifi_led, 0, 255, 0);
+                }
+
+                last_sta_num = sta_num;
+                vTaskDelay(pdMS_TO_TICKS(1000));
+        }
+}
+
+static __unused void task_wifi_ap_blink_start(unsigned cpu)
+{
+        xTaskCreatePinnedToCore(task_wifi_ap_blink, "wifi_blink", 2048, NULL, 1, NULL, cpu);
+}
+
 #endif // __LIBJJ_TASK_WIFI_CONN_H__

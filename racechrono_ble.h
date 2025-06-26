@@ -19,6 +19,7 @@ struct ble_cfg {
         uint8_t update_hz;
 };
 
+static int ble_is_connected = 0;
 static char ble_device_prefix[16] = "RaceChrono";
 static uint8_t racechrono_ble_update_rate_hz = BLE_DEFAULT_UPDATE_RATE_HZ;
 
@@ -94,15 +95,13 @@ static char *ble_device_name_generate(void)
 
 static void task_ble_conn_update(void *arg)
 {
-        static int is_connected = 0;
-
         pr_info("started\n");
 
         while (1) {
                 if (RaceChronoBle.isConnected()) {
-                        if (!is_connected) {
+                        if (!ble_is_connected) {
                                 pr_info("BLE connected\n");
-                                is_connected = 1;
+                                ble_is_connected = 1;
                         }
 
 #ifdef __LIBJJ_EVENT_UDP_MC_H__
@@ -110,9 +109,9 @@ static void task_ble_conn_update(void *arg)
                         event_udp_mc_send(EVENT_RC_BLE_CONNECTED, NULL, 0);
 #endif
                 } else {
-                        if (is_connected) {
+                        if (ble_is_connected) {
                                 pr_info("BLE disconnected\n");
-                                is_connected = 0;
+                                ble_is_connected = 0;
                                 raceChronoHandler.handleDisconnect();
                         }
 
@@ -129,29 +128,47 @@ static void task_ble_conn_update(void *arg)
 static void task_can_ble_led_blink(void *arg)
 {
         while (1) {
-                can_ble_txrx = 0;
-
-                vTaskDelay(pdMS_TO_TICKS(500));
-
-                if (!can_ble_led_blink)
+                if (!can_ble_led_blink) {
+                        vTaskDelay(pdMS_TO_TICKS(1000));
                         continue;
+                }
 
-                if (can_ble_txrx) {
-                        static uint8_t last_on = 0;
+                if (ble_is_connected) {
+                        can_ble_txrx = 0;
 
-                        // blink
-                        if (!last_on) {
-                                led_on(can_ble_led, 0, 255, 0);
-                                last_on = 1;
+                        vTaskDelay(pdMS_TO_TICKS(500));
+
+                        if (can_ble_txrx) {
+                                static uint8_t last_on = 0;
+
+                                // blink
+                                if (!last_on) {
+                                        led_on(can_ble_led, 0, 255, 0);
+                                        last_on = 1;
+                                } else {
+                                        led_off(can_ble_led);
+                                        last_on = 0;
+                                }
                         } else {
-                                led_off(can_ble_led);
-                                last_on = 0;
+                                // keep on if connected but no activity
+                                led_on(can_ble_led, 0, 0, 255);
                         }
                 } else {
-                        if (RaceChronoBle.isConnected())
-                                led_on(can_ble_led, 0, 0, 255);
-                        else
+                        // beacon blink to notice BLE on and we are powered on
+                        static uint8_t pattern[] = { 1, 0, 0, 0, 0, 0 };
+                        static uint8_t i = 0;
+
+                        if (pattern[i]) {
+                                led_on(can_ble_led, 0, 255, 0);
+                        } else {
                                 led_off(can_ble_led);
+                        }
+
+                        i++;
+                        if (i >= ARRAY_SIZE(pattern))
+                                i = 0;
+
+                        vTaskDelay(pdMS_TO_TICKS(1000));
                 }
         }
 }
