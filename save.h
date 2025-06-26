@@ -335,9 +335,9 @@ static __unused void save_reset_gpio_check(unsigned gpio_rst)
                                 delay(250);
 #endif // HAVE_WS2812_LED
 
-                                if (now - ts_pressed >= 10 * 1000) {
+                                if (now - ts_pressed >= 30 * 1000) {
                                         // delete factory.json
-                                        // config_json_delete();
+                                        config_json_delete();
 
                                         // use program default config
                                         memcpy(&g_cfg, &g_cfg_default, sizeof(g_cfg));
