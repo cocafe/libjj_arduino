@@ -125,6 +125,9 @@ void rpc_save_add(void)
                         http_rpc.send(200, "text/plain", "OK\n");
                 }
 
+                save_update(&g_save, &g_cfg);
+                save_write(&g_save);
+
                 jbuf_deinit(&jkey_cfg);
         });
 
