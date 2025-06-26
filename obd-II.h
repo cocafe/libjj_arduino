@@ -309,12 +309,10 @@ static __unused void obd_can_isotp_frame_input(can_frame_t *f)
         frame_type = f->data[0] >> 4;
         switch (frame_type) {
         case CAN_FRAME_SF: {
-                struct can_hdr_sf *sf = (struct can_hdr_sf *)&f->data;
-                uint8_t dlc = sf->dlc;
-
-                memmove(&f->data[0], &f->data[1], dlc - 1);
-                f->data[dlc - 1] = 0x00;
-                f->dlc = dlc;
+                struct can_hdr_sf *sf = (void *)&f->data;
+                uint8_t obd_frame_dlc = sf->dlc; // not can dlc here
+                memmove(&f->data[0], &f->data[1], obd_frame_dlc);
+                f->dlc = obd_frame_dlc;
 
                 obd_can_frame_input(f);
 
