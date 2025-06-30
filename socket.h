@@ -8,7 +8,7 @@
 #include <lwip/sockets.h>
 #include <lwip/inet.h>
 
-#include "libjj/logging.h"
+#include "logging.h"
 
 struct udp_mc_cfg {
         uint8_t enabled;

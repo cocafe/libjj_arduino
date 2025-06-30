@@ -8,9 +8,9 @@
 #include <esp_mac.h>
 #include <esp_system.h>
 
-#include "libjj/utils.h"
-#include "libjj/logging.h"
-#include "libjj/socket.h"
+#include "utils.h"
+#include "logging.h"
+#include "socket.h"
 
 #define EVENT_PKT_MAGIC                 (0x40905090UL)
 
