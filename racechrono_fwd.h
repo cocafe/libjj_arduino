@@ -5,9 +5,10 @@
 #include <stdlib.h>
 #include <errno.h>
 
-#include "libjj/utils.h"
-#include "libjj/logging.h"
-#include "libjj/socket.h"
+#include "utils.h"
+#include "logging.h"
+#include "socket.h"
+#include "can_tcp.h"
 
 static char rc_udp_mc_addr[24] = "239.0.0.1";
 static int rc_udp_mc_port = 4090;
