@@ -293,7 +293,7 @@ static unsigned long long __unused strtoull_wrap(const char *str, int base, int 
 static long long __unused strtoll_wrap(const char *str, int base, int *err)
 {
         char *endptr;
-        long long ret = strtoull(str, &endptr, base);
+        long long ret = strtoll(str, &endptr, base);
         
         if (endptr == str || errno == ERANGE || *endptr != '\0') {
                 *err = -EINVAL;
