@@ -1,8 +1,13 @@
 #ifndef __LIBJJ_TASK_WIFI_CONN_H__
 #define __LIBJJ_TASK_WIFI_CONN_H__
 
+#include "ping.h"
+
 static void task_wifi_conn(void *arg)
 {
+        const unsigned ping_failure_thres = 5;
+        unsigned ping_failure = 0;
+
         vTaskDelay(pdMS_TO_TICKS(1000));
 
         WiFi.onEvent(wifi_sys_event_cb, ARDUINO_EVENT_WIFI_STA_CONNECTED);
@@ -43,12 +48,30 @@ static void task_wifi_conn(void *arg)
                 wifi_sta_cfg_apply_once(&g_cfg.wifi_cfg);
                 esp_wifi_force_wakeup_acquire();
                 pr_info("wifi connected, RSSI %d dBm, BSSID: %s\n", WiFi.RSSI(), WiFi.BSSIDstr().c_str());
+                pr_info("ip local: %s gw: %s subnet: %s dns: %s\n",
+                        WiFi.localIP().toString().c_str(),
+                        WiFi.gatewayIP().toString().c_str(),
+                        WiFi.subnetMask().toString().c_str(),
+                        WiFi.dnsIP().toString().c_str());
 
 #ifdef WIFI_CONN_LED_BLINK
                 led_on(wifi_led, 0, 0, 255);
 #endif
 
                 while (WiFi.status() == WL_CONNECTED) {
+                        if (WiFi.gatewayIP().toString() != "0.0.0.0") {
+                                if (ping4(WiFi.gatewayIP(), 1, 500, 500) != 1) {
+                                        ping_failure++;
+
+                                        if (ping_failure >= ping_failure_thres) {
+                                                pr_err("ping continuously failed for %u times, wifi may lost, reconnect now\n", ping_failure_thres);
+                                                break;
+                                        }
+                                } else {
+                                        ping_failure = 0;
+                                }
+                        }
+
                         xSemaphoreTake(sem_wifi_wait, pdMS_TO_TICKS(5000));
                 }
 
