@@ -38,9 +38,9 @@ static void task_wifi_conn(void *arg)
 #endif // #ifdef WIFI_CONN_LED_BLINK
 
                                 if (esp32_millis() - ts_start_connect >= (wifi_cfg->timeout_sec * 1000)) {
-                                        pr_info("connection timed out, try again\n");
+                                        pr_info("connection timed out, try \"%s\" again\n", wifi_cfg->ssid);
                                         ts_start_connect = esp32_millis();
-                                        wifi_reconnect(wifi_cfg);
+                                        wifi_sta_reconnect();
                                 }
                         }
                 }
@@ -77,7 +77,7 @@ static void task_wifi_conn(void *arg)
 
                 pr_info("wifi connection lost, reconnect now\n");
                 esp_wifi_force_wakeup_release();
-                wifi_reconnect(wifi_cfg);
+                wifi_sta_reconnect();
         }
 }
 

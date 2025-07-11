@@ -286,8 +286,10 @@ static __unused int wifi_sta_ap_init(struct wifi_cfg *cfg, struct wifi_nw_cfg *s
         return 0;
 }
 
-static __unused void wifi_connect(struct wifi_nw_cfg *cfg)
+static void wifi_sta_config(struct wifi_nw_cfg *cfg)
 {
+        wifi_config_t wifi_config = {};
+
         if (!cfg->use_dhcp) {
                 IPAddress local, gw, subnet;
 
@@ -298,13 +300,35 @@ static __unused void wifi_connect(struct wifi_nw_cfg *cfg)
                 WiFi.config(local, gw, subnet);
         }
 
-        WiFi.begin(cfg->ssid, cfg->passwd);
+        strncpy((char *)wifi_config.sta.ssid, cfg->ssid, sizeof(wifi_config.sta.ssid));
+        strncpy((char *)wifi_config.sta.password, cfg->passwd, sizeof(wifi_config.sta.password));
+
+        wifi_config.sta.threshold.authmode = WIFI_AUTH_WPA2_PSK;
+
+        wifi_config.sta.scan_method = WIFI_FAST_SCAN;
+        wifi_config.sta.sort_method = WIFI_CONNECT_AP_BY_SIGNAL;
+        wifi_config.sta.pmf_cfg.capable = true;
+        wifi_config.sta.pmf_cfg.required = false;
+
+        esp_wifi_set_config(WIFI_IF_STA, &wifi_config);
 }
 
-static __unused void wifi_reconnect(struct wifi_nw_cfg *cfg)
+static __unused void wifi_sta_connect(void)
 {
-        WiFi.disconnect(true);
-        wifi_connect(cfg);
+        esp_wifi_connect();
+}
+
+static __unused void wifi_sta_disconnect(void)
+{
+        esp_wifi_disconnect();
+        vTaskDelay(pdMS_TO_TICKS(2000));
+}
+
+static __unused void wifi_sta_reconnect(void)
+{
+        esp_wifi_disconnect();
+        vTaskDelay(pdMS_TO_TICKS(2000));
+        esp_wifi_connect();
 }
 
 static __unused int wifi_first_connect(struct wifi_nw_cfg **cfgs, size_t cfg_cnt)
@@ -312,11 +336,14 @@ static __unused int wifi_first_connect(struct wifi_nw_cfg **cfgs, size_t cfg_cnt
         int idx = 0;
         int ok = 0;
 
+        WiFi.begin();
+
         while (!ok) {
                 struct wifi_nw_cfg *cfg = cfgs[idx];
                 int timeout = cfg->timeout_sec ? cfg->timeout_sec : WIFI_CONNECT_TIMEOUT_SEC;
 
-                wifi_reconnect(cfg);
+                wifi_sta_config(cfg);
+                wifi_sta_connect();
 
                 pr_info("connecting to SSID \"%s\" ...\n", cfg->ssid);
                 for (int i = 0; i < timeout * 2; i++) {
