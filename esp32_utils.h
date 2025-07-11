@@ -11,6 +11,8 @@
 #include <Arduino.h>
 
 #include <esp_random.h>
+#include <esp_heap_caps.h>
+#include <esp_system.h>
 
 #include <driver/temperature_sensor.h>
 
@@ -23,6 +25,21 @@
 #define CPU0                            (0)
 #define CPU1                            (1)
 #endif
+
+static inline void *esp32_psram_alloc(size_t size)
+{
+        return heap_caps_malloc(size, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
+}
+
+static inline void esp32_psram_free(void *ptr)
+{
+        free(ptr);
+}
+
+static inline void *esp32_psram_realloc(void *ptr, size_t new_size)
+{
+        return heap_caps_realloc(ptr, new_size, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
+}
 
 static inline uint64_t esp32_millis(void)
 {

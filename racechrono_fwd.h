@@ -20,6 +20,34 @@ static uint64_t cnt_can_udp_recv; // from remote multicast
 static uint64_t cnt_can_udp_send_error;
 static uint64_t cnt_can_udp_send; // send to remote multicase
 
+struct rc_fwd_recv_cb_ctx {
+        void (*cb)(can_frame_t *f);
+};
+
+static struct rc_fwd_recv_cb_ctx rc_fwd_recv_cbs[4] = { };
+static uint8_t rc_fwd_recv_cb_cnt;
+
+static SemaphoreHandle_t lck_rc_fwd_cb;
+
+static __unused int racechrono_udp_recv_cb_register(void (*cb)(can_frame_t *))
+{
+        int err = 0;
+
+        xSemaphoreTake(lck_rc_fwd_cb, portMAX_DELAY);
+
+        if (rc_fwd_recv_cb_cnt >= ARRAY_SIZE(rc_fwd_recv_cbs)) {
+                err = -ENOSPC;
+                goto unlock;
+        }
+
+        rc_fwd_recv_cbs[rc_fwd_recv_cb_cnt++].cb = cb;
+
+unlock:
+        xSemaphoreGive(lck_rc_fwd_cb);
+
+        return err;
+}
+
 static int __unused racechrono_udp_mc_send(can_frame_t *f)
 {
         int sock = READ_ONCE(rc_udp_mc_sock);
@@ -70,10 +98,13 @@ static int racechrono_udp_mc_recv(void)
                 return -EINVAL;
         }
 
-#ifdef __LIBJJ_RACECHRONO_BLE_H__
-        can_ble_frame_send(f);
-#endif
         cnt_can_udp_recv++;
+
+        for (unsigned i = 0; i < ARRAY_SIZE(rc_fwd_recv_cbs); i++) {
+                if (rc_fwd_recv_cbs[i].cb) {
+                        rc_fwd_recv_cbs[i].cb(f);
+                }
+        }
 
         return 0;
 }
@@ -139,6 +170,8 @@ static void __unused racechrono_fwd_init(struct udp_mc_cfg *cfg, int is_receiver
 
         if (!cfg->enabled)
                 return;
+
+        lck_rc_fwd_cb = xSemaphoreCreateMutex();
 
         strncpy(rc_udp_mc_addr, cfg->mcaddr, sizeof(rc_udp_mc_addr));
         rc_udp_mc_port = cfg->port;

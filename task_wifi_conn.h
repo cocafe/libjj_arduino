@@ -8,7 +8,7 @@ static void task_wifi_conn(void *arg)
         const unsigned ping_failure_thres = 5;
         unsigned ping_failure = 0;
 
-        vTaskDelay(pdMS_TO_TICKS(1000));
+        vTaskDelay(pdMS_TO_TICKS(2000));
 
         WiFi.onEvent(wifi_sys_event_cb, ARDUINO_EVENT_WIFI_STA_CONNECTED);
         WiFi.onEvent(wifi_sys_event_cb, ARDUINO_EVENT_WIFI_STA_DISCONNECTED);
@@ -81,6 +81,7 @@ static void task_wifi_conn(void *arg)
         }
 }
 
+#ifdef WIFI_CONN_LED_BLINK
 static __unused void task_wifi_conn_start(unsigned cpu)
 {
         xTaskCreatePinnedToCore(task_wifi_conn, "wifi_conn", 4096, NULL, 1, NULL, cpu);
@@ -125,5 +126,8 @@ static __unused void task_wifi_ap_blink_start(unsigned cpu)
 {
         xTaskCreatePinnedToCore(task_wifi_ap_blink, "wifi_blink", 2048, NULL, 1, NULL, cpu);
 }
+#else
+static __unused inline void task_wifi_ap_blink_start(unsigned cpu) { }
+#endif // WIFI_CONN_LED_BLINK
 
 #endif // __LIBJJ_TASK_WIFI_CONN_H__

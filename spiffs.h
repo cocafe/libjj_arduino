@@ -13,6 +13,63 @@
 
 static uint8_t have_spiffs = 0;
 
+uint8_t *spiffs_file_read_with_malloc(const char *path, int *err, size_t *sz, void *(*alloc)(size_t))
+{
+        uint8_t *buf = NULL;
+        size_t n = 0;
+        int _err = 0;
+
+        if (unlikely(!alloc)) {
+                if (err)
+                        *err = -EINVAL;
+
+                return NULL;
+        }
+
+        if (unlikely(!have_spiffs)) {
+                if (err)
+                        *err = -ENODEV;
+
+                return NULL;
+        }
+
+        File file = SPIFFS.open(path, FILE_READ);
+        if (!file) {
+                _err = -ENOENT;
+                goto out;
+        }
+
+        if (file.size() == 0) {
+                _err = -ENODATA;
+                goto close;
+        }
+
+        buf = (uint8_t *)alloc(sizeof(uint8_t) * file.size());
+        if (!buf) {
+                _err = -ENOMEM;
+                goto close;
+        }
+
+        n = file.read(buf, file.size());
+        if (n != file.size()) {
+                _err = -EFAULT;
+                free(buf);
+                buf = NULL;
+        }
+
+close:
+        file.close();
+
+out:
+        if (err)
+                *err = _err;
+
+        if (sz)
+                *sz = n;
+
+        return buf;
+}
+
 uint8_t *spiffs_file_read(const char *path, int *err, size_t *sz)
 {
         uint8_t *buf = NULL;

@@ -31,7 +31,7 @@ struct udp_event_pkt {
 } __attribute__((packed));
 
 struct event_dev_hb {
-        uint8_t devname[16];
+        char devname[16];
         uint8_t sn[8];
 };
 
@@ -251,11 +251,11 @@ static void task_event_up_dev_hb(void *arg)
                 return;
         }
 
-        strncpy((char *)hb.devname, devname, sizeof(hb.devname));
+        strncpy(hb.devname, devname, sizeof(hb.devname));
 
         while (1) {
                 event_udp_mc_send(EVENT_DEV_HEARTBEAT, (uint8_t *)&hb, sizeof(hb));
-                vTaskDelay(pdMS_TO_TICKS(10000));
+                vTaskDelay(pdMS_TO_TICKS(5 * 1000));
         }
 }
 

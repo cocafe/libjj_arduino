@@ -87,7 +87,7 @@ struct json_key {
         } obj;
 
         struct {
-                const char    **map;
+                char          **map;
                 size_t          cnt;
         } strval;
 
@@ -568,9 +568,9 @@ void *jbuf_strptr_add(jbuf_t *b, const char *key, char **ref)
 }
 
 #define jbuf_strval_add(_b, _key, _ref, _strmap) \
-        __jbuf_strval_add(_b, _key, &(_ref), sizeof(_ref), _strmap, ARRAY_SIZE(_strmap))
+        __jbuf_strval_add(_b, _key, &(_ref), sizeof(_ref), (char **)_strmap, ARRAY_SIZE(_strmap))
 
-void *__jbuf_strval_add(jbuf_t *b, const char *key, void *ref, size_t refsz, const char *map[], size_t map_cnt)
+void *__jbuf_strval_add(jbuf_t *b, const char *key, void *ref, size_t refsz, char *map[], size_t map_cnt)
 {
         jkey_t *k;
         void *cookie = jbuf_key_add(b, JKEY_TYPE_UINT, key, ref, refsz);
@@ -585,10 +585,10 @@ void *__jbuf_strval_add(jbuf_t *b, const char *key, void *ref, size_t refsz, con
         return cookie;
 }
 
-#define jbuf_u8_add(_b, _key, _ref)     __jbuf_uint_add(_b, _key, &(_ref), sizeof(uint8_t))
-#define jbuf_u16_add(_b, _key, _ref)    __jbuf_uint_add(_b, _key, &(_ref), sizeof(uint16_t))
-#define jbuf_u32_add(_b, _key, _ref)    __jbuf_uint_add(_b, _key, &(_ref), sizeof(uint32_t))
-#define jbuf_u64_add(_b, _key, _ref)    __jbuf_uint_add(_b, _key, &(_ref), sizeof(uint64_t))
+#define jbuf_u8_add(_b, _key, _ref)     __jbuf_uint_add(_b, _key, (_ref), sizeof(uint8_t))
+#define jbuf_u16_add(_b, _key, _ref)    __jbuf_uint_add(_b, _key, (_ref), sizeof(uint16_t))
+#define jbuf_u32_add(_b, _key, _ref)    __jbuf_uint_add(_b, _key, (_ref), sizeof(uint32_t))
+#define jbuf_u64_add(_b, _key, _ref)    __jbuf_uint_add(_b, _key, (_ref), sizeof(uint64_t))
 
 #define jbuf_uint_add(_b, _key, _ref) \
         __jbuf_uint_add(_b, _key, &(_ref), sizeof(_ref))
@@ -598,10 +598,10 @@ void *__jbuf_uint_add(jbuf_t *b, const char *key, void *ref, size_t refsz)
         return jbuf_key_add(b, JKEY_TYPE_UINT, key, ref, refsz);
 }
 
-#define jbuf_s8_add(_b, _key, _ref)     __jbuf_sint_add(_b, _key, &(_ref), sizeof(int8_t))
-#define jbuf_s16_add(_b, _key, _ref)    __jbuf_sint_add(_b, _key, &(_ref), sizeof(int16_t))
-#define jbuf_s32_add(_b, _key, _ref)    __jbuf_sint_add(_b, _key, &(_ref), sizeof(int32_t))
-#define jbuf_s64_add(_b, _key, _ref)    __jbuf_sint_add(_b, _key, &(_ref), sizeof(int64_t))
+#define jbuf_s8_add(_b, _key, _ref)     __jbuf_sint_add(_b, _key, (_ref), sizeof(int8_t))
+#define jbuf_s16_add(_b, _key, _ref)    __jbuf_sint_add(_b, _key, (_ref), sizeof(int16_t))
+#define jbuf_s32_add(_b, _key, _ref)    __jbuf_sint_add(_b, _key, (_ref), sizeof(int32_t))
+#define jbuf_s64_add(_b, _key, _ref)    __jbuf_sint_add(_b, _key, (_ref), sizeof(int64_t))
 
 #define jbuf_sint_add(_b, _key, _ref) \
         __jbuf_sint_add(_b, _key, &(_ref), sizeof(_ref))
@@ -673,9 +673,12 @@ void *__jbuf_offset_strbuf_add(jbuf_t *b, const char *key, ssize_t offset, size_
 }
 
 #define jbuf_offset_strval_add(_b, _key, _container, _member, _strmap) \
-        __jbuf_offset_strval_add(_b, _key, offsetof(_container, _member), sizeof_member(_container, _member), _strmap, ARRAY_SIZE(_strmap))
+        __jbuf_offset_strval_add(_b, _key, offsetof(_container, _member), sizeof_member(_container, _member), (char **)_strmap, ARRAY_SIZE(_strmap))
 
-void *__jbuf_offset_strval_add(jbuf_t *b, const char *key, ssize_t offset, size_t refsz, const char *map[], size_t map_cnt)
+#define jbuf_offset_simple_strval_add(_b, _key, _size, _strmap) \
+        __jbuf_offset_strval_add(_b, _key, 0, _size, (char **)_strmap, ARRAY_SIZE(_strmap))
+
+void *__jbuf_offset_strval_add(jbuf_t *b, const char *key, ssize_t offset, size_t refsz, char *map[], size_t map_cnt)
 {
         void *cookie = __jbuf_strval_add(b, key, NULL, refsz, map, map_cnt);
         if (!cookie)

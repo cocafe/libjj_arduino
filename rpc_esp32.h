@@ -94,8 +94,12 @@ void rpc_esp32_add(void)
 #if ESP_IDF_VERSION_MAJOR >= 5 && ESP_IDF_VERSION_MINOR > 1
                 c += snprintf(&buf[c], sizeof(buf) - c, "esp_stats{t=\"cpu_usage\"} %d\n", cpu);
 #endif
-                c += snprintf(&buf[c], sizeof(buf) - c, "esp_stats{t=\"free_heap\"} %lu\n", esp_get_free_heap_size());
-                c += snprintf(&buf[c], sizeof(buf) - c, "esp_stats{t=\"min_free_heap\"} %lu\n", esp_get_minimum_free_heap_size());
+                c += snprintf(&buf[c], sizeof(buf) - c, "esp_stats{t=\"free_heap\"} %u\n", heap_caps_get_free_size(MALLOC_CAP_INTERNAL));
+                c += snprintf(&buf[c], sizeof(buf) - c, "esp_stats{t=\"min_free_heap\"} %u\n", heap_caps_get_minimum_free_size(MALLOC_CAP_INTERNAL));
+                if (psramFound()) {
+                        c += snprintf(&buf[c], sizeof(buf) - c, "esp_stats{t=\"free_psram\"} %u\n", heap_caps_get_free_size(MALLOC_CAP_SPIRAM));
+                        c += snprintf(&buf[c], sizeof(buf) - c, "esp_stats{t=\"min_free_psram\"} %u\n", heap_caps_get_minimum_free_size(MALLOC_CAP_SPIRAM));
+                }
 
                 http_rpc.send(200, "text/plain", buf);
         });

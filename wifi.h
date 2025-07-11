@@ -56,14 +56,14 @@ struct wifi_cfg {
         uint8_t dynamic_cs;
 };
 
-struct wifi_event_cb_ctx {
-        void (*cb)(int event);
-};
-
 #ifdef WIFI_CONN_LED_BLINK
 uint8_t wifi_led = WIFI_CONN_LED_BLINK;
 uint8_t wifi_led_blink = 1;
 #endif
+
+struct wifi_event_cb_ctx {
+        void (*cb)(int event);
+};
 
 static struct wifi_event_cb_ctx wifi_event_cbs[4] = { };
 static uint8_t wifi_event_cb_cnt;
