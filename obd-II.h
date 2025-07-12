@@ -407,7 +407,7 @@ static int obd_isotp_flow_wait(unsigned ms)
 }
 
 // XXX: need lock if access by multiple threads
-static int obd_pid_query_send(obd_pid_t *p)
+static __unused int obd_pid_query_send(obd_pid_t *p)
 {
         uint32_t now = esp32_millis();
         uint8_t payload[8] = { };
@@ -442,7 +442,7 @@ static int obd_pid_query_send(obd_pid_t *p)
         return 0;
 }
 
-static int obd_pid_init(obd_pid_t **list, size_t cnt)
+static __unused int obd_pid_init(obd_pid_t **list, size_t cnt)
 {
         obd_isotp_recv_done = xSemaphoreCreateBinary();
 

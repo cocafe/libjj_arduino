@@ -44,7 +44,7 @@ do {                                                    \
         }                                               \
 } while (0)
 
-static int http_param_help_print(WebServer &http_server, struct http_cfg_param *params, unsigned params_cnt)
+static __unused int http_param_help_print(WebServer &http_server, struct http_cfg_param *params, unsigned params_cnt)
 {
         if (!http_server.hasArg("help"))
                 return 0;
@@ -80,7 +80,7 @@ static int http_param_help_print(WebServer &http_server, struct http_cfg_param *
         return 1;
 }
 
-static int http_param_parse(WebServer &http_server, struct http_cfg_param *params, unsigned params_cnt)
+static __unused int http_param_parse(WebServer &http_server, struct http_cfg_param *params, unsigned params_cnt)
 {
         int modified = 0;
 

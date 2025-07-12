@@ -81,12 +81,12 @@ static void task_wifi_conn(void *arg)
         }
 }
 
-#ifdef WIFI_CONN_LED_BLINK
 static __unused void task_wifi_conn_start(unsigned cpu)
 {
         xTaskCreatePinnedToCore(task_wifi_conn, "wifi_conn", 4096, NULL, 1, NULL, cpu);
 }
 
+#ifdef WIFI_CONN_LED_BLINK
 static void task_wifi_ap_blink(void *arg)
 {
         uint8_t last_sta_num = 0;

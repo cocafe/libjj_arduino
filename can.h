@@ -29,7 +29,7 @@ enum {
         NUM_CAN_BAUDRATES,
 };
 
-static const char *str_can_baudrates[] = {
+static __unused const char *str_can_baudrates[] = {
         [CAN_BAUDRATE_4K096BPS] = "CAN_4K096BPS",
         [CAN_BAUDRATE_5KBPS]    = "CAN_5KBPS",
         [CAN_BAUDRATE_10KBPS]   = "CAN_10KBPS",
@@ -76,7 +76,7 @@ static uint8_t can_recv_cb_cnt;
 
 static SemaphoreHandle_t lck_can_cb;
 
-static int can_recv_cb_register(void (*cb)(can_frame_t *))
+static __unused int can_recv_cb_register(void (*cb)(can_frame_t *))
 {
         int err = 0;
 
