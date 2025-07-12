@@ -22,6 +22,7 @@ void jbuf_wifi_nw_cfg_add(jbuf_t *b, const char *key, struct wifi_nw_cfg *cfg)
 
         jbuf_strbuf_add(b, "ssid", cfg->ssid);
         jbuf_strbuf_add(b, "passwd", cfg->passwd);
+        jbuf_bool_add(b, "ssid_with_sn", cfg->ssid_with_sn);
         jbuf_uint_add(b, "timeout_sec", cfg->timeout_sec);
         jbuf_bool_add(b, "use_dhcp", cfg->use_dhcp);
         jbuf_strbuf_add(b, "local", cfg->local);
