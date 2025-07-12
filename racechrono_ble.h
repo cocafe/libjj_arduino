@@ -3,12 +3,15 @@
 
 #include <stdint.h>
 
-#include <esp_mac.h>
 #include <RaceChrono.h>
 
 #include "logging.h"
 #include "esp32_utils.h"
 #include "can.h"
+
+#ifndef BLE_DEFAULT_MAC
+#define BLE_DEFAULT_MAC                 ESP_MAC_EFUSE_FACTORY
+#endif
 
 #ifndef BLE_DEFAULT_UPDATE_RATE_HZ
 #define BLE_DEFAULT_UPDATE_RATE_HZ      10
@@ -83,11 +86,11 @@ static char *ble_device_name_generate(void)
         uint8_t mac[6];
         static char dev_name[32];
 
-        if (esp_read_mac(mac, ESP_MAC_BT) == ESP_OK) {
-                sprintf(dev_name, "%s %x:%x:%x", ble_device_prefix, mac[3], mac[4], mac[5]);
-        } else {
+        if (esp32_mac_get(BLE_DEFAULT_MAC, mac)) {
                 pr_err("failed to get BT mac address\n");
                 sprintf(dev_name, "%s ??:??:??", ble_device_prefix);
+        } else {
+                sprintf(dev_name, "%s %x:%x:%x", ble_device_prefix, mac[3], mac[4], mac[5]);
         }
 
         return dev_name;

@@ -13,6 +13,10 @@
 #include "leds.h"
 #include "logging.h"
 
+#ifndef WIFI_DEFAULT_MAC
+#define WIFI_DEFAULT_MAC                ESP_MAC_EFUSE_FACTORY
+#endif
+
 #define WIFI_CONNECT_TIMEOUT_SEC        (60)
 
 static SemaphoreHandle_t sem_wifi_wait;
@@ -153,6 +157,7 @@ struct wifi_nw_cfg {
         char passwd[64];
         uint16_t timeout_sec;
         uint8_t use_dhcp;
+        uint8_t ssid_with_sn;
         char local[32];
         char gw[32];
         char subnet[32];
@@ -163,6 +168,7 @@ static struct wifi_nw_cfg __unused wifi_sta_failsafe = {
         "jijijiji",
         10,
         1,
+        0,
         "\0",
         "\0",
         "\0",
@@ -229,6 +235,20 @@ static inline void wifi_tx_power_set(int txpwr)
         }
 }
 
+static inline char *wifi_ap_ssid_gen(struct wifi_nw_cfg *ap, char *ssid, size_t cnt)
+{
+        if (ap->ssid_with_sn) {
+                uint8_t mac[6] = { };
+
+                if (!esp32_mac_get(WIFI_DEFAULT_MAC, mac)) {
+                        snprintf(ssid, cnt, "%s %02x:%02x:%02x", ap->ssid, mac[3], mac[4], mac[5]);
+                        return ssid;
+                }
+        }
+
+        return ap->ssid;
+}
+
 static __unused int wifi_sta_init(struct wifi_cfg *cfg, struct wifi_nw_cfg *nw)
 {
         IPAddress local, gw, subnet;
@@ -249,6 +269,7 @@ static __unused int wifi_sta_init(struct wifi_cfg *cfg, struct wifi_nw_cfg *nw)
 static __unused int wifi_ap_init(struct wifi_cfg *cfg, struct wifi_nw_cfg *nw)
 {
         IPAddress local, gw, subnet;
+        char ssid[80];
 
         if (!local.fromString(nw->local) || !gw.fromString(nw->gw) || !subnet.fromString(nw->subnet))
                 return -EINVAL;
@@ -257,8 +278,9 @@ static __unused int wifi_ap_init(struct wifi_cfg *cfg, struct wifi_nw_cfg *nw)
 
         __wifi_mode = WIFI_AP;
         __wifi_init(cfg);
+
         WiFi.softAPConfig(local, gw, subnet);
-        WiFi.softAP(nw->ssid, nw->passwd);
+        WiFi.softAP(wifi_ap_ssid_gen(nw, ssid, sizeof(ssid)), nw->passwd);
 
         return 0;
 }
@@ -266,6 +288,7 @@ static __unused int wifi_ap_init(struct wifi_cfg *cfg, struct wifi_nw_cfg *nw)
 static __unused int wifi_sta_ap_init(struct wifi_cfg *cfg, struct wifi_nw_cfg *sta, struct wifi_nw_cfg *ap)
 {
         IPAddress local, gw, subnet;
+        char ssid[80];
 
         if (!local.fromString(sta->local) || !gw.fromString(sta->gw) || !subnet.fromString(sta->subnet))
                 return -EINVAL;
@@ -281,7 +304,7 @@ static __unused int wifi_sta_ap_init(struct wifi_cfg *cfg, struct wifi_nw_cfg *s
 
         WiFi.setAutoReconnect(false);
         WiFi.softAPConfig(local, gw, subnet);
-        WiFi.softAP(ap->ssid, ap->passwd);
+        WiFi.softAP(wifi_ap_ssid_gen(ap, ssid, sizeof(ssid)), ap->passwd);
 
         return 0;
 }

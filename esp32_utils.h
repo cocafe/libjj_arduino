@@ -10,6 +10,7 @@
 #include <freertos/task.h>
 #include <Arduino.h>
 
+#include <esp_mac.h>
 #include <esp_random.h>
 #include <esp_heap_caps.h>
 #include <esp_system.h>
@@ -25,6 +26,15 @@
 #define CPU0                            (0)
 #define CPU1                            (1)
 #endif
+
+static inline int esp32_mac_get(esp_mac_type_t type, uint8_t *mac)
+{
+        if (esp_read_mac(mac, type) != ESP_OK) {
+                return -ENODATA;
+        }
+
+        return 0;
+}
 
 static inline void *esp32_psram_alloc(size_t size)
 {
