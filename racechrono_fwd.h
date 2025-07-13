@@ -163,7 +163,7 @@ static void racechrono_fwd_wifi_event_cb(int event)
         }
 }
 
-static void __unused racechrono_fwd_init(struct udp_mc_cfg *cfg, int is_receiver)
+static void __unused racechrono_fwd_init(struct udp_mc_cfg *cfg, int recv_enabled)
 {
         if (!cfg)
                 return;
@@ -182,7 +182,7 @@ static void __unused racechrono_fwd_init(struct udp_mc_cfg *cfg, int is_receiver
                 wifi_event_cb_register(racechrono_fwd_wifi_event_cb);
         }
 
-        if (is_receiver)
+        if (recv_enabled)
                 xTaskCreatePinnedToCore(task_racechrono_fwd_recv, "rc_fwd", 4096, NULL, 1, NULL, CPU1);
 }
 

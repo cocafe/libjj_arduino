@@ -463,7 +463,7 @@ static void task_can_tcp(void *arg)
         }
 }
 
-static void task_can_tcp_server_start(unsigned cpu)
+static void can_tcp_server_init(unsigned cpu)
 {
         if (can_dev) {
                 can_recv_cb_register(can_tcp_recv_cb);

@@ -19,6 +19,7 @@
 
 struct ble_cfg {
         char devname[16];
+        uint8_t enabled;
         uint8_t update_hz;
 };
 
@@ -33,6 +34,8 @@ static uint8_t can_ble_txrx = 0;
 static uint8_t can_ble_led = CAN_BLE_LED_BLINK;
 static uint8_t can_ble_led_blink = 1;
 #endif // CAN_BLE_LED_BLINK
+
+static SemaphoreHandle_t lck_ble_send;
 
 using PidExtra = struct
 {
@@ -198,7 +201,9 @@ static void can_ble_frame_send(can_frame_t *f)
         PidExtra *extra = pidMap.getExtra(entry);
         uint32_t now = esp32_millis();
         if ((now - extra->ts_last_send) >= extra->update_intv_ms) {
+                xSemaphoreTake(lck_ble_send, portMAX_DELAY);
                 RaceChronoBle.sendCanData(f->id, f->data, f->dlc);
+                xSemaphoreGive(lck_ble_send);
 
                 extra->ts_last_send = now;
                 cnt_can_ble_send++;
@@ -211,6 +216,8 @@ static void can_ble_frame_send(can_frame_t *f)
 
 static void __unused ble_init(struct ble_cfg *cfg)
 {
+        lck_ble_send = xSemaphoreCreateMutex();
+
         if (cfg) {
                 strncpy(ble_device_prefix, cfg->devname, sizeof(ble_device_prefix));
                 racechrono_ble_update_rate_hz = cfg->update_hz;

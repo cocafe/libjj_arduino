@@ -173,24 +173,26 @@ static void task_can_led_blink(void *arg)
 }
 #endif // CAN_LED_BLINK
 
-static __unused void can_init(void)
-{
-        lck_can_cb = xSemaphoreCreateMutex();
-}
-
 static __unused int task_can_start(unsigned task_cpu)
 {
         if (can_dev) {
 #ifdef CAN_LED_BLINK
                 xTaskCreatePinnedToCore(task_can_led_blink, "led_blink_can", 1024, NULL, 1, NULL, task_cpu);
+                vTaskDelay(pdMS_TO_TICKS(50));
 #endif
                 xTaskCreatePinnedToCore(task_can_recv, "can_recv", 4096, NULL, 1, NULL, task_cpu);
+                vTaskDelay(pdMS_TO_TICKS(50));
         } else {
                 pr_err("no device inited\n");
                 return -ENODEV;
         }
 
         return 0;
+}
+
+static __unused void can_init(void)
+{
+        lck_can_cb = xSemaphoreCreateMutex();
 }
 
 #endif // __LIBJJ_CAN_H__

@@ -74,4 +74,29 @@ void jbuf_twai_cfg_add(jbuf_t *b, const char *key, struct twai_cfg *cfg)
 }
 #endif
 
+#ifdef __LIBJJ_RACECHRONO_BLE_H__
+void jbuf_ble_cfg_add(jbuf_t *b, const char *key, struct ble_cfg *cfg)
+{
+        void *obj = jbuf_obj_open(b, key);
+
+        jbuf_bool_add(b, "enabled", cfg->enabled);
+        jbuf_strbuf_add(b, "devname", cfg->devname);
+        jbuf_uint_add(b, "update_hz", cfg->update_hz);
+
+        jbuf_obj_close(b, obj);
+}
+#endif // __LIBJJ_RACECHRONO_BLE_H__
+
+#ifdef __LIBJJ_CAN_TCP_H__
+void jbuf_can_rlimit_add(jbuf_t *b, const char *key, struct can_ratelimit_cfg *cfg)
+{
+        void *obj = jbuf_obj_open(b, key);
+
+        jbuf_bool_add(b, "enabled", cfg->enabled);
+        jbuf_uint_add(b, "default_hz", cfg->default_hz);
+
+        jbuf_obj_close(b, obj);
+}
+#endif // __LIBJJ_CAN_TCP_H__
+
 #endif // __LIBJJ_JBUF_MAKER_H__

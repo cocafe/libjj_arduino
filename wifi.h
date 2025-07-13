@@ -253,6 +253,9 @@ static __unused int wifi_sta_init(struct wifi_cfg *cfg, struct wifi_nw_cfg *nw)
 {
         IPAddress local, gw, subnet;
 
+        if (!nw)
+                return -ENODATA;
+
         if (!local.fromString(nw->local) || !gw.fromString(nw->gw) || !subnet.fromString(nw->subnet))
                 return -EINVAL;
 
@@ -270,6 +273,9 @@ static __unused int wifi_ap_init(struct wifi_cfg *cfg, struct wifi_nw_cfg *nw)
 {
         IPAddress local, gw, subnet;
         char ssid[80];
+
+        if (!nw)
+                return -ENODATA;
 
         if (!local.fromString(nw->local) || !gw.fromString(nw->gw) || !subnet.fromString(nw->subnet))
                 return -EINVAL;
@@ -289,6 +295,9 @@ static __unused int wifi_sta_ap_init(struct wifi_cfg *cfg, struct wifi_nw_cfg *s
 {
         IPAddress local, gw, subnet;
         char ssid[80];
+
+        if (!sta || !ap)
+                return -ENODATA;
 
         if (!local.fromString(sta->local) || !gw.fromString(sta->gw) || !subnet.fromString(sta->subnet))
                 return -EINVAL;
@@ -435,6 +444,29 @@ void wifi_sys_event_cb(arduino_event_id_t event)
         case ARDUINO_EVENT_WIFI_STA_AUTHMODE_CHANGE:
         default:
                 break;
+        }
+}
+
+static __unused void task_wifi_conn_start(unsigned cpu);
+static __unused void task_wifi_ap_blink_start(unsigned cpu);
+
+static __unused void wifi_start(struct wifi_cfg *cfg,
+                                struct wifi_nw_cfg *cfg_sta,
+                                struct wifi_nw_cfg *cfg_ap,
+                                unsigned cpu)
+{
+        if (cfg->mode == ESP_WIFI_MODE_STA || cfg->mode == ESP_WIFI_MODE_STA_AP) {
+                if (cfg->mode == ESP_WIFI_MODE_STA)
+                        wifi_sta_init(cfg, cfg_sta);
+                else
+                        wifi_sta_ap_init(cfg, cfg_sta, cfg_ap);
+
+                task_wifi_conn_start(cpu);
+        } else if (cfg->mode == ESP_WIFI_MODE_AP) {
+                wifi_ap_init(cfg, cfg_ap);
+
+                task_wifi_ap_blink_start(cpu);
+                vTaskDelay(pdMS_TO_TICKS(500)); // delay for wifi stack init
         }
 }
 
