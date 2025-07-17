@@ -76,7 +76,7 @@ void rpc_save_add(void)
         });
 
         http_rpc.on("/factory_json", HTTP_GET, [](){
-                if (http_rpc.hasArg("del")) {
+                if (http_rpc.hasArg("delete")) {
                         if (config_json_delete())
                                 http_rpc.send(200, "text/plain", "delete error\n");
                         else
