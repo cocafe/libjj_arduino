@@ -1331,8 +1331,6 @@ static void cjson_node_print(cJSON *node, int depth, const size_t *arr_idx)
                 printf("[null]");
                 break;
         case cJSON_Number: {
-                printf("[number]");
-
                 double num = cJSON_GetNumberValue(node);
 
                 // does number have fraction part
@@ -1344,7 +1342,6 @@ static void cjson_node_print(cJSON *node, int depth, const size_t *arr_idx)
                 break;
         }
         case cJSON_String:
-                printf("[string]");
                 printf(" : \"%s\"", cJSON_GetStringValue(node));
                 break;
         case cJSON_Array:
