@@ -4,9 +4,12 @@
 void rpc_save_add(void)
 {
         http_rpc.on("/cfg_reset", HTTP_GET, [](){
-                save_update(&g_save, &g_cfg_default);
-                save_write(&g_save);
+                save_cfg_reset();
+                http_rpc.send(200, "text/plain", "OK\n");
+        });
 
+        http_rpc.on("/cfg_def_reset", HTTP_GET, [](){
+                save_cfg_default_reset();
                 http_rpc.send(200, "text/plain", "OK\n");
         });
 

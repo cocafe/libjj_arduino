@@ -291,6 +291,26 @@ static int nvs_erase(void)
         return 0;
 }
 
+static void save_cfg_reset(void)
+{
+        memcpy(&g_cfg, &g_cfg_default, sizeof(g_cfg));
+        save_update(&g_save, &g_cfg);
+
+        // use factory config if found
+        if (!config_json_load(&g_save.cfg)) {
+                pr_info("factory json config found, config merged with it\n");
+        }
+
+        save_write(&g_save);
+}
+
+static void save_cfg_default_reset(void)
+{
+        memcpy(&g_cfg, &g_cfg_default, sizeof(g_cfg));
+        save_update(&g_save, &g_cfg);
+        save_write(&g_save);
+}
+
 static __unused void save_reset_gpio_check(unsigned gpio_rst)
 {
         static uint32_t ts_pressed = 0;
@@ -306,15 +326,7 @@ static __unused void save_reset_gpio_check(unsigned gpio_rst)
                         ts_pressed = now;
                         continue;
                 } else if (now - ts_pressed >= 3000) {
-                        memcpy(&g_cfg, &g_cfg_default, sizeof(g_cfg));
-                        save_update(&g_save, &g_cfg);
-
-                        // use factory config if found
-                        if (!config_json_load(&g_save.cfg)) {
-                                pr_info("factory json config found, config merged with it\n");
-                        }
-
-                        save_write(&g_save);
+                        save_cfg_reset();
 
                         pr_info("config reset performed\n");
 
@@ -340,9 +352,7 @@ static __unused void save_reset_gpio_check(unsigned gpio_rst)
                                         config_json_delete();
 
                                         // use program default config
-                                        memcpy(&g_cfg, &g_cfg_default, sizeof(g_cfg));
-                                        save_update(&g_save, &g_cfg);
-                                        save_write(&g_save);
+                                        save_cfg_default_reset();
 
                                         nvs_erase();
 
