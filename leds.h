@@ -201,6 +201,7 @@ static __unused void led_init(void)
 #if defined (HAVE_WS2812_LED) && defined (GPIO_LED_WS2812)
         FastLED.addLeds<WS2812, GPIO_LED_WS2812, GRB>(led_ws2812, NUM_LED_WS2812);
         led_ws2812_brightness_set(led_ws2812_brightness);
+        led_off(LED_WS2812);
 #endif
 }
 
