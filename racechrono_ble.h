@@ -17,6 +17,8 @@
 #define BLE_DEFAULT_UPDATE_RATE_HZ      10
 #endif
 
+#define BLE_UPDATE_HZ_TO_MS(hz)         (((hz) == 0) ? 0 : (1000 / (hz)))
+
 struct ble_cfg {
         char devname[16];
         uint8_t enabled;
@@ -39,7 +41,7 @@ static SemaphoreHandle_t lck_ble_send;
 
 using PidExtra = struct
 {
-        uint32_t update_intv_ms = (racechrono_ble_update_rate_hz == 0) ? 0 : (1000 / racechrono_ble_update_rate_hz);
+        uint32_t update_intv_ms = BLE_UPDATE_HZ_TO_MS(racechrono_ble_update_rate_hz);
         uint32_t ts_last_send = 0;
 };
 RaceChronoPidMap<PidExtra> pidMap;
@@ -65,7 +67,7 @@ public:
                         void *entry = pidMap.getEntryId(pid);
                         PidExtra *pidExtra = pidMap.getExtra(entry);
                         pidExtra->ts_last_send = 0;
-                        pidExtra->update_intv_ms = (racechrono_ble_update_rate_hz == 0) ? 0 : (1000 / racechrono_ble_update_rate_hz);
+                        pidExtra->update_intv_ms = BLE_UPDATE_HZ_TO_MS(racechrono_ble_update_rate_hz);
                         if (racechrono_ble_update_rate_hz != 0)
                                 pr_info("pid: 0x%03lx update interval %u Hz\n", pid, racechrono_ble_update_rate_hz);
                         else
@@ -83,6 +85,24 @@ public:
                 }
         }
 } raceChronoHandler;
+
+static void blc_rc_pidmap_for_each(void (*cb)(PidExtra *))
+{
+        if (!cb)
+                return;
+
+        void *entry = pidMap.getFirstEntryId();
+
+        while (entry != nullptr)
+        {
+                PidExtra *extra = pidMap.getExtra(entry);
+
+                if (extra)
+                        cb(extra);
+
+                entry = pidMap.getNextEntryId(entry);
+        }
+}
 
 static char *ble_device_name_generate(void)
 {
