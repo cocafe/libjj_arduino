@@ -198,7 +198,7 @@ static int esp32_top_snapshot_print(int (*__snprintf)(char *buffer, size_t bufsz
 
         c += __snprintf(&buf[c], bufsz - c, "%-4s | %-16s | %-10s | %-4s | Stack High Watermark\n", "Task", "Name", "Tick", "CPU");
         for (unsigned i = 0; i < task_cnt; i++) {
-                c += __snprintf(&buf[c], bufsz - c, "%-4s | %-16s | %10lu | %lu\n",
+                c += __snprintf(&buf[c], bufsz - c, "%-4u | %-16s | %10lu | %lu\n",
                                 tasks[i].xTaskNumber,
                                 tasks[i].pcTaskName,
                                 tasks[i].ulRunTimeCounter,
