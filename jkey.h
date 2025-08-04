@@ -1313,7 +1313,9 @@ static void cjson_node_print(cJSON *node, int depth, const size_t *arr_idx)
         if (depth >= (sizeof(json_indent) - 1))
                 depth = sizeof(json_indent);
 
-        printf("%.*s", depth, json_indent);
+        // printf("%.*s", depth, json_indent);
+        for (int i = 0; i < depth; i++)
+                printf("%s", "    ");
 
         if (arr_idx)
                 printf("[%zu] ", *arr_idx);
