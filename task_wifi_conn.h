@@ -3,7 +3,7 @@
 
 #include "ping.h"
 
-static void task_wifi_conn_ping_cb(struct ping_ctx *ctx, struct pbuf *p, const ip_addr_t *addr)
+static int task_wifi_conn_ping_cb(struct ping_ctx *ctx, struct pbuf *p, const ip_addr_t *addr)
 {
         struct icmp_echo_hdr *iecho = (struct icmp_echo_hdr *)((uint8_t *)(p->payload) + icmp_ip_hlen);
 
@@ -23,7 +23,11 @@ static void task_wifi_conn_ping_cb(struct ping_ctx *ctx, struct pbuf *p, const i
                 }
 
                 xSemaphoreGive(ctx->sem);
+
+                return 0;
         }
+
+        return -EINVAL;
 }
 
 static void task_wifi_conn(void *arg)

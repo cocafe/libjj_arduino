@@ -12,7 +12,7 @@
 #define PING_DATA_SIZE          8
 
 static const int icmp_ip_hlen = 20;
-typedef void (*ping_cb_t)(struct ping_ctx *ctx, struct pbuf *p, const ip_addr_t *addr);
+typedef int (*ping_cb_t)(struct ping_ctx *ctx, struct pbuf *p, const ip_addr_t *addr);
 
 struct ping_ctx {
         SemaphoreHandle_t sem;
@@ -30,14 +30,14 @@ static u8_t __ping4_recv(void *arg, struct raw_pcb *pcb, struct pbuf *p, const i
 
         if (p->len >= (icmp_ip_hlen + sizeof(struct icmp_echo_hdr))) {
                 if (ctx->cb) {
-                        ctx->cb(ctx, p, addr);
-                        pbuf_free(p);
-
-                        return 1; // consumed
+                        if (ctx->cb(ctx, p, addr) == 0) {
+                                pbuf_free(p);
+                                return 1; // consumed
+                        }
                 }
         }
 
-        return 0; // not consumed, free by lwip
+        return 0; // not consumed, continue other logic, free by lwip
 }
 
 static void __ping4_send(void *arg)
