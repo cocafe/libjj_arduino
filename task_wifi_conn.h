@@ -3,10 +3,35 @@
 
 #include "ping.h"
 
+static void task_wifi_conn_ping_cb(struct ping_ctx *ctx, struct pbuf *p, const ip_addr_t *addr)
+{
+        struct icmp_echo_hdr *iecho = (struct icmp_echo_hdr *)((uint8_t *)(p->payload) + icmp_ip_hlen);
+
+        if ((iecho->type == ICMP_ER) && (iecho->id == lwip_htons(PING_ID))) {
+                int *ping_success = (int *)ctx->userdata;
+
+                if (lwip_ntohs(iecho->seqno) != (ctx->seq)) {
+                        pr_dbg("mismatched seq\n");
+                } else {
+                        *ping_success = 1;
+
+                        // {
+                        //         uint32_t rtt = esp32_millis() - ctx->ts_send;
+                        //         pr_dbg("Reply from %s: icmp_seq=%d time=%lu ms\n",
+                        //                 ipaddr_ntoa(addr), lwip_ntohs(iecho->seqno), rtt);
+                        // }
+                }
+
+                xSemaphoreGive(ctx->sem);
+        }
+}
+
 static void task_wifi_conn(void *arg)
 {
         const unsigned ping_failure_thres = 5;
         unsigned ping_failure = 0;
+        int ping_success = 0;
+        struct ping_ctx *pctx = NULL;
 
         vTaskDelay(pdMS_TO_TICKS(2000));
 
@@ -45,8 +70,11 @@ static void task_wifi_conn(void *arg)
                         }
                 }
 
+                ping_failure = 0;
+
                 wifi_sta_cfg_apply_once(&g_cfg.wifi_cfg);
                 esp_wifi_force_wakeup_acquire();
+
                 pr_info("wifi connected, RSSI %d dBm, BSSID: %s\n", WiFi.RSSI(), WiFi.BSSIDstr().c_str());
                 pr_info("ip local: %s gw: %s subnet: %s dns: %s\n",
                         WiFi.localIP().toString().c_str(),
@@ -60,22 +88,46 @@ static void task_wifi_conn(void *arg)
 
                 while (WiFi.status() == WL_CONNECTED) {
                         if (WiFi.gatewayIP().toString() != "0.0.0.0") {
-                                if (ping4(WiFi.gatewayIP(), 1, 500, 500) != 1) {
-                                        ping_failure++;
-
-                                        if (ping_failure >= ping_failure_thres) {
-                                                pr_err("ping continuously failed for %u times, wifi may lost, reconnect now\n", ping_failure_thres);
-                                                break;
+                                if (!pctx) {
+                                        pctx = ping4_init(WiFi.gatewayIP().toString().c_str(),
+                                                          task_wifi_conn_ping_cb,
+                                                          (void *)&ping_success);
+                                        if (!pctx) {
+                                                pr_err("failed to init ping4\n");
+                                                goto next;
                                         }
+                                }
+
+                                ping_success = 0;
+                                ping4_send(pctx);
+
+                                if (xSemaphoreTake(pctx->sem, pdMS_TO_TICKS(1000)) == pdFALSE) {
+                                        pr_info("ping timed out\n");
+                                        ping_failure++;
                                 } else {
-                                        ping_failure = 0;
+                                        if (ping_success)
+                                                ping_failure = 0;
+                                        else
+                                                ping_failure++;
+                                }
+
+                                if (ping_failure >= ping_failure_thres) {
+                                        pr_err("ping continuously failed for %u times, wifi may lost, reconnect now\n", ping_failure_thres);
+                                        break;
                                 }
                         }
 
-                        xSemaphoreTake(sem_wifi_wait, pdMS_TO_TICKS(5000));
+next:
+                        xSemaphoreTake(sem_wifi_wait, pdMS_TO_TICKS(1000));
+                }
+
+                if (pctx) {
+                        ping4_deinit(pctx);
+                        pctx = NULL;
                 }
 
                 pr_info("wifi connection lost, reconnect now\n");
+
                 esp_wifi_force_wakeup_release();
                 wifi_sta_reconnect();
         }
