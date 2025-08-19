@@ -294,13 +294,13 @@ static int nvs_erase(void)
 static void save_cfg_reset(void)
 {
         memcpy(&g_cfg, &g_cfg_default, sizeof(g_cfg));
-        save_update(&g_save, &g_cfg);
 
         // use factory config if found
-        if (!config_json_load(&g_save.cfg)) {
+        if (!config_json_load(&g_cfg)) {
                 pr_info("factory json config found, config merged with it\n");
         }
 
+        save_update(&g_save, &g_cfg);
         save_write(&g_save);
 }
 

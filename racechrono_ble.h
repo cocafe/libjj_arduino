@@ -26,7 +26,7 @@ struct ble_cfg {
 };
 
 static int ble_is_connected = 0;
-static char ble_device_prefix[16] = "RaceChrono";
+static char ble_device_prefix[32] = "RaceChrono";
 static uint8_t racechrono_ble_update_rate_hz = BLE_DEFAULT_UPDATE_RATE_HZ;
 
 static uint64_t cnt_can_ble_send; // send to remote
@@ -107,7 +107,7 @@ static void blc_rc_pidmap_for_each(void (*cb)(PidExtra *))
 static char *ble_device_name_generate(void)
 {
         uint8_t mac[6];
-        static char dev_name[32];
+        static char dev_name[64];
 
         if (esp32_mac_get(BLE_DEFAULT_MAC, mac)) {
                 pr_err("failed to get BT mac address\n");
@@ -243,7 +243,11 @@ static void __unused ble_init(struct ble_cfg *cfg)
                 racechrono_ble_update_rate_hz = cfg->update_hz;
         }
 
-        RaceChronoBle.setUp(ble_device_name_generate(), &raceChronoHandler);
+        char *name = ble_device_name_generate();
+
+        pr_info("devname: %s\n", name);
+
+        RaceChronoBle.setUp(name, &raceChronoHandler);
         RaceChronoBle.startAdvertising();
 
         if (can_dev) {
