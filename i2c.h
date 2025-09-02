@@ -10,6 +10,7 @@
 
 #include "utils.h"
 #include "logging.h"
+#include "jkey.h"
 
 #ifndef GPIO_I2C_SDA0
 #define GPIO_I2C_SDA0                   (-1)
@@ -31,11 +32,35 @@
 #define CONFIG_I2C_FREQ0                (100 * 1000UL)
 #endif
 
-#ifndef CONFIG_I2C_FREQ1
-#define CONFIG_I2C_FREQ1                (100 * 1000UL)
+#ifndef CONFIG_I2C_1_FREQ
+#define CONFIG_I2C_1_FREQ                (100 * 1000UL)
 #endif
 
-static SemaphoreHandle_t lck_i2c;
+struct i2c_cfg {
+        int16_t pin_scl;
+        int16_t pin_sda;
+        uint32_t freq;
+};
+
+struct i2c_ctx {
+        SemaphoreHandle_t lck;
+        struct i2c_cfg *cfg;
+        TwoWire *wire;
+};
+
+static struct i2c_ctx i2c_0;
+static struct i2c_ctx i2c_1;
+
+static void jbuf_i2c_cfg_add(jbuf_t *b, const char *key, struct i2c_cfg *cfg)
+{
+        void *obj = jbuf_obj_open(b, key);
+
+        jbuf_uint_add(b, "scl", cfg->pin_scl);
+        jbuf_uint_add(b, "sda", cfg->pin_sda);
+        jbuf_uint_add(b, "freq", cfg->freq);
+
+        jbuf_obj_close(b, obj);
+}
 
 static void __i2cdetect(TwoWire *wire, int (*__snprintf)(char *buffer, size_t bufsz, const char *format, ...), char *buf, unsigned len, uint8_t first, uint8_t last)
 {
@@ -110,37 +135,62 @@ static int __unused i2cdetect(unsigned bus, char *buf, size_t len)
         return 0;
 }
 
-static void __unused i2c_init(void)
+static int __i2c_init(struct i2c_ctx *i2c, TwoWire *wire, struct i2c_cfg *cfg)
 {
-        int pin_sda0 = GPIO_I2C_SDA0, pin_scl0 = GPIO_I2C_SCL0;
-
-        lck_i2c = xSemaphoreCreateMutex();
-
-        if (pin_sda0 >= 0 && pin_scl0 >= 0) {
-                Wire.begin(pin_sda0, pin_scl0, CONFIG_I2C_FREQ0);
-                pr_info("bus 0 running at %luHz\n", Wire.getClock());
+        if (cfg->pin_scl < 0 || cfg->pin_sda < 0) {
+                pr_info("invalid scl or sda pin\n");
+                return -EINVAL;
         }
+
+        wire->begin(cfg->pin_sda, cfg->pin_scl, cfg->freq);
+        pr_info("scl %d sda %d, running at %luHz\n", cfg->pin_scl, cfg->pin_sda, wire->getClock());
+
+        i2c->lck = xSemaphoreCreateMutex();
+        i2c->cfg = cfg;
+        i2c->wire = wire;
+
+        vTaskDelay(pdMS_TO_TICKS(300));
+
+        return 0;
+}
+
+static int i2c_0_init(struct i2c_cfg *cfg)
+{
+        return __i2c_init(&i2c_0, &Wire, cfg);
+}
 
 #if SOC_I2C_NUM > 1
-        int pin_sda1 = GPIO_I2C_SDA1, pin_scl1 = GPIO_I2C_SCL1;
-
-        if (pin_sda1 >= 0 && pin_scl1 >= 0) {
-                Wire1.begin(pin_sda1, pin_scl1, CONFIG_I2C_FREQ1);
-                pr_info("bus 1 running at %luHz\n", Wire1.getClock());
-        }
+static int i2c_1_init(struct i2c_cfg *cfg)
+{
+        return __i2c_init(&i2c_1, &Wire1, cfg);
+}
 #endif
 
-        delay(300);
+static void i2c_init(struct i2c_cfg *cfg0, struct i2c_cfg *cfg1)
+{
+        if (i2c_0_init(cfg0))
+                pr_err("failed to init i2c 0\n");
+
+#if SOC_I2C_NUM > 1
+        if (i2c_1_init(cfg1))
+                pr_err("failed to init i2c 1\n");
+#endif
 }
 
-static int __unused i2c_lock(void)
+static int __unused i2c_lock(struct i2c_ctx *ctx)
 {
-        return xSemaphoreTake(lck_i2c, portMAX_DELAY) == pdTRUE ? 0 : -1;
+        if (!ctx->wire)
+                return -ENODEV;
+
+        return xSemaphoreTake(ctx->lck, portMAX_DELAY) == pdTRUE ? 0 : -1;
 }
 
-static void __unused i2c_unlock(void)
+static void __unused i2c_unlock(struct i2c_ctx *ctx)
 {
-        xSemaphoreGive(lck_i2c);
+        if (!ctx->wire)
+                return;
+
+        xSemaphoreGive(ctx->lck);
 }
 
 #endif // __LIBJJ_I2C_H__
