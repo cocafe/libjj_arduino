@@ -4,46 +4,6 @@
 void rpc_can_rlimit_add(void)
 {
 #ifdef CONFIG_HAVE_CANTCP_RLIMIT
-        http_rpc.on("/can_rlimit_cfg", HTTP_GET, [](){
-                unsigned enabled, update_hz;
-                struct http_cfg_param params[] = {
-                        HTTP_CFG_PARAM_INT(enabled, enabled),
-                        HTTP_CFG_PARAM_INT(default_update_hz, update_hz),
-                };
-                int modified = 0;
-
-                enabled = can_rlimit_enabled;
-                update_hz = can_rlimit_update_hz_default;
-
-                if (http_param_help_print(http_rpc, params, ARRAY_SIZE(params)))
-                        return;
-
-                modified = http_param_parse(http_rpc, params, ARRAY_SIZE(params));
-                if (modified < 0) {
-                        http_rpc.send(500, "text/plain", "Invalid value or internal error\n");
-                        return;
-                }
-
-                if (modified == 1) {
-                        can_rlimit_enabled = !!enabled;
-                        can_rlimit_update_hz_default = (update_hz >= 255 )? 0 : update_hz;
-                        g_cfg.rlimit_cfg.enabled = can_rlimit_enabled;
-                        g_cfg.rlimit_cfg.default_hz = can_rlimit_update_hz_default;
-
-                        http_rpc.send(200, "text/plain", "OK\n");
-                } else {
-                        char buf[128] = { };
-                        size_t c = 0;
-
-                        c += snprintf(&buf[c], sizeof(buf) - c, "{\n");
-                        c += snprintf(&buf[c], sizeof(buf) - c, "  \"enabled\": %d,\n", can_rlimit_enabled);
-                        c += snprintf(&buf[c], sizeof(buf) - c, "  \"default_update_hz\": %d\n", can_rlimit_update_hz_default);
-                        c += snprintf(&buf[c], sizeof(buf) - c, "}\n");
-
-                        http_rpc.send(200, "text/plain", buf);
-                }
-        });
-
         http_rpc.on("/can_rlimit", HTTP_GET, [](){
                 uint8_t enabled_saved = can_rlimit_enabled;
 

@@ -3,47 +3,45 @@
 
 void rpc_ble_add(void)
 {
-        http_rpc.on("/ble_cfg", HTTP_GET, [](){
-                struct ble_cfg tmp = { };
-                struct http_cfg_param params[] = {
-                        HTTP_CFG_PARAM_STR(devname, tmp.devname),
-                        HTTP_CFG_PARAM_INT(update_hz, tmp.update_hz),
-                };
-                int modified = 0;
+        http_rpc.on("/ble_txpower", HTTP_GET, [](){
+                if (http_rpc.hasArg("set")) {
+                        String data = http_rpc.arg("set");
+                        int match = 0;
+                        int i = 0;
 
-                memcpy(&tmp, &g_cfg.ble_cfg, sizeof(tmp));
+                        for (i = 0; i < ARRAY_SIZE(str_ble_txpwr); i++) {
+                                if (is_str_equal((char *)str_ble_txpwr[i], (char *)data.c_str(), CASELESS)) {
+                                        match = 1;
+                                        break;
+                                }
+                        }
 
-                if (http_param_help_print(http_rpc, params, ARRAY_SIZE(params)))
-                        return;
-
-                modified = http_param_parse(http_rpc, params, ARRAY_SIZE(params));
-                if (modified < 0) {
-                        http_rpc.send(500, "text/plain", "Invalid value or internal error\n");
-                        return;
-                }
-
-                if (modified == 1) {
-                        if (tmp.devname[0] == '\0') {
-                                http_rpc.send(500, "text/plain", "Dev name can't be empty\n");
+                        if (!match) {
+                                http_rpc.send(404, "text/plain", "Invalid value\n");
                                 return;
                         }
 
-                        if (tmp.update_hz == 0) {
-                                http_rpc.send(500, "text/plain", "Update HZ can't be zero\n");
-                                return;
-                        }
-
-                        memcpy(&g_cfg.ble_cfg, &tmp, sizeof(g_cfg.ble_cfg));
-
-                        http_rpc.send(200, "text/plain", "OK\n");
+                        if (esp_ble_tx_power_set(ESP_BLE_PWR_TYPE_DEFAULT, ble_txpwr_to_esp_value[i]) != ESP_OK)
+                                http_rpc.send(200, "text/plain", "error\n");
+                        else
+                                http_rpc.send(200, "text/plain", "OK\n");
                 } else {
-                        char buf[256] = { };
+                        char buf[1024] = { };
                         size_t c = 0;
 
-                        c += snprintf(&buf[c], sizeof(buf) - c, "{\n");
-                        c += snprintf(&buf[c], sizeof(buf) - c, "  \"devname\": \"%s\",\n", g_cfg.ble_cfg.devname);
-                        c += snprintf(&buf[c], sizeof(buf) - c, "  \"update_hz\": %d\n", g_cfg.ble_cfg.update_hz);
-                        c += snprintf(&buf[c], sizeof(buf) - c, "}\n");
+                        c += snprintf(&buf[c], sizeof(buf) - c, "\n");
+
+                        for (unsigned i = 0; i < ESP_BLE_PWR_TYPE_NUM; i++) {
+                                int esp_val = esp_ble_tx_power_get((esp_ble_power_type_t)i);
+
+                                c += snprintf(&buf[c], sizeof(buf) - c, "%s ", str_ble_pwr_types[i]);
+
+                                if (esp_val < 0 || esp_val >= ARRAY_SIZE(ble_txpwr_from_esp_value)) {
+                                        c += snprintf(&buf[c], sizeof(buf) - c, "(unknown: %d)\n", esp_val);
+                                } else {
+                                        c += snprintf(&buf[c], sizeof(buf) - c, "%s\n", str_ble_txpwr[ble_txpwr_from_esp_value[esp_val]]);
+                                }
+                        }
 
                         http_rpc.send(200, "text/plain", buf);
                 }

@@ -3,6 +3,7 @@
 
 #include <stdint.h>
 
+#include <esp_bt.h>
 #include <RaceChrono.h>
 
 #include "logging.h"
@@ -19,10 +20,103 @@
 
 #define BLE_UPDATE_HZ_TO_MS(hz)         (((hz) == 0) ? 0 : (1000 / (hz)))
 
+enum {
+        BLE_TXPWR_MINUS_24DBM,
+        BLE_TXPWR_MINUS_21DBM,
+        BLE_TXPWR_MINUS_18DBM,
+        BLE_TXPWR_MINUS_15DBM,
+        BLE_TXPWR_MINUS_12DBM,
+        BLE_TXPWR_MINUS_9DBM,
+        BLE_TXPWR_MINUS_6DBM,
+        BLE_TXPWR_MINUS_3DBM,
+        BLE_TXPWR_0DBM,
+        BLE_TXPWR_3DBM,
+        BLE_TXPWR_6DBM,
+        BLE_TXPWR_9DBM,         // ESP DEFAULT
+        BLE_TXPWR_12DBM,
+        BLE_TXPWR_15DBM,
+        BLE_TXPWR_18DBM,
+        BLE_TXPWR_20DBM,
+        NUM_BLE_TXPWR_LEVELS,
+};
+
+static const char *str_ble_txpwr[] = {
+        [BLE_TXPWR_MINUS_24DBM] = "-24dBm",
+        [BLE_TXPWR_MINUS_21DBM] = "-21dBm",
+        [BLE_TXPWR_MINUS_18DBM] = "-18dBm",
+        [BLE_TXPWR_MINUS_15DBM] = "-15dBm",
+        [BLE_TXPWR_MINUS_12DBM] = "-12dBm",
+        [BLE_TXPWR_MINUS_9DBM] = "-9dBm",
+        [BLE_TXPWR_MINUS_6DBM] = "-6dBm",
+        [BLE_TXPWR_MINUS_3DBM] = "-3dBm",
+        [BLE_TXPWR_0DBM] = "0dBm",
+        [BLE_TXPWR_3DBM] = "3dBm",
+        [BLE_TXPWR_6DBM] = "6dBm",
+        [BLE_TXPWR_9DBM] = "9dBm",
+        [BLE_TXPWR_12DBM] = "12dBm",
+        [BLE_TXPWR_15DBM] = "15dBm",
+        [BLE_TXPWR_18DBM] = "18dBm",
+        [BLE_TXPWR_20DBM] = "20dBm",
+};
+
+static const esp_power_level_t ble_txpwr_to_esp_value[NUM_BLE_TXPWR_LEVELS] = {
+        [BLE_TXPWR_MINUS_24DBM] = ESP_PWR_LVL_N24,
+        [BLE_TXPWR_MINUS_21DBM] = ESP_PWR_LVL_N21,
+        [BLE_TXPWR_MINUS_18DBM] = ESP_PWR_LVL_N18,
+        [BLE_TXPWR_MINUS_15DBM] = ESP_PWR_LVL_N15,
+        [BLE_TXPWR_MINUS_12DBM] = ESP_PWR_LVL_N12,
+        [BLE_TXPWR_MINUS_9DBM] = ESP_PWR_LVL_N9,
+        [BLE_TXPWR_MINUS_6DBM] = ESP_PWR_LVL_N6,
+        [BLE_TXPWR_MINUS_3DBM] = ESP_PWR_LVL_N3,
+        [BLE_TXPWR_0DBM] = ESP_PWR_LVL_N0,
+        [BLE_TXPWR_3DBM] = ESP_PWR_LVL_P3,
+        [BLE_TXPWR_6DBM] = ESP_PWR_LVL_P6,
+        [BLE_TXPWR_9DBM] = ESP_PWR_LVL_P9,
+        [BLE_TXPWR_12DBM] = ESP_PWR_LVL_P12,
+        [BLE_TXPWR_15DBM] = ESP_PWR_LVL_P15,
+        [BLE_TXPWR_18DBM] = ESP_PWR_LVL_P18,
+        [BLE_TXPWR_20DBM] = ESP_PWR_LVL_P20,
+};
+
+static const int ble_txpwr_from_esp_value[NUM_BLE_TXPWR_LEVELS] = {
+        [ESP_PWR_LVL_N24] = BLE_TXPWR_MINUS_24DBM,
+        [ESP_PWR_LVL_N21] = BLE_TXPWR_MINUS_21DBM,
+        [ESP_PWR_LVL_N18] = BLE_TXPWR_MINUS_18DBM,
+        [ESP_PWR_LVL_N15] = BLE_TXPWR_MINUS_15DBM,
+        [ESP_PWR_LVL_N12] = BLE_TXPWR_MINUS_12DBM,
+        [ESP_PWR_LVL_N9] = BLE_TXPWR_MINUS_9DBM,
+        [ESP_PWR_LVL_N6] = BLE_TXPWR_MINUS_6DBM,
+        [ESP_PWR_LVL_N3] = BLE_TXPWR_MINUS_3DBM,
+        [ESP_PWR_LVL_N0] = BLE_TXPWR_0DBM,
+        [ESP_PWR_LVL_P3] = BLE_TXPWR_3DBM,
+        [ESP_PWR_LVL_P6] = BLE_TXPWR_6DBM,
+        [ESP_PWR_LVL_P9] = BLE_TXPWR_9DBM,
+        [ESP_PWR_LVL_P12] = BLE_TXPWR_12DBM,
+        [ESP_PWR_LVL_P15] = BLE_TXPWR_15DBM,
+        [ESP_PWR_LVL_P18] = BLE_TXPWR_18DBM,
+        [ESP_PWR_LVL_P20] = BLE_TXPWR_20DBM,
+};
+
+static const char *str_ble_pwr_types[ESP_BLE_PWR_TYPE_NUM] = {
+        [ESP_BLE_PWR_TYPE_CONN_HDL0] = "conn0",
+        [ESP_BLE_PWR_TYPE_CONN_HDL1] = "conn1",
+        [ESP_BLE_PWR_TYPE_CONN_HDL2] = "conn2",
+        [ESP_BLE_PWR_TYPE_CONN_HDL3] = "conn3",
+        [ESP_BLE_PWR_TYPE_CONN_HDL4] = "conn4",
+        [ESP_BLE_PWR_TYPE_CONN_HDL5] = "conn5",
+        [ESP_BLE_PWR_TYPE_CONN_HDL6] = "conn6",
+        [ESP_BLE_PWR_TYPE_CONN_HDL7] = "conn7",
+        [ESP_BLE_PWR_TYPE_CONN_HDL8] = "conn8",
+        [ESP_BLE_PWR_TYPE_ADV] = "adv",
+        [ESP_BLE_PWR_TYPE_SCAN] = "scan",
+        [ESP_BLE_PWR_TYPE_DEFAULT] = "default",
+};
+
 struct ble_cfg {
         char devname[16];
         uint8_t enabled;
         uint8_t update_hz;
+        uint8_t tx_power;
 };
 
 static int ble_is_connected = 0;
@@ -249,6 +343,11 @@ static void __unused ble_init(struct ble_cfg *cfg)
 
         RaceChronoBle.setUp(name, &raceChronoHandler);
         RaceChronoBle.startAdvertising();
+
+        if (cfg->tx_power < ARRAY_SIZE(ble_txpwr_to_esp_value)) {
+                if (ESP_OK != esp_ble_tx_power_set(ESP_BLE_PWR_TYPE_DEFAULT, ble_txpwr_to_esp_value[cfg->tx_power]))
+                        pr_err("esp_ble_tx_power_set() failed\n");
+        }
 
         if (can_dev) {
                 can_recv_cb_register(can_ble_frame_send);
