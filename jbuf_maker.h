@@ -82,6 +82,7 @@ void jbuf_ble_cfg_add(jbuf_t *b, const char *key, struct ble_cfg *cfg)
         jbuf_bool_add(b, "enabled", cfg->enabled);
         jbuf_strbuf_add(b, "devname", cfg->devname);
         jbuf_uint_add(b, "update_hz", cfg->update_hz);
+        jbuf_strval_add(b, "tx_power", cfg->tx_power, str_ble_txpwr);
 
         jbuf_obj_close(b, obj);
 }
@@ -98,5 +99,18 @@ void jbuf_can_rlimit_add(jbuf_t *b, const char *key, struct can_ratelimit_cfg *c
         jbuf_obj_close(b, obj);
 }
 #endif // __LIBJJ_CAN_TCP_H__
+
+#ifdef __LIBJJ_I2C_H__
+static void jbuf_i2c_cfg_add(jbuf_t *b, const char *key, struct i2c_cfg *cfg)
+{
+        void *obj = jbuf_obj_open(b, key);
+
+        jbuf_uint_add(b, "scl", cfg->pin_scl);
+        jbuf_uint_add(b, "sda", cfg->pin_sda);
+        jbuf_uint_add(b, "freq", cfg->freq);
+
+        jbuf_obj_close(b, obj);
+}
+#endif // __LIBJJ_I2C_H__
 
 #endif // __LIBJJ_JBUF_MAKER_H__

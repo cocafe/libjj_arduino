@@ -10,7 +10,6 @@
 
 #include "utils.h"
 #include "logging.h"
-#include "jkey.h"
 
 #ifndef GPIO_I2C_SDA0
 #define GPIO_I2C_SDA0                   (-1)
@@ -50,17 +49,6 @@ struct i2c_ctx {
 
 static struct i2c_ctx i2c_0;
 static struct i2c_ctx i2c_1;
-
-static void jbuf_i2c_cfg_add(jbuf_t *b, const char *key, struct i2c_cfg *cfg)
-{
-        void *obj = jbuf_obj_open(b, key);
-
-        jbuf_uint_add(b, "scl", cfg->pin_scl);
-        jbuf_uint_add(b, "sda", cfg->pin_sda);
-        jbuf_uint_add(b, "freq", cfg->freq);
-
-        jbuf_obj_close(b, obj);
-}
 
 static void __i2cdetect(TwoWire *wire, int (*__snprintf)(char *buffer, size_t bufsz, const char *format, ...), char *buf, unsigned len, uint8_t first, uint8_t last)
 {
