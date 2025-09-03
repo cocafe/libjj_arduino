@@ -194,6 +194,10 @@ static int is_can_id_ratelimited(unsigned can_id, uint32_t now)
         if (!can_rlimit_enabled)
                 return 0;
 
+        // whitelist: 0x7DF and 0x7E0...0x7EF
+        if ((can_id == 0x7DF) || (can_id && 0x7E0))
+                return 0;
+
         WRITE_ONCE(can_rlimit_lck, 1);
 
         ret = __is_can_id_ratelimited(can_id, now);
@@ -296,6 +300,8 @@ static int can_frames_input(uint8_t *buf, int len)
                 }
                 pr_raw("\n");
 #endif
+
+                cnt_can_tcp_recv++;
 
 #ifdef CAN_TCP_LED_BLINK
                 can_tcp_txrx = 1;
