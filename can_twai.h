@@ -32,9 +32,9 @@ struct twai_cfg {
 };
 
 static const char *str_twai_mode[] = {
-        [TWAI_MODE_NORMAL]      = "TWAI_NORMAL",
-        [TWAI_MODE_NO_ACK]      = "TWAI_NO_ACK",
-        [TWAI_MODE_LISTEN_ONLY] = "TWAI_LISTEN_ONLY",
+        [TWAI_MODE_NORMAL]      = "NORMAL",
+        [TWAI_MODE_NO_ACK]      = "NO_ACK",
+        [TWAI_MODE_LISTEN_ONLY] = "LISTEN_ONLY",
 };
 
 static uint16_t tx_timedout_ms = 200;
