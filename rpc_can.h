@@ -4,7 +4,7 @@
 void rpc_can_add(void)
 {
         http_rpc.on("/can_stats", HTTP_GET, [](){
-                char buf[1024] = { };
+                char buf[1600] = { };
                 size_t c = 0;
 
                 c += snprintf(&buf[c], sizeof(buf) - c, "# HELP can_stats\n");
@@ -36,6 +36,20 @@ void rpc_can_add(void)
 #ifdef __LIBJJ_RACECHRONO_BLE_H__
                 c += snprintf(&buf[c], sizeof(buf) - c, "can_stats{t=\"ble_send\"} %llu\n", cnt_can_ble_send);
 #endif
+
+#ifdef CONFIG_HAVE_CAN_TWAI
+                twai_status_info_t twaistatus;
+                twai_get_status_info(&twaistatus);
+                c += snprintf(&buf[c], sizeof(buf) - c, "# HELP twai_stats\n");
+                c += snprintf(&buf[c], sizeof(buf) - c, "# TYPE twai_stats gauge\n");
+                c += snprintf(&buf[c], sizeof(buf) - c, "twai_stats{t=\"tx_queued\"} %lu\n", twaistatus.msgs_to_tx);
+                c += snprintf(&buf[c], sizeof(buf) - c, "twai_stats{t=\"rx_queued\"} %lu\n", twaistatus.msgs_to_rx);
+                c += snprintf(&buf[c], sizeof(buf) - c, "twai_stats{t=\"tx_err\"} %lu\n", twaistatus.tx_error_counter);
+                c += snprintf(&buf[c], sizeof(buf) - c, "twai_stats{t=\"rx_err\"} %lu\n", twaistatus.rx_error_counter);
+                c += snprintf(&buf[c], sizeof(buf) - c, "twai_stats{t=\"tx_failed\"} %lu\n", twaistatus.tx_failed_count);
+                c += snprintf(&buf[c], sizeof(buf) - c, "twai_stats{t=\"rx_missed\"} %lu\n", twaistatus.rx_missed_count);
+                c += snprintf(&buf[c], sizeof(buf) - c, "twai_stats{t=\"bus_err\"} %lu\n", twaistatus.bus_error_count);
+#endif // CONFIG_HAVE_CAN_TWAI
 
                 http_rpc.send(200, "text/plain", buf);
         });
