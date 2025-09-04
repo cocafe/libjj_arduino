@@ -374,6 +374,7 @@ static __unused int wifi_first_connect(struct wifi_nw_cfg **cfgs, size_t cfg_cnt
                 struct wifi_nw_cfg *cfg = cfgs[idx];
                 int timeout = cfg->timeout_sec ? cfg->timeout_sec : WIFI_CONNECT_TIMEOUT_SEC;
 
+                wifi_sta_disconnect();
                 wifi_sta_config(cfg);
                 wifi_sta_connect();
 
