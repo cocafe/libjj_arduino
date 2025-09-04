@@ -198,6 +198,13 @@ char *jkey_type_strs[] = {
         [JKEY_TYPE_DOUBLE]       = (char *)"double",
 };
 
+static int jkey_invalid_strval_ignore = 0;
+
+static void jkey_invalid_strval_ignore_set(int enabled)
+{
+        jkey_invalid_strval_ignore = enabled;
+}
+
 static int is_jkey_writable_array(jkey_t *jkey)
 {
         return is_cjson_type(jkey->cjson_type, cJSON_Array) &&
@@ -824,7 +831,10 @@ static int strval_map_to_int(void *dst, size_t dst_sz, char *src, char **map, si
 
         pr_err("cannot convert string \'%s\' to value\n", src);
 
-        return -ENOENT;
+        if (jkey_invalid_strval_ignore)
+                return 0;
+        else
+                return -ENOENT;
 }
 
 static inline int jkey_is_strptr(jkey_t *jkey)

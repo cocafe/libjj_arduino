@@ -55,7 +55,10 @@ static int config_json_load(struct config *cfg)
         if ((err = jbuf_cfg_make(&jb, cfg)))
                 return err;
 
+        // migration for strval changes
+        jkey_invalid_strval_ignore_set(1);
         err = jbuf_json_file_load(&jb, CONFIG_SAVE_JSON_PATH);
+        jkey_invalid_strval_ignore_set(0);
 
         jbuf_deinit(&jb);
 
