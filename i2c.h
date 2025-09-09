@@ -125,6 +125,14 @@ static int __unused i2cdetect(unsigned bus, char *buf, size_t len)
 
 static int __i2c_init(struct i2c_ctx *i2c, TwoWire *wire, struct i2c_cfg *cfg)
 {
+        if (!cfg)
+                return 0;
+
+        if (!i2c || !wire) {
+                pr_info("invalid runtime pointer\n");
+                return -EINVAL;
+        }
+
         if (cfg->pin_scl < 0 || cfg->pin_sda < 0) {
                 pr_info("invalid scl or sda pin\n");
                 return -EINVAL;
