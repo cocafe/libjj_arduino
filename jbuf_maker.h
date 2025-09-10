@@ -105,8 +105,8 @@ static void jbuf_i2c_cfg_add(jbuf_t *b, const char *key, struct i2c_cfg *cfg)
 {
         void *obj = jbuf_obj_open(b, key);
 
-        jbuf_uint_add(b, "scl", cfg->pin_scl);
-        jbuf_uint_add(b, "sda", cfg->pin_sda);
+        jbuf_sint_add(b, "scl", cfg->pin_scl);
+        jbuf_sint_add(b, "sda", cfg->pin_sda);
         jbuf_uint_add(b, "freq", cfg->freq);
 
         jbuf_obj_close(b, obj);
