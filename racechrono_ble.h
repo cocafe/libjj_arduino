@@ -60,9 +60,15 @@ static const char *str_ble_txpwr[] = {
 };
 
 static const esp_power_level_t ble_txpwr_to_esp_value[NUM_BLE_TXPWR_LEVELS] = {
+#ifdef CONFIG_IDF_TARGET_ESP32C6
+        [BLE_TXPWR_MINUS_24DBM] = ESP_PWR_LVL_N15,
+        [BLE_TXPWR_MINUS_21DBM] = ESP_PWR_LVL_N15,
+        [BLE_TXPWR_MINUS_18DBM] = ESP_PWR_LVL_N15,
+#else
         [BLE_TXPWR_MINUS_24DBM] = ESP_PWR_LVL_N24,
         [BLE_TXPWR_MINUS_21DBM] = ESP_PWR_LVL_N21,
         [BLE_TXPWR_MINUS_18DBM] = ESP_PWR_LVL_N18,
+#endif
         [BLE_TXPWR_MINUS_15DBM] = ESP_PWR_LVL_N15,
         [BLE_TXPWR_MINUS_12DBM] = ESP_PWR_LVL_N12,
         [BLE_TXPWR_MINUS_9DBM] = ESP_PWR_LVL_N9,
@@ -79,9 +85,15 @@ static const esp_power_level_t ble_txpwr_to_esp_value[NUM_BLE_TXPWR_LEVELS] = {
 };
 
 static const int ble_txpwr_from_esp_value[NUM_BLE_TXPWR_LEVELS] = {
+#ifdef CONFIG_IDF_TARGET_ESP32C6
+        [0] = BLE_TXPWR_MINUS_24DBM,
+        [1] = BLE_TXPWR_MINUS_21DBM,
+        [2] = BLE_TXPWR_MINUS_18DBM,
+#else
         [ESP_PWR_LVL_N24] = BLE_TXPWR_MINUS_24DBM,
         [ESP_PWR_LVL_N21] = BLE_TXPWR_MINUS_21DBM,
         [ESP_PWR_LVL_N18] = BLE_TXPWR_MINUS_18DBM,
+#endif
         [ESP_PWR_LVL_N15] = BLE_TXPWR_MINUS_15DBM,
         [ESP_PWR_LVL_N12] = BLE_TXPWR_MINUS_12DBM,
         [ESP_PWR_LVL_N9] = BLE_TXPWR_MINUS_9DBM,
