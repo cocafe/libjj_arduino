@@ -121,7 +121,7 @@ static void task_can_recv(void *arg)
                                         rlimit = can_ratelimit_get(f->id);
 
                                         if (!rlimit) {
-                                                rlimit = __can_ratelimit_add(can_id);
+                                                rlimit = can_ratelimit_add(f->id);
                                         }
                                 }
                         } else {

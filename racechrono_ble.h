@@ -116,11 +116,19 @@ static void rc_udp_2_ble_can_frame_forward(can_frame_t *f)
         rc_ble_can_frame_send(f, NULL);
 }
 
+static void rc_can_rlimit_set_all(int update_hz)
+{
+        xSemaphoreTake(can_rlimit.lck, portMAX_DELAY);
+        can_ratelimit_set_all(CAN_RLIMIT_TYPE_RC, update_hz);
+        xSemaphoreGive(can_rlimit.lck);
+}
+
 class ServerCallbacks : public NimBLEServerCallbacks
 {
         void onConnect(NimBLEServer *server, NimBLEConnInfo &connInfo) override
         {
                 pr_info("ble client connected (%s)\n", connInfo.getAddress().toString().c_str());
+
                 ble_is_connected = 1;
 
                 /**
@@ -137,8 +145,11 @@ class ServerCallbacks : public NimBLEServerCallbacks
         void onDisconnect(NimBLEServer *server, NimBLEConnInfo &connInfo, int reason) override
         {
                 pr_info("ble client disconnected, start advertising\n");
+
                 ble_is_connected = 0;
                 NimBLEDevice::startAdvertising();
+
+                rc_can_rlimit_set_all(-1);
         }
 
         void onMTUChange(uint16_t MTU, NimBLEConnInfo &connInfo) override
@@ -180,7 +191,7 @@ class ServerCallbacks : public NimBLEServerCallbacks
 #endif
 } serverCallbacks;
 
-static void racechrono_char_pid_on_write(const uint8_t *data, uint16_t len)
+static void rc_char_pid_on_write(const uint8_t *data, uint16_t len)
 {
         // The protocol implemented in this file is based on
         // https://github.com/aollin/racechrono-ble-diy-device
@@ -191,21 +202,21 @@ static void racechrono_char_pid_on_write(const uint8_t *data, uint16_t len)
         }
 
         switch (data[0]) {
-        // Deny all CAN PIDs
+        // will be called once before calling allow one or more pid
         case 0:
                 if (len == 1) {
                         pr_info("deny all pid\n");
                         rc_deny_all = 1;
+                        rc_can_rlimit_set_all(-1);
                 } else {
                         pr_err("invalid deny all pid command\n");
                 }
 
                 break;
 
-        // Allow all CAN PIDs
         case 1: 
                 if (len == 3) {
-                        uint16_t __attribute__((unused)) update_intv_ms = data[1] << 8 | data[2];
+                        uint16_t update_intv_ms = data[1] << 8 | data[2];
                         pr_info("allow all pid, update_intv_ms: %u\n", update_intv_ms);
                         rc_deny_all = 0;
                         rc_allow_all = 1;
@@ -215,8 +226,7 @@ static void racechrono_char_pid_on_write(const uint8_t *data, uint16_t len)
 
                 break;
 
-        // Allow one more CAN PID
-        // XXX: did not reset all RC pid...
+        // allow one more pid
         case 2:
                 if (len == 7) {
                         uint16_t __attribute__((unused)) update_intv_ms = data[1] << 8 | data[2];
@@ -227,6 +237,7 @@ static void racechrono_char_pid_on_write(const uint8_t *data, uint16_t len)
 
 #ifdef CONFIG_HAVE_CAN_RLIMIT
                         struct can_rlimit_node *rlimit;
+                        unsigned update_hz = rc_ble.cfg->update_hz;
 
                         xSemaphoreTake(can_rlimit.lck, portMAX_DELAY);
 
@@ -236,11 +247,13 @@ static void racechrono_char_pid_on_write(const uint8_t *data, uint16_t len)
                                 rlimit = can_ratelimit_add(pid);
                         }
 
-                        __can_ratelimit_set(rlimit, CAN_RLIMIT_TYPE_RC, rc_ble.update_hz);
+                        can_ratelimit_set(rlimit, CAN_RLIMIT_TYPE_RC, update_hz);
 
                         xSemaphoreGive(can_rlimit.lck);
 
-                        pr_info("allow pid: 0x%03lx update_intv_ms: %u\n", pid, rc_ble.update_hz ? 1000 / rc_ble.update_hz : 0);
+                        pr_info("allow pid: 0x%03lx update_intv_ms: %u\n", pid, update_hz ? update_hz_to_ms(update_hz) : 0);
+#else
+                        pr_info("allow pid: 0x%03lx\n", pid);
 #endif
                 } else {
                         pr_err("invalid allow pid command\n");
@@ -255,7 +268,7 @@ class CharacteristicCallbacks : public NimBLECharacteristicCallbacks
         void onWrite(NimBLECharacteristic *pCharacteristic, NimBLEConnInfo &connInfo) override
         {
                 NimBLEAttValue value = pCharacteristic->getValue();
-                racechrono_char_pid_on_write(value.data(), value.length());
+                rc_char_pid_on_write(value.data(), value.length());
         }
 } rc_char_pid_cbs;
 

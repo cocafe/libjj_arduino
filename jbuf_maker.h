@@ -94,7 +94,16 @@ void jbuf_can_rlimit_add(jbuf_t *b, const char *key, struct can_rlimit_cfg *cfg)
         void *obj = jbuf_obj_open(b, key);
 
         jbuf_bool_add(b, "enabled", cfg->enabled);
-        jbuf_uint_add(b, "default_hz", cfg->default_hz);
+
+        {
+                void *hz = jbuf_obj_open(b, "default_hz");
+
+                for (unsigned i = 0; i < ARRAY_SIZE(cfg->default_hz); i++) {
+                        jbuf_sint_add(b, str_rlimit_types[i], cfg->default_hz[i]);
+                }
+
+                jbuf_obj_close(b, hz);
+        }
 
         jbuf_obj_close(b, obj);
 }

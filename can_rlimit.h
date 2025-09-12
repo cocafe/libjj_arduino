@@ -12,6 +12,11 @@ enum {
         NUM_CAN_RLIMIT_TYPES,
 };
 
+static const char *str_rlimit_types[NUM_CAN_RLIMIT_TYPES] = {
+        [CAN_RLIMIT_TYPE_TCP] = "tcp",
+        [CAN_RLIMIT_TYPE_RC] = "rc",
+};
+
 struct can_rlimit_cfg {
         uint8_t enabled;
         int8_t default_hz[NUM_CAN_RLIMIT_TYPES];
@@ -29,7 +34,7 @@ struct can_rlimit_node {
 };
 
 struct can_rlimit_ctx {
-        struct hlist_head htbl[1 << 8];
+        struct hlist_head htbl[1 << 7];
         SemaphoreHandle_t lck;
         struct can_rlimit_cfg *cfg;
 };
@@ -66,7 +71,7 @@ static inline struct can_rlimit_node *can_ratelimit_add(unsigned can_id)
                 d->update_ms = can_rlimit.cfg->default_hz[i];
         }
 
-        pr_dbg("can_id: 0x%03x\n", can_id);
+        pr_dbg("can_id 0x%03x\n", can_id);
 
         return n;
 }
@@ -97,35 +102,39 @@ static inline struct can_rlimit_node *can_ratelimit_get(unsigned can_id)
         return NULL;
 }
 
-static int __can_ratelimit_set(struct can_rlimit_node *n, unsigned type, int update_hz)
+static int can_ratelimit_set(struct can_rlimit_node *n, unsigned type, int update_hz)
 {
-        struct can_rlimit_data *d = &n->data[type];
+        if (unlikely(!n))
+                return -ENODATA;
 
         if (unlikely(type >= NUM_CAN_RLIMIT_TYPES))
                 return -EINVAL;
 
+        struct can_rlimit_data *d = &n->data[type];
+
         if (update_hz == 0) {
-                pr_dbg("can_id 0x%03x type %u: no ratelimit\n", n->can_id, type);
+                pr_dbg("can_id 0x%03x type \"%s\": unlimited\n", n->can_id, str_rlimit_types[type]);
                 d->update_ms = 0;
         } else if (update_hz < 0) {
-                pr_dbg("can_id 0x%03x type %u: drop\n", n->can_id, type);
+                pr_dbg("can_id 0x%03x type \"%s\": drop\n", n->can_id, str_rlimit_types[type]);
                 d->update_ms = -1;
         } else {
-                pr_dbg("can_id 0x%03x type %u: %d hz\n", n->can_id, type, update_hz);
+                pr_dbg("can_id 0x%03x type \"%s\": %d hz\n", n->can_id, str_rlimit_types[type], update_hz);
                 d->update_ms = update_hz_to_ms(update_hz);
         }
 
         return 0;
 }
 
-static int can_ratelimit_set(unsigned can_id, unsigned type, int update_hz)
+static void can_ratelimit_set_all(unsigned type, int update_hz)
 {
-        struct can_rlimit_node *n = can_ratelimit_get(can_id);
+        uint32_t bkt;
+        struct hlist_node *tmp;
+        struct can_rlimit_node *n;
 
-        if (!n)
-                return -ENOENT;
-
-        return __can_ratelimit_set(n, type, update_hz);
+        hash_for_each_safe(can_rlimit.htbl, bkt, tmp, n, hnode) {
+                can_ratelimit_set(n, type, update_hz);
+        }
 }
 
 static int __is_can_id_ratelimited(struct can_rlimit_node *n, unsigned type, uint32_t now)
