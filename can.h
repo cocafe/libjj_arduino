@@ -115,7 +115,7 @@ static void task_can_recv(void *arg)
                 while (can_dev->recv(f) == 0) {
 #ifdef CONFIG_HAVE_CAN_RLIMIT
                         if (can_rlimit.cfg->enabled) {
-                                xSemaphoreTake(can_rlimit.lck, portMAX_DELAY);
+                                can_rlimit_lock();
 
                                 if (!rlimit || rlimit->can_id != f->id) {
                                         rlimit = can_ratelimit_get(f->id);
@@ -152,7 +152,7 @@ static void task_can_recv(void *arg)
 
 #ifdef CONFIG_HAVE_CAN_RLIMIT
                         if (can_rlimit.cfg->enabled) {
-                                xSemaphoreGive(can_rlimit.lck);
+                                can_rlimit_unlock();
                         }
 #endif
 

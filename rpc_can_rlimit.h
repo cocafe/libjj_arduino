@@ -3,13 +3,11 @@
 
 void rpc_can_rlimit_add(void)
 {
-#if 0
+#ifdef CONFIG_HAVE_CAN_RLIMIT
         http_rpc.on("/can_rlimit", HTTP_GET, [](){
-                uint8_t enabled_saved = can_rlimit_enabled;
-
                 if (http_rpc.hasArg("add") || http_rpc.hasArg("mod")) {
-                        if (!http_rpc.hasArg("id") || !http_rpc.hasArg("hz")) {
-                                http_rpc.send(500, "text/plain", "<id> <hz 0:unlimited>\n");
+                        if (!http_rpc.hasArg("id") || !http_rpc.hasArg("hz") || http_rpc.hasArg("type")) {
+                                http_rpc.send(500, "text/plain", "<id> <type> <hz 0:unlimited -1:drop>\n");
                                 return;
                         }
                         int err = 0;
@@ -23,36 +21,48 @@ void rpc_can_rlimit_add(void)
                         }
 
                         String _hz = http_rpc.arg("hz");
-                        unsigned hz = strtoull_wrap(_hz.c_str(), 10, &err);
+                        int hz = strtoll_wrap(_hz.c_str(), 10, &err);
 
                         if (err) {
                                 http_rpc.send(500, "text/plain", "Invalid value\n");
                                 return;
                         }
 
-                        if (http_rpc.hasArg("add")) {
-                                if (enabled_saved) {
-                                        can_rlimit_enabled = 0;
-                                        while (can_rlimit_lck) {
-                                                vTaskDelay(pdMS_TO_TICKS(1));
-                                        }
-                                }
+                        String _type = http_rpc.arg("type");
+                        unsigned type = strtoll_wrap(_type.c_str(), 10, &err);
 
-                                struct can_rlimit_node *n = can_ratelimit_get(id);
+                        if (err) {
+                                http_rpc.send(500, "text/plain", "Invalid value\n");
+                                return;
+                        }
+
+                        struct can_rlimit_node *n = can_ratelimit_get(id);
+                        if (http_rpc.hasArg("add")) {
+                                // if (enabled_saved) {
+                                //         can_rlimit.cfg->enabled = 0;
+                                //         while (can_rlimit_lck) {
+                                //                 vTaskDelay(pdMS_TO_TICKS(1));
+                                //         }
+                                // }
 
                                 if (n) {
                                         http_rpc.send(500, "text/plain", "Already in hash table\n");
                                 } else {
-                                        n = can_ratelimit_add(id, hz);
+                                        can_rlimit_lock();
+                                        n = can_ratelimit_add(id);
+
+                                        if (n)
+                                                can_ratelimit_set(n, type, hz);
+
+                                        can_rlimit_unlock();
+
                                         if (!n)
                                                 http_rpc.send(500, "text/plain", "No memory\n");
                                         else
                                                 http_rpc.send(500, "text/plain", "OK\n");
                                 }
-
-                                can_rlimit_enabled = enabled_saved;
                         } else {
-                                if ((err = can_ratelimit_set(id, hz))) {
+                                if ((err = can_ratelimit_set(n, type, hz))) {
                                         switch (err) {
                                         case -ENOENT:
                                                 http_rpc.send(500, "text/plain", "No such item\n");
@@ -88,33 +98,35 @@ void rpc_can_rlimit_add(void)
                         } else {
                                 if (http_rpc.hasArg("get")) {
                                         char buf[16] = { };
-                                        snprintf(buf, sizeof(buf), "0x%03x %u\n", n->can_id, 1000 / n->sampling_ms);
+                                        snprintf(buf, sizeof(buf), "0x%03x %d %d\n", n->can_id, n->data[0].update_ms, n->data[1].update_ms);
+
                                         http_rpc.send(200, "text/plain", buf);
                                 } else {
-                                        if (enabled_saved) {
-                                                can_rlimit_enabled = 0;
-                                                while (can_rlimit_lck) {
-                                                        vTaskDelay(pdMS_TO_TICKS(1));
-                                                }
-                                        }
-
+                                        can_rlimit_lock();
                                         can_ratelimit_del(n);
-
-                                        can_rlimit_enabled = enabled_saved;
+                                        can_rlimit_unlock();
 
                                         http_rpc.send(200, "text/plain", "OK\n");
                                 }
                         }
                 } else {
-                        char buf[256] = { };
+                        char buf[1024] = { };
                         size_t c = 0;
 
                         struct can_rlimit_node *n;
                         unsigned bkt;
 
+                        can_rlimit_lock();
                         hash_for_each(can_rlimit.htbl, bkt, n, hnode) {
-                                c += snprintf(&buf[c], sizeof(buf) - c, "0x%03x %u\n", n->can_id, 1000 / n->sampling_ms);
+                                c += snprintf(&buf[c], sizeof(buf) - c, "0x%03x ", n->can_id);
+
+                                for (unsigned i = 0; i < ARRAY_SIZE(n->data); i++) {
+                                        c += snprintf(&buf[c], sizeof(buf) - c, "%d ", n->data[i].update_ms);
+                                }
+
+                                c += snprintf(&buf[c], sizeof(buf) - c, "\n");
                         }
+                        can_rlimit_unlock();
 
                         http_rpc.send(200, "text/plain", buf);
                 }

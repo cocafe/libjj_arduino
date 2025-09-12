@@ -118,9 +118,9 @@ static void rc_udp_2_ble_can_frame_forward(can_frame_t *f)
 
 static void rc_can_rlimit_set_all(int update_hz)
 {
-        xSemaphoreTake(can_rlimit.lck, portMAX_DELAY);
+        can_rlimit_lock();
         can_ratelimit_set_all(CAN_RLIMIT_TYPE_RC, update_hz);
-        xSemaphoreGive(can_rlimit.lck);
+        can_rlimit_unlock();
 }
 
 class ServerCallbacks : public NimBLEServerCallbacks
@@ -239,7 +239,7 @@ static void rc_char_pid_on_write(const uint8_t *data, uint16_t len)
                         struct can_rlimit_node *rlimit;
                         unsigned update_hz = rc_ble.cfg->update_hz;
 
-                        xSemaphoreTake(can_rlimit.lck, portMAX_DELAY);
+                        can_rlimit_lock();
 
                         rlimit = can_ratelimit_get(pid);
                         
@@ -249,7 +249,7 @@ static void rc_char_pid_on_write(const uint8_t *data, uint16_t len)
 
                         can_ratelimit_set(rlimit, CAN_RLIMIT_TYPE_RC, update_hz);
 
-                        xSemaphoreGive(can_rlimit.lck);
+                        can_rlimit_unlock();
 
                         pr_info("allow pid: 0x%03lx update_intv_ms: %u\n", pid, update_hz ? update_hz_to_ms(update_hz) : 0);
 #else

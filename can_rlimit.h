@@ -174,6 +174,16 @@ static int is_can_id_ratelimited(struct can_rlimit_node *n, unsigned type, uint3
         return ret;
 }
 
+static void can_rlimit_lock(void)
+{
+        xSemaphoreTake(can_rlimit.lck, portMAX_DELAY);
+}
+
+static void can_rlimit_unlock(void)
+{
+        xSemaphoreGive(can_rlimit.lck);
+}
+
 static int can_ratelimit_init(struct can_rlimit_cfg *cfg)
 {
         can_rlimit.cfg = cfg;
