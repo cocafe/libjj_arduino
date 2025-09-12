@@ -111,9 +111,17 @@ send:
 #endif
 }
 
-static void rc_udp_2_ble_can_frame_forward(can_frame_t *f)
+static void rc_ble_can_frame_send_ratelimited(can_frame_t *f)
 {
-        rc_ble_can_frame_send(f, NULL);
+        static struct can_rlimit_node *rlimit = NULL;
+
+#ifdef CONFIG_HAVE_CAN_RLIMIT
+        if (!rlimit || f->id != rlimit->can_id) {
+                rlimit = can_ratelimit_get(f->id);
+        }
+#endif
+
+        rc_ble_can_frame_send(f, rlimit);
 }
 
 static void rc_can_rlimit_set_all(int update_hz)

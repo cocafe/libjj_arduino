@@ -4,6 +4,27 @@
 void rpc_can_rlimit_add(void)
 {
 #ifdef CONFIG_HAVE_CAN_RLIMIT
+        http_rpc.on("/can_rlimit_enable", HTTP_GET, [](){
+                if (http_rpc.hasArg("set")) {
+                        int err;
+                        String _set = http_rpc.arg("set");
+                        unsigned set = strtoull_wrap(_set.c_str(), 10, &err);
+
+                        if (err) {
+                                http_rpc.send(500, "text/plain", "Invalid value\n");
+                                return;
+                        }
+
+                        can_rlimit.cfg->enabled = !!set;
+                } else {
+                        char buf[16] = { };
+
+                        snprintf(buf, sizeof(buf), "%d\n", can_rlimit.cfg->enabled);
+
+                        http_rpc.send(200, "text/plain", buf);
+                }
+        });
+
         http_rpc.on("/can_rlimit", HTTP_GET, [](){
                 if (http_rpc.hasArg("add") || http_rpc.hasArg("mod")) {
                         if (!http_rpc.hasArg("id") || !http_rpc.hasArg("hz") || http_rpc.hasArg("type")) {

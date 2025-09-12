@@ -166,7 +166,7 @@ static int is_can_id_ratelimited(struct can_rlimit_node *n, unsigned type, uint3
                 return 0;
 
         // whitelist: 0x7DF and 0x7E0...0x7EF
-        if ((n->can_id == 0x7DF) || (n->can_id && 0x7E0))
+        if ((n->can_id == 0x7DF) || (n->can_id == 0x7E0))
                 return 0;
 
         ret = __is_can_id_ratelimited(n, type, now);
