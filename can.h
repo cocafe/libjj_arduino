@@ -7,6 +7,7 @@
 #include "leds.h"
 #include "logging.h"
 #include "can_frame.h"
+#include "can_rlimit.h"
 
 enum {
         CAN_BAUDRATE_4K096BPS,
@@ -68,7 +69,7 @@ static uint64_t cnt_can_recv_drop;
 #endif // CAN_TWAI_USE_RINGBUF
 
 struct can_recv_cb_ctx {
-        void (*cb)(can_frame_t *);
+        void (*cb)(can_frame_t *, struct can_rlimit_node *rlimit);
 };
 
 static struct can_recv_cb_ctx can_recv_cbs[4] = { };
@@ -76,7 +77,7 @@ static uint8_t can_recv_cb_cnt;
 
 static SemaphoreHandle_t lck_can_cb;
 
-static __unused int can_recv_cb_register(void (*cb)(can_frame_t *))
+static __unused int can_recv_cb_register(void (*cb)(can_frame_t *, struct can_rlimit_node *))
 {
         int err = 0;
 
@@ -106,9 +107,28 @@ static void task_can_recv(void *arg)
         pr_info("started\n");
 
         while (1) {
+#ifdef CONFIG_HAVE_CAN_RLIMIT
+                struct can_rlimit_node *rlimit = NULL;
+#endif
                 uint8_t aggr = 0;
 
                 while (can_dev->recv(f) == 0) {
+#ifdef CONFIG_HAVE_CAN_RLIMIT
+                        if (can_rlimit.cfg->enabled) {
+                                xSemaphoreTake(can_rlimit.lck, portMAX_DELAY);
+
+                                if (!rlimit || rlimit->can_id != f->id) {
+                                        rlimit = can_ratelimit_get(f->id);
+
+                                        if (!rlimit) {
+                                                rlimit = __can_ratelimit_add(can_id);
+                                        }
+                                }
+                        } else {
+                                rlimit = NULL;
+                        }
+#endif
+
 #if 0
                         pr_raw("canbus recv: id: 0x%04lx len: %hhu ", f->id, f->dlc);
                         for (uint8_t i = 0; i < f->dlc; i++) {
@@ -119,10 +139,22 @@ static void task_can_recv(void *arg)
 
                         for (int i = 0; i < ARRAY_SIZE(can_recv_cbs); i++) {
                                 if (can_recv_cbs[i].cb) {
-                                        can_recv_cbs[i].cb(f);
+                                        can_recv_cbs[i].cb(f,
+#ifdef CONFIG_HAVE_CAN_RLIMIT
+                                                rlimit
+#else
+                                                NULL
+#endif
+                                        );
                                         aggr++;
                                 }
                         }
+
+#ifdef CONFIG_HAVE_CAN_RLIMIT
+                        if (can_rlimit.cfg->enabled) {
+                                xSemaphoreGive(can_rlimit.lck);
+                        }
+#endif
 
                         // XXX: to avoid starvation of other tasks
                         // taskYIELD();

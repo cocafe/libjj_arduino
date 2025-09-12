@@ -12,6 +12,10 @@
 #include "esp32_bt.h"
 #include "can.h"
 
+#ifndef BLE_DEFAULT_MAC
+#define BLE_DEFAULT_MAC                 ESP_MAC_EFUSE_FACTORY
+#endif
+
 static const uint16_t RACECHRONO_SERVICE_UUID = 0x1ff8;
 
 // RaceChrono uses two BLE characteristics:
@@ -19,16 +23,6 @@ static const uint16_t RACECHRONO_SERVICE_UUID = 0x1ff8;
 // 2) 0x01 to be notified of data received for those PIDs
 static const uint16_t PID_CHARACTERISTIC_UUID = 0x2;
 static const uint16_t CAN_BUS_CHARACTERISTIC_UUID = 0x1;
-
-#ifndef BLE_DEFAULT_MAC
-#define BLE_DEFAULT_MAC                 ESP_MAC_EFUSE_FACTORY
-#endif
-
-#ifndef BLE_DEFAULT_UPDATE_RATE_HZ
-#define BLE_DEFAULT_UPDATE_RATE_HZ      10
-#endif
-
-#define BLE_UPDATE_HZ_TO_MS(hz)         (((hz) == 0) ? 0 : (1000 / (hz)))
 
 struct ble_cfg {
         char devname[16];
@@ -48,12 +42,10 @@ struct ble_ctx {
 };
 
 static struct ble_ctx rc_ble;
-
 static SemaphoreHandle_t lck_ble_send;
 
-static uint8_t racechrono_ble_update_rate_hz = BLE_DEFAULT_UPDATE_RATE_HZ;
-
-// TODO: hash map for PIDs
+static uint8_t rc_deny_all = 0;
+static uint8_t rc_allow_all = 0;
 
 static char *ble_device_name_generate(char *str)
 {
@@ -90,11 +82,24 @@ static void __rc_ble_can_frame_send(struct ble_ctx *ctx, uint32_t pid, uint8_t *
         ctx->char_canbus->notify();
 }
 
-static void rc_ble_can_frame_send(can_frame_t *f)
+static void rc_ble_can_frame_send(can_frame_t *f, struct can_rlimit_node *rlimit)
 {
         if (!ble_is_connected)
                 return;
 
+        if (unlikely(rc_deny_all))
+                return;
+
+        if (unlikely(rc_allow_all))
+                goto send;
+
+#ifdef CONFIG_HAVE_CAN_RLIMIT
+        if (is_can_id_ratelimited(rlimit, CAN_RLIMIT_TYPE_RC, esp32_millis())) {
+                return;
+        }
+#endif
+
+send:
         xSemaphoreTake(lck_ble_send, portMAX_DELAY);
         __rc_ble_can_frame_send(&rc_ble, f->id, f->data, f->dlc);
         xSemaphoreGive(lck_ble_send);
@@ -104,6 +109,11 @@ static void rc_ble_can_frame_send(can_frame_t *f)
 #ifdef CAN_BLE_LED_BLINK
         can_ble_txrx = 1;
 #endif
+}
+
+static void rc_udp_2_ble_can_frame_forward(can_frame_t *f)
+{
+        rc_ble_can_frame_send(f, NULL);
 }
 
 class ServerCallbacks : public NimBLEServerCallbacks
@@ -129,7 +139,6 @@ class ServerCallbacks : public NimBLEServerCallbacks
                 pr_info("ble client disconnected, start advertising\n");
                 ble_is_connected = 0;
                 NimBLEDevice::startAdvertising();
-                // TODO: reset hash map
         }
 
         void onMTUChange(uint16_t MTU, NimBLEConnInfo &connInfo) override
@@ -182,41 +191,63 @@ static void racechrono_char_pid_on_write(const uint8_t *data, uint16_t len)
         }
 
         switch (data[0]) {
-        case 1: // Allow all CAN PIDs.
-                if (len == 3) {
-                        uint16_t update_intv_ms = data[1] << 8 | data[2];
-                        // allowAllPids(update_intv_ms);
-                        pr_info("allow all pid, update_intv_ms: %u\n", update_intv_ms);
-                } else {
-                        pr_err("invalid allow all pid command\n");
-                }
-
-                break;
-
-        case 0: // Deny all CAN PIDs.
+        // Deny all CAN PIDs
+        case 0:
                 if (len == 1) {
-                        // denyAllPids();
                         pr_info("deny all pid\n");
+                        rc_deny_all = 1;
                 } else {
                         pr_err("invalid deny all pid command\n");
                 }
 
                 break;
 
-        case 2: // Allow one more CAN PID.
+        // Allow all CAN PIDs
+        case 1: 
+                if (len == 3) {
+                        uint16_t __attribute__((unused)) update_intv_ms = data[1] << 8 | data[2];
+                        pr_info("allow all pid, update_intv_ms: %u\n", update_intv_ms);
+                        rc_deny_all = 0;
+                        rc_allow_all = 1;
+                } else {
+                        pr_err("invalid allow all pid command\n");
+                }
+
+                break;
+
+        // Allow one more CAN PID
+        // XXX: did not reset all RC pid...
+        case 2:
                 if (len == 7) {
-                        uint16_t update_intv_ms = data[1] << 8 | data[2];
+                        uint16_t __attribute__((unused)) update_intv_ms = data[1] << 8 | data[2];
                         uint32_t pid = data[3] << 24 | data[4] << 16 | data[5] << 8 | data[6];
-                        // allowPid(pid, update_intv_ms);
-                        pr_info("allow pid: 0x%03lx update_intv_ms: %u\n", pid, update_intv_ms);
+
+                        rc_deny_all = 0;
+                        rc_allow_all = 0;
+
+#ifdef CONFIG_HAVE_CAN_RLIMIT
+                        struct can_rlimit_node *rlimit;
+
+                        xSemaphoreTake(can_rlimit.lck, portMAX_DELAY);
+
+                        rlimit = can_ratelimit_get(pid);
+                        
+                        if (!rlimit) {
+                                rlimit = can_ratelimit_add(pid);
+                        }
+
+                        __can_ratelimit_set(rlimit, CAN_RLIMIT_TYPE_RC, rc_ble.update_hz);
+
+                        xSemaphoreGive(can_rlimit.lck);
+
+                        pr_info("allow pid: 0x%03lx update_intv_ms: %u\n", pid, rc_ble.update_hz ? 1000 / rc_ble.update_hz : 0);
+#endif
                 } else {
                         pr_err("invalid allow pid command\n");
                 }
 
                 break;
         }
-
-        // TODO: invalid command counter
 }
 
 class CharacteristicCallbacks : public NimBLECharacteristicCallbacks

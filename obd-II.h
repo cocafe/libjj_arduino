@@ -380,7 +380,7 @@ static __unused void obd_can_isotp_frame_input(can_frame_t *f)
         }
 }
 
-static void obd_can_frame_recv(can_frame_t *f)
+static void obd_can_frame_recv(can_frame_t *f, struct can_rlimit_node *unused)
 {
         switch (f->id) {
         case 0x7E8 ... 0x7EF:

@@ -1,5 +1,5 @@
-#ifndef __ESP32_BT_H__
-#define __ESP32_BT_H__
+#ifndef __LIBJJ_ESP32_BT_H__
+#define __LIBJJ_ESP32_BT_H__
 
 #include <stdint.h>
 
@@ -201,4 +201,4 @@ static __unused void task_ble_conn_broadcast_start(unsigned cpu)
         xTaskCreatePinnedToCore(task_ble_conn_broadcast, "ble_state", 4096, NULL, 1, NULL, cpu);
 }
 
-#endif // __ESP32_BT_H__
+#endif // __LIBJJ_ESP32_BT_H__

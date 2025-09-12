@@ -3,7 +3,7 @@
 
 void rpc_can_rlimit_add(void)
 {
-#ifdef CONFIG_HAVE_CANTCP_RLIMIT
+#if 0
         http_rpc.on("/can_rlimit", HTTP_GET, [](){
                 uint8_t enabled_saved = can_rlimit_enabled;
 
@@ -38,7 +38,7 @@ void rpc_can_rlimit_add(void)
                                         }
                                 }
 
-                                struct can_ratelimit *n = can_ratelimit_get(id);
+                                struct can_rlimit_node *n = can_ratelimit_get(id);
 
                                 if (n) {
                                         http_rpc.send(500, "text/plain", "Already in hash table\n");
@@ -82,7 +82,7 @@ void rpc_can_rlimit_add(void)
                                 return;
                         }
 
-                        struct can_ratelimit *n = can_ratelimit_get(id);
+                        struct can_rlimit_node *n = can_ratelimit_get(id);
                         if (!n) {
                                 http_rpc.send(500, "text/plain", "No such item\n");
                         } else {
@@ -109,17 +109,17 @@ void rpc_can_rlimit_add(void)
                         char buf[256] = { };
                         size_t c = 0;
 
-                        struct can_ratelimit *n;
+                        struct can_rlimit_node *n;
                         unsigned bkt;
 
-                        hash_for_each(htbl_can_rlimit, bkt, n, hnode) {
+                        hash_for_each(can_rlimit.htbl, bkt, n, hnode) {
                                 c += snprintf(&buf[c], sizeof(buf) - c, "0x%03x %u\n", n->can_id, 1000 / n->sampling_ms);
                         }
 
                         http_rpc.send(200, "text/plain", buf);
                 }
         });
-#endif // CONFIG_HAVE_CANTCP_RLIMIT
+#endif // CONFIG_HAVE_CAN_RLIMIT
 }
 
 #endif // __LIBJJ_RPC_CAN_RLIMIT_H__

@@ -1,5 +1,5 @@
-#ifndef __TASK_BLE_H__
-#define __TASK_BLE_H__
+#ifndef __LIBJJ_TASK_BLE_H__
+#define __LIBJJ_TASK_BLE_H__
 
 static unsigned ble_gw_connected = 0;
 static unsigned ble_event_received = 0;
@@ -65,4 +65,4 @@ static void event_udp_mc_cb(uint8_t event, void *data, unsigned dlen)
         }
 }
 
-#endif // __TASK_BLE_H__
+#endif // __LIBJJ_TASK_BLE_H__

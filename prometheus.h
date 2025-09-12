@@ -1,5 +1,5 @@
-#ifndef PROMETHEUS_H
-#define PROMETHEUS_H
+#ifndef __LIBJJ_PROMETHEUS_H__
+#define __LIBJJ_PROMETHEUS_H__
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -391,4 +391,4 @@ void prom_cleanup(prom_server *srv, prom_metric_set *s)
                 free(srv->buf);
 }
 
-#endif // PROMETHEUS_H
+#endif // __LIBJJ_PROMETHEUS_H__

@@ -22,26 +22,6 @@
 
 #include "can.h"
 
-struct can_ratelimit_cfg {
-        uint8_t enabled;
-        uint8_t default_hz;
-};
-
-#ifdef CONFIG_HAVE_CANTCP_RLIMIT
-struct can_ratelimit {
-        struct hlist_node       hnode;
-        uint16_t                can_id;
-        uint16_t                sampling_ms;
-        uint32_t                last_ts;
-};
-
-// XXX: this only protect add/del with rpc server
-static uint8_t __attribute__((aligned(16))) can_rlimit_lck = 0; 
-static struct hlist_head htbl_can_rlimit[1 << 8] = { };
-static uint8_t can_rlimit_enabled = 1;
-static uint8_t can_rlimit_update_hz_default = 20;
-#endif // CONFIG_HAVE_CANTCP_RLIMIT
-
 static NetworkServer can_tcp_server(CONFIG_CANTCP_SERVER_PORT);
 static int can_tcp_client_fd = -1;
 
@@ -88,139 +68,6 @@ static void task_can_tcp_led_blink(void *arg)
         }
 }
 #endif // CAN_TCP_LED_BLINK
-
-#ifdef CONFIG_HAVE_CANTCP_RLIMIT
-static inline unsigned update_hz_to_ms(unsigned hz)
-{
-        return 1 * 1000 / hz;
-}
-
-static inline struct can_ratelimit *can_ratelimit_add(unsigned can_id, unsigned update_hz)
-{
-        struct can_ratelimit *n = (struct can_ratelimit *)calloc(1, sizeof(struct can_ratelimit));
-        if (!n) {
-                pr_err("%s(): no memory\n", __func__);
-                return NULL;
-        }
-
-        INIT_HLIST_NODE(&n->hnode);
-
-        if (update_hz == 0) {
-                n->sampling_ms = 0;
-        } else {
-                n->sampling_ms = update_hz_to_ms(update_hz);
-        }
-
-        n->can_id = can_id;
-
-        hash_add(htbl_can_rlimit, &n->hnode, n->can_id);
-
-        pr_dbg("add can_id: 0x%03x sampling_ms: %ums hz: %u\n", can_id, n->sampling_ms, update_hz);
-
-        return n;
-}
-
-static inline void can_ratelimit_del(struct can_ratelimit *n)
-{
-        hash_del(&n->hnode);
-        free(n);
-}
-
-static inline struct can_ratelimit *can_ratelimit_get(unsigned can_id)
-{
-        uint32_t bkt = hash_bkt(htbl_can_rlimit, can_id);
-        struct can_ratelimit *n;
-        int8_t found = 0;
-
-        hash_for_bkt_each(htbl_can_rlimit, bkt, n, hnode) {
-                if (n->can_id != can_id)
-                        continue;
-
-                found = 1;
-                break;
-        }
-
-        if (found)
-                return n;
-
-        return NULL;
-}
-
-static int can_ratelimit_set(unsigned can_id, unsigned update_hz)
-{
-        struct can_ratelimit *n = can_ratelimit_get(can_id);
-
-        if (n) {
-                if (update_hz == 0) {
-                        pr_dbg("can_id 0x%03x: no ratelimit\n", can_id);
-                        n->sampling_ms = 0;
-                } else {
-                        n->sampling_ms = update_hz_to_ms(update_hz);
-                }
-
-                return 0;
-        }
-
-        return -ENOENT;
-}
-
-static int __is_can_id_ratelimited(unsigned can_id, uint32_t now)
-{
-        struct can_ratelimit *n = can_ratelimit_get(can_id);
-
-        if (!n) {
-                if (can_rlimit_update_hz_default) {
-                        can_ratelimit_add(can_id, can_rlimit_update_hz_default);
-                }
-        } else {
-                if (n->sampling_ms == 0)
-                        return 0;
-
-                if (now - n->last_ts >= n->sampling_ms) {
-                        n->last_ts = now;
-                        return 0;
-                }
-
-                return 1;
-        }
-
-        return 0;
-}
-
-static int is_can_id_ratelimited(unsigned can_id, uint32_t now)
-{
-        int ret;
-
-        if (!can_rlimit_enabled)
-                return 0;
-
-        // whitelist: 0x7DF and 0x7E0...0x7EF
-        if ((can_id == 0x7DF) || (can_id && 0x7E0))
-                return 0;
-
-        WRITE_ONCE(can_rlimit_lck, 1);
-
-        ret = __is_can_id_ratelimited(can_id, now);
-
-        WRITE_ONCE(can_rlimit_lck, 0);
-
-        return ret;
-}
-
-static void can_ratelimit_init(struct can_ratelimit_cfg *cfg)
-{
-        if (cfg) {
-                can_rlimit_enabled = cfg->enabled;
-                can_rlimit_update_hz_default = cfg->default_hz;
-        }
-
-        for (int i = 0; i < ARRAY_SIZE(htbl_can_rlimit); i++) {
-                htbl_can_rlimit[i].first = NULL;
-        }
-
-        hash_init(htbl_can_rlimit);
-}
-#endif // CONFIG_HAVE_CANTCP_RLIMIT
 
 static int is_valid_can_frame(can_frame_t *f)
 {
@@ -314,7 +161,7 @@ next_frame:
         return pos; // consumed
 }
 
-static void can_tcp_recv_cb(can_frame_t *f)
+static void can_tcp_recv_cb(can_frame_t *f, struct can_rlimit_node *rlimit)
 {
         int sockfd = READ_ONCE(can_tcp_client_fd);
         int n;
@@ -323,8 +170,8 @@ static void can_tcp_recv_cb(can_frame_t *f)
                 return;
         }
 
-#ifdef CONFIG_HAVE_CANTCP_RLIMIT
-        if (is_can_id_ratelimited(f->id, esp32_millis())) {
+#ifdef CONFIG_HAVE_CAN_RLIMIT
+        if (is_can_id_ratelimited(rlimit, CAN_RLIMIT_TYPE_TCP, esp32_millis())) {
                 return;
         }
 #endif
@@ -469,7 +316,7 @@ static void task_can_tcp(void *arg)
         }
 }
 
-static void can_tcp_server_init(unsigned cpu)
+static __unused void can_tcp_server_init(unsigned cpu)
 {
         if (can_dev) {
                 can_recv_cb_register(can_tcp_recv_cb);

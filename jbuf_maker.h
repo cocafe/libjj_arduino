@@ -89,7 +89,7 @@ void jbuf_ble_cfg_add(jbuf_t *b, const char *key, struct ble_cfg *cfg)
 #endif // __LIBJJ_RACECHRONO_BLE_H__
 
 #ifdef __LIBJJ_CAN_TCP_H__
-void jbuf_can_rlimit_add(jbuf_t *b, const char *key, struct can_ratelimit_cfg *cfg)
+void jbuf_can_rlimit_add(jbuf_t *b, const char *key, struct can_rlimit_cfg *cfg)
 {
         void *obj = jbuf_obj_open(b, key);
 
