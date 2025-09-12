@@ -35,6 +35,8 @@ struct event_dev_hb {
         uint8_t sn[8];
 };
 
+// TODO: BT event including devname?
+
 struct udp_evnet_all {
         union {
                 struct event_dev_hb dev_hb;
