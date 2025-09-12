@@ -109,10 +109,14 @@ static void task_wifi_conn(void *arg)
                                         pr_info("ping timed out\n");
                                         ping_failure++;
                                 } else {
-                                        if (ping_success)
+                                        if (ping_success) {
+                                                if (ping_failure)
+                                                        pr_info("ping failure cleared\n");
+
                                                 ping_failure = 0;
-                                        else
+                                        } else {
                                                 ping_failure++;
+                                        }
                                 }
 
                                 if (ping_failure >= ping_failure_thres) {
