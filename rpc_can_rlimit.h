@@ -118,7 +118,7 @@ void rpc_can_rlimit_add(void)
                                 http_rpc.send(500, "text/plain", "No such item\n");
                         } else {
                                 if (http_rpc.hasArg("get")) {
-                                        char buf[16] = { };
+                                        char buf[32] = { };
                                         snprintf(buf, sizeof(buf), "0x%03x %d %d\n", n->can_id, n->data[0].update_ms, n->data[1].update_ms);
 
                                         http_rpc.send(200, "text/plain", buf);
