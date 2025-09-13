@@ -126,9 +126,11 @@ static void rc_ble_can_frame_send_ratelimited(can_frame_t *f)
 
 static void rc_can_rlimit_set_all(int update_hz)
 {
+#ifdef CONFIG_HAVE_CAN_RLIMIT
         can_rlimit_lock();
         can_ratelimit_set_all(CAN_RLIMIT_TYPE_RC, update_hz);
         can_rlimit_unlock();
+#endif
 }
 
 class ServerCallbacks : public NimBLEServerCallbacks

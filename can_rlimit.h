@@ -44,11 +44,17 @@ static struct can_rlimit_ctx can_rlimit = { };
 
 static inline unsigned update_hz_to_ms(unsigned hz)
 {
+        if (hz == 0)
+                return 0;
+
         return 1 * 1000 / hz;
 }
 
 static inline unsigned update_ms_to_hz(unsigned ms)
 {
+        if (ms == 0)
+                return 0;
+
         return 1 * 1000 / ms;
 }
 
