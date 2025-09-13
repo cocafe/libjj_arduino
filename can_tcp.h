@@ -24,6 +24,7 @@
 
 static NetworkServer can_tcp_server(CONFIG_CANTCP_SERVER_PORT);
 static int can_tcp_client_fd = -1;
+static uint8_t can_tcp_no_delay = 0;
 
 static uint64_t cnt_can_tcp_send;       // send to remote
 static uint64_t cnt_can_tcp_send_bytes;
@@ -231,12 +232,12 @@ static void can_tcp_server_worker(void)
                 // for client.readBytes()
                 // client.setTimeout(1000);
 
-#ifdef CONFIG_CANTCP_NO_DELAY
                 // disable TCP Nagle
                 // send small pkt asap
                 // but will increase memory pressure
-                client.setNoDelay(true);
-#endif
+                if (can_tcp_no_delay) {
+                        client.setNoDelay(true);
+                }
 
                 WRITE_ONCE(can_tcp_client_fd, sockfd);
 
@@ -316,14 +317,18 @@ static void task_can_tcp(void *arg)
         }
 }
 
-static __unused void can_tcp_server_init(unsigned cpu)
+static __unused void can_tcp_server_init(unsigned nodelay, unsigned cpu)
 {
+        can_tcp_no_delay = nodelay;
+
         if (can_dev) {
                 can_recv_cb_register(can_tcp_recv_cb);
                 can_tcp_server.begin();
-#ifdef CONFIG_CANTCP_NO_DELAY
-                can_tcp_server.setNoDelay(true);
-#endif
+
+                if (can_tcp_no_delay) {
+                        can_tcp_server.setNoDelay(true);
+                }
+
                 xTaskCreatePinnedToCore(task_can_tcp, "can_tcp", 4096, NULL, 1, NULL, cpu);
 #ifdef CAN_TCP_LED_BLINK
                 xTaskCreatePinnedToCore(task_can_tcp_led_blink, "led_blink_tcp", 1024, NULL, 1, NULL, cpu);
