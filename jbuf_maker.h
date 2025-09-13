@@ -122,4 +122,16 @@ static void jbuf_i2c_cfg_add(jbuf_t *b, const char *key, struct i2c_cfg *cfg)
 }
 #endif // __LIBJJ_I2C_H__
 
+#ifdef __LIBJJ_CAN_TCP_H__
+static void jbuf_cantcp_add(jbuf_t *b, const char *key, struct cantcp_cfg *cfg)
+{
+        void *obj = jbuf_obj_open(b, key);
+
+        jbuf_bool_add(b, "enabled", cfg->enabled);
+        jbuf_bool_add(b, "nodelay", cfg->nodelay);
+
+        jbuf_obj_close(b, obj);
+}
+#endif // __LIBJJ_CAN_TCP_H__
+
 #endif // __LIBJJ_JBUF_MAKER_H__

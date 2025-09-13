@@ -22,6 +22,11 @@
 
 #include "can.h"
 
+struct cantcp_cfg {
+        uint8_t enabled;
+        uint8_t nodelay;
+};
+
 static NetworkServer can_tcp_server(CONFIG_CANTCP_SERVER_PORT);
 static int can_tcp_client_fd = -1;
 static uint8_t can_tcp_no_delay = 0;
@@ -317,9 +322,9 @@ static void task_can_tcp(void *arg)
         }
 }
 
-static __unused void can_tcp_server_init(unsigned nodelay, unsigned cpu)
+static __unused void can_tcp_server_init(struct cantcp_cfg *cfg, unsigned cpu)
 {
-        can_tcp_no_delay = nodelay;
+        can_tcp_no_delay = cfg->nodelay;
 
         if (can_dev) {
                 can_recv_cb_register(can_tcp_recv_cb);
