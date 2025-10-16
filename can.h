@@ -88,6 +88,12 @@ static uint64_t cnt_can_recv_rtr;
 static uint64_t cnt_can_recv_drop;
 #endif // CAN_TWAI_USE_RINGBUF
 
+#ifdef CAN_LED_BLINK
+static uint8_t can_txrx = 0;
+static uint8_t can_led = CAN_LED_BLINK;
+static uint8_t can_led_blink = 1;
+#endif
+
 struct can_recv_cb_ctx {
         void (*cb)(can_frame_t *, struct can_rlimit_node *rlimit);
 };
@@ -202,10 +208,6 @@ static void task_can_recv(void *arg)
 }
 
 #ifdef CAN_LED_BLINK
-static uint8_t can_txrx = 0;
-static uint8_t can_led = CAN_LED_BLINK;
-static uint8_t can_led_blink = 1;
-
 static void task_can_led_blink(void *arg)
 {
         while (1) {

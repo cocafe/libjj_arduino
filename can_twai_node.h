@@ -112,7 +112,7 @@ static bool IRAM_ATTR twai_listener_on_error_callback(twai_node_handle_t handle,
                                                       const twai_error_event_data_t *edata,
                                                       void *user_ctx)
 {
-        pr_err("bus error: 0x%x\n", edata->err_flags.val);
+        pr_err("bus error: 0x%lx\n", edata->err_flags.val);
         cnt_twai_bus_error++;
 
         return false;

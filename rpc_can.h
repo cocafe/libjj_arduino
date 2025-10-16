@@ -54,9 +54,9 @@ void rpc_can_add(void)
 #if (defined CONFIG_HAVE_CAN_TWAI && defined CONFIG_TWAI_NEW_API)
 c += snprintf(&buf[c], sizeof(buf) - c, "# HELP twai_stats\n");
                 c += snprintf(&buf[c], sizeof(buf) - c, "# TYPE twai_stats gauge\n");
-                c += snprintf(&buf[c], sizeof(buf) - c, "twai_stats{t=\"rxq_full\"} %lu\n", cnt_twai_rxq_full);
-                c += snprintf(&buf[c], sizeof(buf) - c, "twai_stats{t=\"bus_err\"} %lu\n", cnt_twai_bus_error);
-                c += snprintf(&buf[c], sizeof(buf) - c, "twai_stats{t=\"state\"} %lu\n", twai_node_state);
+                c += snprintf(&buf[c], sizeof(buf) - c, "twai_stats{t=\"rxq_full\"} %llu\n", cnt_twai_rxq_full);
+                c += snprintf(&buf[c], sizeof(buf) - c, "twai_stats{t=\"bus_err\"} %llu\n", cnt_twai_bus_error);
+                c += snprintf(&buf[c], sizeof(buf) - c, "twai_stats{t=\"state\"} %d\n", twai_node_state);
 #endif // CONFIG_TWAI_NEW_API
 
                 http_rpc.send(200, "text/plain", buf);
