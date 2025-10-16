@@ -172,7 +172,7 @@ static void task_can_ble_led_blink(void *arg)
 static __unused void task_ble_blink_start(unsigned cpu)
 {
 #ifdef CAN_BLE_LED_BLINK
-        xTaskCreatePinnedToCore(task_can_ble_led_blink, "led_blink_ble", 1024, NULL, 1, NULL, cpu);
+        xTaskCreatePinnedToCore(task_can_ble_led_blink, "led_blink_ble", 4096, NULL, 1, NULL, cpu);
 #endif
 }
 

@@ -193,7 +193,7 @@ static __unused void led_init(void)
 
                 if (led->gpio < 0)
                         continue;
-                
+
                 pinMode(led->gpio, OUTPUT);
                 gpio_led_off(led->gpio);
         }
