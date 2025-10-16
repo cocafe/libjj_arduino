@@ -336,7 +336,7 @@ static __unused void can_tcp_server_init(struct cantcp_cfg *cfg, unsigned cpu)
 
                 xTaskCreatePinnedToCore(task_can_tcp, "can_tcp", 4096, NULL, 1, NULL, cpu);
 #ifdef CAN_TCP_LED_BLINK
-                xTaskCreatePinnedToCore(task_can_tcp_led_blink, "led_blink_tcp", 1024, NULL, 1, NULL, cpu);
+                xTaskCreatePinnedToCore(task_can_tcp_led_blink, "led_blink_tcp", 4096, NULL, 1, NULL, cpu);
 #endif
         }
 }

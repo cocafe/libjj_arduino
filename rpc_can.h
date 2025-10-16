@@ -37,7 +37,7 @@ void rpc_can_add(void)
                 c += snprintf(&buf[c], sizeof(buf) - c, "can_stats{t=\"ble_send\"} %llu\n", cnt_can_ble_send);
 #endif
 
-#ifdef CONFIG_HAVE_CAN_TWAI
+#if (defined CONFIG_HAVE_CAN_TWAI && !defined CONFIG_TWAI_NEW_API)
                 twai_status_info_t twaistatus;
                 twai_get_status_info(&twaistatus);
                 c += snprintf(&buf[c], sizeof(buf) - c, "# HELP twai_stats\n");
@@ -50,6 +50,14 @@ void rpc_can_add(void)
                 c += snprintf(&buf[c], sizeof(buf) - c, "twai_stats{t=\"rx_missed\"} %lu\n", twaistatus.rx_missed_count);
                 c += snprintf(&buf[c], sizeof(buf) - c, "twai_stats{t=\"bus_err\"} %lu\n", twaistatus.bus_error_count);
 #endif // CONFIG_HAVE_CAN_TWAI
+
+#if (defined CONFIG_HAVE_CAN_TWAI && defined CONFIG_TWAI_NEW_API)
+c += snprintf(&buf[c], sizeof(buf) - c, "# HELP twai_stats\n");
+                c += snprintf(&buf[c], sizeof(buf) - c, "# TYPE twai_stats gauge\n");
+                c += snprintf(&buf[c], sizeof(buf) - c, "twai_stats{t=\"rxq_full\"} %lu\n", cnt_twai_rxq_full);
+                c += snprintf(&buf[c], sizeof(buf) - c, "twai_stats{t=\"bus_err\"} %lu\n", cnt_twai_bus_error);
+                c += snprintf(&buf[c], sizeof(buf) - c, "twai_stats{t=\"state\"} %lu\n", twai_node_state);
+#endif // CONFIG_TWAI_NEW_API
 
                 http_rpc.send(200, "text/plain", buf);
         });

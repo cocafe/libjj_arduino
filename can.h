@@ -50,6 +50,26 @@ static __unused const char *str_can_baudrates[] = {
         [CAN_BAUDRATE_1000KBPS] = "CAN_1000KBPS",
 };
 
+static uint32_t can_baudrates_vals[] = {
+        [CAN_BAUDRATE_4K096BPS] = 4096,
+        [CAN_BAUDRATE_5KBPS]    = 5000,
+        [CAN_BAUDRATE_10KBPS]   = 10000,
+        [CAN_BAUDRATE_20KBPS]   = 20000,
+        [CAN_BAUDRATE_25KBPS]   = 25000,
+        [CAN_BAUDRATE_31K25BPS] = 31250,
+        [CAN_BAUDRATE_33K3BPS]  = 33300,
+        [CAN_BAUDRATE_40KBPS]   = 40000,
+        [CAN_BAUDRATE_50KBPS]   = 50000,
+        [CAN_BAUDRATE_80KBPS]   = 80000,
+        [CAN_BAUDRATE_100KBPS]  = 100000,
+        [CAN_BAUDRATE_125KBPS]  = 125000,
+        [CAN_BAUDRATE_200KBPS]  = 200000,
+        [CAN_BAUDRATE_250KBPS]  = 250000,
+        [CAN_BAUDRATE_500KBPS]  = 500000,
+        [CAN_BAUDRATE_800KBPS]  = 800000,
+        [CAN_BAUDRATE_1000KBPS] = 1000000,
+};
+
 struct can_device {
         int (*send)(uint32_t can_id, uint8_t dlc, uint8_t *data);
         int (*recv)(can_frame_t *out);
@@ -96,6 +116,60 @@ unlock:
         return err;
 }
 
+static void can_recv_one(can_frame_t *f)
+{
+#ifdef CONFIG_HAVE_CAN_RLIMIT
+        struct can_rlimit_node *rlimit = NULL;
+
+        if (can_rlimit.cfg->enabled) {
+                can_rlimit_lock();
+
+                if (!rlimit || rlimit->can_id != f->id) {
+                        rlimit = can_ratelimit_get(f->id);
+
+                        if (!rlimit) {
+                                rlimit = can_ratelimit_add(f->id);
+                        }
+                }
+        } else {
+                rlimit = NULL;
+        }
+#endif
+
+#if 0
+        pr_raw("canbus recv: id: 0x%04lx len: %hhu ", f->id, f->dlc);
+        for (uint8_t i = 0; i < f->dlc; i++) {
+                pr_raw("0x%02x ", f->data[i]);
+        }
+        pr_raw("\n");
+#endif
+
+        for (int i = 0; i < ARRAY_SIZE(can_recv_cbs); i++) {
+                if (can_recv_cbs[i].cb) {
+                        can_recv_cbs[i].cb(f,
+#ifdef CONFIG_HAVE_CAN_RLIMIT
+                                rlimit
+#else
+                                NULL
+#endif
+                        );
+                }
+        }
+
+#ifdef CONFIG_HAVE_CAN_RLIMIT
+        if (can_rlimit.cfg->enabled) {
+                can_rlimit_unlock();
+        }
+#endif
+
+#ifdef CAN_LED_BLINK
+        can_txrx = 1;
+#endif
+
+        // XXX: to avoid starvation of other tasks
+        // taskYIELD();
+}
+
 static void task_can_recv(void *arg)
 {
         static union {
@@ -107,59 +181,17 @@ static void task_can_recv(void *arg)
         pr_info("started\n");
 
         while (1) {
-#ifdef CONFIG_HAVE_CAN_RLIMIT
-                struct can_rlimit_node *rlimit = NULL;
-#endif
                 uint8_t aggr = 0;
 
                 while (can_dev->recv(f) == 0) {
-#ifdef CONFIG_HAVE_CAN_RLIMIT
-                        if (can_rlimit.cfg->enabled) {
-                                can_rlimit_lock();
+                        can_recv_one(f);
 
-                                if (!rlimit || rlimit->can_id != f->id) {
-                                        rlimit = can_ratelimit_get(f->id);
-
-                                        if (!rlimit) {
-                                                rlimit = can_ratelimit_add(f->id);
-                                        }
-                                }
-                        } else {
-                                rlimit = NULL;
-                        }
-#endif
-
-#if 0
-                        pr_raw("canbus recv: id: 0x%04lx len: %hhu ", f->id, f->dlc);
-                        for (uint8_t i = 0; i < f->dlc; i++) {
-                                pr_raw("0x%02x ", f->data[i]);
-                        }
-                        pr_raw("\n");
-#endif
-
-                        for (int i = 0; i < ARRAY_SIZE(can_recv_cbs); i++) {
-                                if (can_recv_cbs[i].cb) {
-                                        can_recv_cbs[i].cb(f,
-#ifdef CONFIG_HAVE_CAN_RLIMIT
-                                                rlimit
-#else
-                                                NULL
-#endif
-                                        );
-                                        aggr++;
-                                }
-                        }
-
-#ifdef CONFIG_HAVE_CAN_RLIMIT
-                        if (can_rlimit.cfg->enabled) {
-                                can_rlimit_unlock();
-                        }
-#endif
+                        aggr++;
 
                         // XXX: to avoid starvation of other tasks
                         // taskYIELD();
 
-                        if (aggr >= 10) {
+                        if (aggr >= 5) {
                                 vTaskDelay(pdMS_TO_TICKS(1));
                                 aggr = 0;
                         }
@@ -209,10 +241,13 @@ static __unused int task_can_start(unsigned task_cpu)
 {
         if (can_dev) {
 #ifdef CAN_LED_BLINK
-                xTaskCreatePinnedToCore(task_can_led_blink, "led_blink_can", 1024, NULL, 1, NULL, task_cpu);
+                xTaskCreatePinnedToCore(task_can_led_blink, "led_blink_can", 4096, NULL, 1, NULL, task_cpu);
                 vTaskDelay(pdMS_TO_TICKS(50));
 #endif
-                xTaskCreatePinnedToCore(task_can_recv, "can_recv", 4096, NULL, 1, NULL, task_cpu);
+
+                if (can_dev->recv)
+                        xTaskCreatePinnedToCore(task_can_recv, "can_recv", 4096, NULL, 1, NULL, task_cpu);
+
                 vTaskDelay(pdMS_TO_TICKS(50));
         } else {
                 pr_err("no device inited\n");
