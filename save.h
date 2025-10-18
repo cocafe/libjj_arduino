@@ -24,7 +24,34 @@
 #define CONFIG_CFG_JSON_PATH                    ("/config.json")
 #endif
 
+#ifndef CONFIG_METADATA_JSON_PATH
+#define CONFIG_METADATA_JSON_PATH               ("/metadata.json")
+#endif
+
+struct save_metadata {
+        char fwhash[32 * 2 + 2];
+};
+
+static save_metadata g_save_meta;
+
 static int (*jbuf_cfg_make)(jbuf_t *, struct config *);
+
+static int jbuf_save_meta_make(jbuf_t *b, struct save_metadata *meta)
+{
+        void *root;
+        int err;
+
+        if ((err = jbuf_init(b, JBUF_INIT_ALLOC_KEYS)))
+                return err;
+
+        root = jbuf_obj_open(b, NULL);
+
+        jbuf_strbuf_add(b, "fwhash", meta->fwhash);
+
+        jbuf_obj_close(b, root);
+
+        return 0;
+}
 
 static int save_fwhash_read(char *hash, size_t cnt)
 {
@@ -39,7 +66,7 @@ static int save_fwhash_read(char *hash, size_t cnt)
                 pr_info("failed to verify firmware image.\n");
                 return -EIO;
         }
-        
+
         pr_raw("firmware SHA-256: ");
         for (int i = 0, c = 0; i < 32; ++i) {
                 pr_raw("%02x", data.image_digest[i]);
@@ -50,6 +77,36 @@ static int save_fwhash_read(char *hash, size_t cnt)
         pr_raw("\n");
 
         return 0;
+}
+
+static int save_meatadata_load(struct save_metadata *meta)
+{
+        jbuf_t jb = { };
+        int err;
+
+        if ((err = jbuf_save_meta_make(&jb, meta)))
+                return err;
+
+        err = jbuf_json_file_load(&jb, CONFIG_METADATA_JSON_PATH);
+
+        jbuf_deinit(&jb);
+
+        return err;
+}
+
+static int save_meatadata_save(struct save_metadata *meta)
+{
+        jbuf_t jb = { };
+        int err;
+
+        if ((err = jbuf_save_meta_make(&jb, meta)))
+                return err;
+
+        err = jbuf_json_file_save(&jb, CONFIG_METADATA_JSON_PATH);
+
+        jbuf_deinit(&jb);
+
+        return err;
 }
 
 static int config_json_load(struct config *cfg, const char *json_path)
@@ -103,11 +160,34 @@ static int save_read(struct config *cfg)
 
 static int save_write(struct config *cfg)
 {
-        return config_json_save(cfg, CONFIG_CFG_JSON_PATH);
+        int err;
+
+        if ((err = save_meatadata_save(&g_save_meta)))
+                return err;
+
+        if ((err = config_json_save(cfg, CONFIG_CFG_JSON_PATH)))
+                return err;
+
+        return 0;
+}
+
+static void save_factory_config_json_load(void)
+{
+        memcpy(&g_cfg, &g_cfg_default, sizeof(g_cfg));
+
+        if (!config_json_load(&g_cfg, CONFIG_FACTORY_JSON_PATH)) {
+                pr_info("factory json config found, config merged with it\n");
+
+                if (!config_json_save(&g_cfg, CONFIG_FACTORY_JSON_PATH))
+                        pr_info("factory json updated\n");
+        } else {
+                pr_info("no factory json, use default values now\n");
+        }
 }
 
 static void save_init(int (*jbuf_maker)(jbuf_t *, struct config *))
 {
+        char fwhash[32 * 2 + 2] = { };
         uint8_t f = json_print_on_load;
 
         if (!jbuf_maker) {
@@ -117,20 +197,44 @@ static void save_init(int (*jbuf_maker)(jbuf_t *, struct config *))
 
         jbuf_cfg_make = jbuf_maker;
 
-        save_fwhash_read(NULL, 0);
+        save_fwhash_read(fwhash, sizeof(fwhash));
+
+        if (save_meatadata_load(&g_save_meta)) {
+                pr_info("failed to load save metadata json\n");
+
+                memcpy(&g_save_meta.fwhash, fwhash, sizeof(g_save_meta.fwhash));
+                if (save_meatadata_save(&g_save_meta)) {
+                        pr_err("failed to save metadata json\n");
+                }
+        }
+
+        if (!is_str_equal(fwhash, g_save_meta.fwhash, CASELESS)) {
+                pr_info("fw hash mismatches, migrate config json\n");
+
+                // update metadata here
+                memcpy(&g_save_meta.fwhash, fwhash, sizeof(g_save_meta.fwhash));
+
+                // reset default config
+                memcpy(&g_cfg, &g_cfg_default, sizeof(g_cfg));
+
+                // merge config stored
+                json_print_on_load = 1;
+                if (config_json_load(&g_cfg, CONFIG_FACTORY_JSON_PATH)) {
+                        pr_info("no config.json found, create new one\n");
+                        save_factory_config_json_load();
+                }
+                json_print_on_load = f;
+
+                save_write(&g_cfg);
+
+                return;
+        }
 
         json_print_on_load = 1;
         if (save_read(&g_cfg) != 0) {
                 pr_info("failed to read config json from flash, create new one\n");
 
-                memcpy(&g_cfg, &g_cfg_default, sizeof(g_cfg));
-
-                if (!config_json_load(&g_cfg, CONFIG_FACTORY_JSON_PATH)) {
-                        pr_info("factory json config found, config merged with it\n");
-
-                        if (!config_json_save(&g_cfg, CONFIG_FACTORY_JSON_PATH))
-                                pr_info("factory json updated\n");
-                }
+                save_factory_config_json_load();
 
                 save_write(&g_cfg);
         }
