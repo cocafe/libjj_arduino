@@ -8,7 +8,6 @@
 #include <esp_image_format.h>
 #include <nvs_flash.h>
 
-#include <EEPROM.h>
 #include <CRC32.h>
 
 #include "utils.h"
@@ -17,78 +16,17 @@
 #include "json.h"
 
 // MUST start with '/'
-#ifndef CONFIG_SAVE_JSON_PATH
-#define CONFIG_SAVE_JSON_PATH           ("/factory.json")
+#ifndef CONFIG_FACTORY_JSON_PATH
+#define CONFIG_FACTORY_JSON_PATH                ("/factory.json")
 #endif
 
-#define SAVE_MAGIC                      (0x00C0CAFE)
-#define SAVE_PAGE                       (0)
-
-struct save {
-        uint32_t        magic;
-        union {
-                struct {
-                        uint8_t ignore_fwhash   : 1;
-                        uint8_t reserved        : 7;
-                };
-                uint8_t flags;
-        };
-        uint8_t         fwhash[8];
-        uint16_t        save_sz;
-        struct config   cfg;
-        uint32_t        crc32;
-};
-
-static struct save g_save;
-static uint8_t current_fw_hash[32] = { };
+#ifndef CONFIG_CFG_JSON_PATH
+#define CONFIG_CFG_JSON_PATH                    ("/config.json")
+#endif
 
 static int (*jbuf_cfg_make)(jbuf_t *, struct config *);
 
-static int config_json_load(struct config *cfg)
-{
-        jbuf_t jb = { };
-        int err;
-
-        if (unlikely(!jbuf_cfg_make))
-                return -ENOTSUP;
-
-        if ((err = jbuf_cfg_make(&jb, cfg)))
-                return err;
-
-        // migration for strval changes
-        jkey_invalid_strval_ignore_set(1);
-        err = jbuf_json_file_load(&jb, CONFIG_SAVE_JSON_PATH);
-        jkey_invalid_strval_ignore_set(0);
-
-        jbuf_deinit(&jb);
-
-        return err;
-}
-
-static int config_json_save(struct config *cfg)
-{
-        jbuf_t jb = { };
-        int err;
-
-        if (unlikely(!jbuf_cfg_make))
-                return -ENOTSUP;
-
-        if ((err = jbuf_cfg_make(&jb, cfg)))
-                return err;
-
-        err = jbuf_json_file_save(&jb, CONFIG_SAVE_JSON_PATH);
-
-        jbuf_deinit(&jb);
-
-        return err;
-}
-
-static int config_json_delete(void)
-{
-        return spiffs_file_delete(CONFIG_SAVE_JSON_PATH);
-}
-
-static int save_fw_hash_verify(void)
+static int save_fwhash_read(char *hash, size_t cnt)
 {
         const esp_partition_t *running_partition = esp_ota_get_running_partition();
         const esp_partition_pos_t partition_position = {
@@ -102,181 +40,101 @@ static int save_fw_hash_verify(void)
                 return -EIO;
         }
         
-        printf("firmware SHA-256: ");
-        for (int i = 0; i < 32; ++i) {
-                printf("%02X", data.image_digest[i]);
-                current_fw_hash[i] = data.image_digest[i];
+        pr_raw("firmware SHA-256: ");
+        for (int i = 0, c = 0; i < 32; ++i) {
+                pr_raw("%02x", data.image_digest[i]);
+
+                if (hash)
+                        c += snprintf(&hash[c], cnt, "%02x", data.image_digest[i]);
         }
-        printf("\n");
+        pr_raw("\n");
 
         return 0;
 }
 
-static uint32_t save_crc32(struct save *save)
+static int config_json_load(struct config *cfg, const char *json_path)
 {
-        size_t cnt = sizeof(struct save) - sizeof(typeof(g_save.crc32));
-        uint8_t *data = (uint8_t *)save;
-        CRC32 crc;
-
-        crc.add((uint8_t *)save, cnt);
-        crc.restart();
-        for (size_t i = 0; i < cnt; i++) {
-                crc.add(data[i]);
-        }
-
-        return crc.calc();
-}
-
-static int save_verify(struct save *save)
-{
-        uint32_t crc32;
-
-        if (save->magic != SAVE_MAGIC)
-                return -ENODATA;
-
-        if (!save->ignore_fwhash) {
-                for (int i = 0; i < ARRAY_SIZE(save->fwhash); i++) {
-                        if (save->fwhash[i] != current_fw_hash[i]) {
-                                pr_info("firmware hash mismatched\n");
-                                return -EBADF;
-                        }
-                }
-        }
-
-        if (sizeof(struct save) != save->save_sz) {
-                pr_info("save size mismatched\n");
-                return -EBADF;
-        }
-
-        crc32 = save_crc32(save);
-
-        pr_info("calc crc32: 0x%08lx\n", crc32);
-        pr_info("save crc32: 0x%08lx\n", save->crc32);
-
-        if (crc32 != save->crc32)
-                return -EINVAL;
-
-        return 0;
-}
-
-static int __save_read(size_t addr, struct save *save)
-{
-        uint8_t buf[sizeof(struct save)] = { 0 };
-        struct save *s = (struct save *)&buf[0];
+        jbuf_t jb = { };
         int err;
 
-        for (size_t i = 0; i < sizeof(struct save); i++) {
-                buf[i] = EEPROM.read(addr + i);
-        }
+        if (unlikely(!jbuf_cfg_make))
+                return -ENOTSUP;
 
-#ifdef SAVE_HEXDUMP
-        hexdump(buf, sizeof(buf));
-#endif
-
-        if ((err = save_verify(s)))
-                return err; 
-
-        memcpy(save, buf, sizeof(struct save));
-
-        return 0;
-}
-
-static int save_read(struct save *save)
-{
-        int err;
-
-        if ((err = __save_read(SAVE_PAGE, save))) {
-                pr_info("failed to read save, err = %d\n", err);
+        if ((err = jbuf_cfg_make(&jb, cfg)))
                 return err;
-        }
 
-        pr_info("read save ok\n");
-        return 0;
+        // migration for strval changes
+        jkey_invalid_strval_ignore_set(1);
+        err = jbuf_json_file_load(&jb, json_path);
+        jkey_invalid_strval_ignore_set(0);
+
+        jbuf_deinit(&jb);
+
+        return err;
 }
 
-static void __save_write(size_t addr, struct save *save)
+static int config_json_save(struct config *cfg, const char *json_path)
 {
-        uint8_t *buf = (uint8_t *)save;
+        jbuf_t jb = { };
+        int err;
 
-        for (size_t i = 0; i < sizeof(struct save); i++) {
-                EEPROM.write(addr + i, buf[i]);
-        }
+        if (unlikely(!jbuf_cfg_make))
+                return -ENOTSUP;
 
-        EEPROM.commit();
+        if ((err = jbuf_cfg_make(&jb, cfg)))
+                return err;
+
+        err = jbuf_json_file_save(&jb, json_path);
+
+        jbuf_deinit(&jb);
+
+        return err;
 }
 
-static void save_write(struct save *save)
+static int config_json_delete(const char *json_path)
 {
-        save->magic = SAVE_MAGIC;
-        
-        for (int i = 0; i < ARRAY_SIZE(save->fwhash); i++) {
-                save->fwhash[i] = save->ignore_fwhash ? 0x00 : current_fw_hash[i];
-        }
-
-        save->save_sz = sizeof(struct save);
-
-        save->crc32 = save_crc32(save);
-
-        pr_info("save crc32: 0x%08lx\n", save->crc32);
-
-#ifdef SAVE_HEXDUMP
-        hexdump(save, sizeof(struct save));
-#endif
-
-        __save_write(SAVE_PAGE, save);
-
-        pr_info("saved to EEPROM\n");
+        return spiffs_file_delete(json_path);
 }
 
-static void save_update(struct save *save, struct config *cfg)
+static int save_read(struct config *cfg)
 {
-        if (cfg)
-                memcpy(&save->cfg, cfg, sizeof(save->cfg));
+        return config_json_load(cfg, CONFIG_CFG_JSON_PATH);
 }
 
-static void save_create(struct save *save, struct config *cfg)
+static int save_write(struct config *cfg)
 {
-        memset(save, 0x00, sizeof(struct save));
-
-        save->magic = SAVE_MAGIC;
-
-        memcpy(&save->cfg, cfg, sizeof(save->cfg));
+        return config_json_save(cfg, CONFIG_CFG_JSON_PATH);
 }
 
 static void save_init(int (*jbuf_maker)(jbuf_t *, struct config *))
 {
-        uint32_t eeprom_size = ROUND_UP_POWER2(sizeof(struct save));
+        uint8_t f = json_print_on_load;
 
-        if (jbuf_maker) {
-                jbuf_cfg_make = jbuf_maker;
+        if (!jbuf_maker) {
+                pr_err("to use save, must define constructor for json\n");
+                return;
         }
 
-        EEPROM.begin(eeprom_size);
+        jbuf_cfg_make = jbuf_maker;
 
-        save_fw_hash_verify();
+        save_fwhash_read(NULL, 0);
 
-        pr_info("sizeof save: %u, eeprom size: %lu\n", sizeof(struct save), eeprom_size);
+        json_print_on_load = 1;
+        if (save_read(&g_cfg) != 0) {
+                pr_info("failed to read config json from flash, create new one\n");
 
-        if (save_read(&g_save) != 0) {
-                uint8_t f = json_print_on_load;
+                memcpy(&g_cfg, &g_cfg_default, sizeof(g_cfg));
 
-                pr_info("failed to read save from flash, create new one\n");
-
-                save_create(&g_save, &g_cfg_default);
-
-                json_print_on_load = 1;
-                if (!config_json_load(&g_save.cfg)) {
+                if (!config_json_load(&g_cfg, CONFIG_FACTORY_JSON_PATH)) {
                         pr_info("factory json config found, config merged with it\n");
 
-                        if (!config_json_save(&g_save.cfg))
+                        if (!config_json_save(&g_cfg, CONFIG_FACTORY_JSON_PATH))
                                 pr_info("factory json updated\n");
                 }
-                json_print_on_load = f;
 
-                save_write(&g_save);
+                save_write(&g_cfg);
         }
-
-        memcpy(&g_cfg, &g_save.cfg, sizeof(g_cfg));
+        json_print_on_load = f;
 }
 
 static int nvs_erase(void)
@@ -299,19 +157,17 @@ static void save_cfg_reset(void)
         memcpy(&g_cfg, &g_cfg_default, sizeof(g_cfg));
 
         // use factory config if found
-        if (!config_json_load(&g_cfg)) {
+        if (!config_json_load(&g_cfg, CONFIG_FACTORY_JSON_PATH)) {
                 pr_info("factory json config found, config merged with it\n");
         }
 
-        save_update(&g_save, &g_cfg);
-        save_write(&g_save);
+        save_write(&g_cfg);
 }
 
 static void save_cfg_default_reset(void)
 {
         memcpy(&g_cfg, &g_cfg_default, sizeof(g_cfg));
-        save_update(&g_save, &g_cfg);
-        save_write(&g_save);
+        save_write(&g_cfg);
 }
 
 static __unused void save_reset_gpio_check(unsigned gpio_rst)
@@ -352,7 +208,7 @@ static __unused void save_reset_gpio_check(unsigned gpio_rst)
 
                                 if (now - ts_pressed >= 30 * 1000) {
                                         // delete factory.json
-                                        config_json_delete();
+                                        config_json_delete(CONFIG_FACTORY_JSON_PATH);
 
                                         // use program default config
                                         save_cfg_default_reset();

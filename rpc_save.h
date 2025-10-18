@@ -19,8 +19,7 @@ void rpc_save_add(void)
         });
 
         http_rpc.on("/cfg_save", HTTP_GET, [](){
-                save_update(&g_save, &g_cfg);
-                save_write(&g_save);
+                save_write(&g_cfg);
 
                 http_rpc.send(200, "text/plain", "OK\n");
         });
@@ -70,8 +69,7 @@ void rpc_save_add(void)
                         return;
                 }
 
-                save_update(&g_save, &g_cfg);
-                save_write(&g_save);
+                save_write(&g_cfg);
 
                 http_rpc.send(200, "text/plain", "OK\n");
 
@@ -80,12 +78,12 @@ void rpc_save_add(void)
 
         http_rpc.on("/factory_json", HTTP_GET, [](){
                 if (http_rpc.hasArg("delete")) {
-                        if (config_json_delete())
+                        if (config_json_delete(CONFIG_FACTORY_JSON_PATH))
                                 http_rpc.send(200, "text/plain", "delete error\n");
                         else
                                 http_rpc.send(200, "text/plain", "OK\n");
                 } else if (http_rpc.hasArg("save")) {
-                        if (config_json_save(&g_cfg))
+                        if (config_json_save(&g_cfg, CONFIG_FACTORY_JSON_PATH))
                                 http_rpc.send(200, "text/plain", "save error\n");
                         else
                                 http_rpc.send(200, "text/plain", "OK\n");
@@ -93,7 +91,7 @@ void rpc_save_add(void)
                         int err;
                         size_t len;
 
-                        char *buf = (char *)spiffs_file_read(CONFIG_SAVE_JSON_PATH, &err, &len);
+                        char *buf = (char *)spiffs_file_read(CONFIG_FACTORY_JSON_PATH, &err, &len);
                         if (err) {
                                 http_rpc.send(500, "text/plain", "read error\n");
                                 return;
@@ -127,41 +125,39 @@ void rpc_save_add(void)
                         return;
                 }
 
-                if (config_json_save(&g_cfg)) {
+                if (config_json_save(&g_cfg, CONFIG_FACTORY_JSON_PATH)) {
                         http_rpc.send(500, "text/plain", "failed to write json\n");
                 } else {
                         http_rpc.send(200, "text/plain", "OK\n");
                 }
 
-                save_update(&g_save, &g_cfg);
-                save_write(&g_save);
+                save_write(&g_cfg);
 
                 jbuf_deinit(&jkey_cfg);
         });
 
-        http_rpc.on("/verify_fwhash", HTTP_GET, [](){
-                if (http_rpc.hasArg("set")) {
-                        String data = http_rpc.arg("set");
-                        int i = atoi(data.c_str());
+        // http_rpc.on("/verify_fwhash", HTTP_GET, [](){
+        //         if (http_rpc.hasArg("set")) {
+        //                 String data = http_rpc.arg("set");
+        //                 int i = atoi(data.c_str());
 
-                        if (i == 1) {
-                                g_save.ignore_fwhash = 0;
-                        } else {
-                                g_save.ignore_fwhash = 1;
-                        }
+        //                 if (i == 1) {
+        //                         g_save.ignore_fwhash = 0;
+        //                 } else {
+        //                         g_save.ignore_fwhash = 1;
+        //                 }
 
-                        save_update(&g_save, &g_cfg);
-                        save_write(&g_save);
+        //                 save_write(&g_cfg);
 
-                        http_rpc.send(200, "text/plain", "OK\n");
-                } else {
-                        char buf[8] = { };
+        //                 http_rpc.send(200, "text/plain", "OK\n");
+        //         } else {
+        //                 char buf[8] = { };
 
-                        snprintf(buf, sizeof(buf), "%hhu\n", !g_save.ignore_fwhash);
+        //                 snprintf(buf, sizeof(buf), "%hhu\n", !g_save.ignore_fwhash);
 
-                        http_rpc.send(200, "text/plain", buf);
-                }
-        });
+        //                 http_rpc.send(200, "text/plain", buf);
+        //         }
+        // });
 }
 
 #endif // __LIBJJ_RPC_SAVE_H__
