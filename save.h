@@ -219,7 +219,7 @@ static void save_init(int (*jbuf_maker)(jbuf_t *, struct config *))
 
                 // merge config stored
                 json_print_on_load = 1;
-                if (config_json_load(&g_cfg, CONFIG_FACTORY_JSON_PATH)) {
+                if (config_json_load(&g_cfg, CONFIG_CFG_JSON_PATH)) {
                         pr_info("no config.json found, create new one\n");
                         save_factory_config_json_load();
                 }
