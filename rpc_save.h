@@ -76,6 +76,33 @@ void rpc_save_add(void)
                 jbuf_deinit(&jkey_cfg);
         });
 
+        http_rpc.on("/config_json", HTTP_GET, [](){
+                if (http_rpc.hasArg("delete")) {
+                        if (config_json_delete(CONFIG_CFG_JSON_PATH))
+                                http_rpc.send(200, "text/plain", "delete error\n");
+                        else
+                                http_rpc.send(200, "text/plain", "OK\n");
+                } else if (http_rpc.hasArg("save")) {
+                        if (config_json_save(&g_cfg, CONFIG_CFG_JSON_PATH))
+                                http_rpc.send(200, "text/plain", "save error\n");
+                        else
+                                http_rpc.send(200, "text/plain", "OK\n");
+                } else {
+                        int err;
+                        size_t len;
+
+                        char *buf = (char *)spiffs_file_read(CONFIG_CFG_JSON_PATH, &err, &len);
+                        if (err) {
+                                http_rpc.send(500, "text/plain", "read error\n");
+                                return;
+                        }
+
+                        http_rpc.send_P(200, "application/json", buf, len);
+
+                        free(buf);
+                }
+        });
+
         http_rpc.on("/factory_json", HTTP_GET, [](){
                 if (http_rpc.hasArg("delete")) {
                         if (config_json_delete(CONFIG_FACTORY_JSON_PATH))
