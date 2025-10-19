@@ -187,20 +187,11 @@ static void task_can_recv(void *arg)
         pr_info("started\n");
 
         while (1) {
-                uint8_t aggr = 0;
-
                 while (can_dev->recv(f) == 0) {
                         can_recv_one(f);
 
-                        aggr++;
-
                         // XXX: to avoid starvation of other tasks
-                        // taskYIELD();
-
-                        if (aggr >= 5) {
-                                vTaskDelay(pdMS_TO_TICKS(1));
-                                aggr = 0;
-                        }
+                        taskYIELD();
                 }
 
                 vTaskDelay(pdMS_TO_TICKS(1));
