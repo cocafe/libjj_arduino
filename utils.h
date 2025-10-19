@@ -116,6 +116,21 @@ static __always_inline void __write_once_size(volatile void *p, void *res, int s
         }
 }
 
+#define mod_2(x, m)             ((x) & (typeof((x)))((m) - 1))
+
+unsigned roundup_pow2(unsigned v)
+{
+        v--;
+        v |= v >> 1;
+        v |= v >> 2;
+        v |= v >> 4;
+        v |= v >> 8;
+        v |= v >> 16;
+        v++;
+
+        return v;
+}
+
 /*
  * Prevent the compiler from merging or refetching reads or writes. The
  * compiler is also forbidden from reordering successive instances of

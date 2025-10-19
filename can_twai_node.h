@@ -7,20 +7,23 @@
 
 #include "can.h"
 #include "ffs.h"
+#include "spsc_rbuf.h"
 
 #include <esp_twai.h>
 #include <esp_twai_onchip.h>
 
-#define TWAI_RX_SLOT_PAYLOAD_SZ 64
+// TODO: support variable up to 64
+#define TWAI_RX_SLOT_PAYLOAD_SZ 8
 
 union twai_rx_slot {
         can_frame_t f;
         uint8_t raw[sizeof(can_frame_t) + TWAI_RX_SLOT_PAYLOAD_SZ];
-};
+} __attribute__((aligned(4)));
 
 static uint16_t tx_timedout_ms = 200;
 static twai_node_handle_t twai_node = NULL;
-static QueueHandle_t twai_rxq = NULL;
+
+static spsc_rbuf twai_rxq;
 
 const char *str_twai_states[] = {
         "error_active",
@@ -63,16 +66,19 @@ static int TWAI_send(uint32_t can_id, uint8_t len, uint8_t *data)
 static TaskHandle_t task_twai_rxq;
 static void task_twai_rxq_worker(void *arg)
 {
-        static union twai_rx_slot rx; 
+        union twai_rx_slot *rx = NULL; 
 
         while (1) {
-                BaseType_t ret = xQueueReceive(twai_rxq, &rx, portMAX_DELAY);
-
-                if (ret != pdTRUE) {
+                rx = (union twai_rx_slot *)spsc_rbuf_rptr_get(&twai_rxq);
+                if (!rx) {
+                        vTaskDelay(pdMS_TO_TICKS(1));
                         continue;
                 }
 
-                can_recv_one(&rx.f);
+                can_recv_one(&rx->f);
+                spsc_rbuf_rptr_put(&twai_rxq);
+
+                taskYIELD();
         }
 }
 
@@ -80,13 +86,23 @@ static bool IRAM_ATTR TWAI_recv_cb(twai_node_handle_t handle,
                                    const twai_rx_done_event_data_t *edata,
                                    void *user_ctx)
 {
-        static union twai_rx_slot rx = { };
-        can_frame_t *f = &rx.f;
-        twai_frame_t rx_frame = { 
-                .buffer = f->data,
-                .buffer_len = TWAI_RX_SLOT_PAYLOAD_SZ,
-        };
+        static uint8_t drop[8] = { };
+        static twai_frame_t rx_frame = { };
         BaseType_t woken = pdFALSE;
+        union twai_rx_slot *rx = NULL;
+        can_frame_t *f = NULL;
+
+        rx = (union twai_rx_slot *)spsc_rbuf_wptr_get(&twai_rxq);
+        if (rx) {
+                f = &rx->f;
+                rx_frame.buffer = f->data;
+                rx_frame.buffer_len = TWAI_RX_SLOT_PAYLOAD_SZ;
+        } else {
+                rx_frame.buffer = drop;
+                rx_frame.buffer_len = sizeof(drop);
+                cnt_can_recv_drop++;
+                cnt_twai_rxq_full++;
+        }
 
         if (ESP_OK == twai_node_receive_from_isr(handle, &rx_frame)) {
                 if (rx_frame.header.rtr) {
@@ -94,13 +110,11 @@ static bool IRAM_ATTR TWAI_recv_cb(twai_node_handle_t handle,
                         return false;
                 }
 
-                f->id = rx_frame.header.id;
-                f->dlc = twaifd_dlc2len(rx_frame.header.dlc);
-
-                if (pdPASS != xQueueSendFromISR(twai_rxq, &rx, &woken))
-                        cnt_twai_rxq_full++;
-
-                cnt_can_recv++;
+                if (rx_frame.buffer != drop) {
+                        f->id = rx_frame.header.id;
+                        f->dlc = twaifd_dlc2len(rx_frame.header.dlc);
+                        cnt_can_recv++;
+                }
         } else {
                 cnt_can_recv_error++;
         }
@@ -181,12 +195,9 @@ int TWAI_init(struct twai_cfg *cfg)
                 break;
         }
 
-        twai_rxq = xQueueCreate(cfg->rx_qlen, sizeof(union twai_rx_slot));
-        if (!twai_rxq) {
-                pr_err("failed to allocate twai_rxq, content bytes: %zu\n", cfg->rx_qlen * sizeof(union twai_rx_slot));
+        if (spsc_rbuf_init(&twai_rxq, cfg->rx_qlen, sizeof(union twai_rx_slot))) {
                 return -ENOMEM;
         }
-        pr_info("rxq allocate %zu bytes\n", cfg->rx_qlen * sizeof(union twai_rx_slot));
 
         if (twai_new_node_onchip(&twai_cfg, &twai_node) != ESP_OK) {
                 pr_err("twai_new_node_onchip()\n");

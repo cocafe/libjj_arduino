@@ -84,9 +84,7 @@ static uint64_t cnt_can_send_error;
 static uint64_t cnt_can_recv;
 static uint64_t cnt_can_recv_error;
 static uint64_t cnt_can_recv_rtr;
-#ifdef CAN_TWAI_USE_RINGBUF
-static uint64_t cnt_can_recv_drop;
-#endif // CAN_TWAI_USE_RINGBUF
+static __unused uint64_t cnt_can_recv_drop;
 
 #ifdef CAN_LED_BLINK
 static uint8_t can_txrx = 0;

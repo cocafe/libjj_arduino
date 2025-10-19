@@ -34,7 +34,7 @@ struct can_rlimit_node {
 };
 
 struct can_rlimit_ctx {
-        struct hlist_head htbl[1 << 7];
+        struct hlist_head htbl[1 << 5];
         SemaphoreHandle_t lck;
         struct can_rlimit_cfg *cfg;
 };

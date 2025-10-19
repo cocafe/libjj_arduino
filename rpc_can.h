@@ -12,9 +12,7 @@ void rpc_can_add(void)
 //              c += snprintf(&buf[c], sizeof(buf) - c, "can_stats{t=\"inited\"} %u\n", can_dev ? 1 : 0);
                 c += snprintf(&buf[c], sizeof(buf) - c, "can_stats{t=\"send_err\"} %llu\n", cnt_can_send_error);
                 c += snprintf(&buf[c], sizeof(buf) - c, "can_stats{t=\"recv_err\"} %llu\n", cnt_can_recv_error);
-#ifdef CAN_TWAI_USE_RINGBUF
                 c += snprintf(&buf[c], sizeof(buf) - c, "can_stats{t=\"can_recv_drop\"} %llu\n", cnt_can_recv_drop);
-#endif
                 c += snprintf(&buf[c], sizeof(buf) - c, "can_stats{t=\"recv_rtr\"} %llu\n", cnt_can_recv_rtr);
                 c += snprintf(&buf[c], sizeof(buf) - c, "can_stats{t=\"recv\"} %llu\n", cnt_can_recv);
                 c += snprintf(&buf[c], sizeof(buf) - c, "can_stats{t=\"send\"} %llu\n", cnt_can_send);
@@ -55,6 +53,7 @@ void rpc_can_add(void)
 c += snprintf(&buf[c], sizeof(buf) - c, "# HELP twai_stats\n");
                 c += snprintf(&buf[c], sizeof(buf) - c, "# TYPE twai_stats gauge\n");
                 c += snprintf(&buf[c], sizeof(buf) - c, "twai_stats{t=\"rxq_full\"} %llu\n", cnt_twai_rxq_full);
+                c += snprintf(&buf[c], sizeof(buf) - c, "twai_stats{t=\"rxq_len\"} %d\n", spsc_rbuf_qlen_get(&twai_rxq));
                 c += snprintf(&buf[c], sizeof(buf) - c, "twai_stats{t=\"bus_err\"} %llu\n", cnt_twai_bus_error);
                 c += snprintf(&buf[c], sizeof(buf) - c, "twai_stats{t=\"state\"} %d\n", twai_node_state);
 #endif // CONFIG_TWAI_NEW_API
