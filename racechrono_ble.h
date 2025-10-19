@@ -47,6 +47,26 @@ static SemaphoreHandle_t lck_ble_send;
 static uint8_t rc_deny_all = 0;
 static uint8_t rc_allow_all = 0;
 
+static uint8_t rc_ready_to_send = 0;
+static void rc_ready_to_send_timer(void *arg)
+{
+        if (ble_is_connected) {
+                rc_ready_to_send = 1;
+        } else {
+                rc_ready_to_send = 0;
+        }
+
+        pr_info("ready to send: %u\n", rc_ready_to_send);
+}
+
+static esp_timer_handle_t rc_ready_timer;
+static const esp_timer_create_args_t rc_ready_timer_args = {
+        .callback = rc_ready_to_send_timer,
+        .arg = NULL,
+        .dispatch_method = ESP_TIMER_TASK,
+        .name = "rc_ready",
+};
+
 static char *ble_device_name_generate(char *str)
 {
         char buf[32] = "RaceChrono";
@@ -84,7 +104,7 @@ static void __rc_ble_can_frame_send(struct ble_ctx *ctx, uint32_t pid, uint8_t *
 
 static void rc_ble_can_frame_send(can_frame_t *f, struct can_rlimit_node *rlimit)
 {
-        if (!ble_is_connected)
+        if (unlikely(!rc_ready_to_send))
                 return;
 
         if (unlikely(rc_deny_all))
@@ -141,6 +161,11 @@ class ServerCallbacks : public NimBLEServerCallbacks
 
                 ble_is_connected = 1;
 
+                if (!esp_timer_is_active(rc_ready_timer)) {
+                        esp_timer_start_once(rc_ready_timer, 5ULL * 1000 * 1000);
+                        pr_dbg("rc ready timer started\n");
+                }
+
                 /**
                  *  We can use the connection handle here to ask for different connection parameters.
                  *  Args: connection handle, min connection interval, max connection interval
@@ -157,6 +182,12 @@ class ServerCallbacks : public NimBLEServerCallbacks
                 pr_info("ble client disconnected, start advertising\n");
 
                 ble_is_connected = 0;
+
+                // delay to cancel ready
+                if (!esp_timer_is_active(rc_ready_timer)) {
+                        esp_timer_start_once(rc_ready_timer, 5ULL * 1000 * 1000);
+                }
+
                 NimBLEDevice::startAdvertising();
 
                 rc_can_rlimit_set_all(-1);
@@ -339,6 +370,11 @@ static int __unused racechrono_ble_init(struct ble_cfg *cfg)
 
         ctx->cfg = cfg;
         ctx->devname = ble_device_name_generate(cfg->devname);
+
+        if (esp_timer_create(&rc_ready_timer_args, &rc_ready_timer) != ESP_OK) {
+                pr_err("failed to create timer\n");
+                return -ENOMEM;
+        }
 
         racechrono_nimble_init(ctx);
 
