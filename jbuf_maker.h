@@ -134,4 +134,18 @@ static void jbuf_cantcp_add(jbuf_t *b, const char *key, struct cantcp_cfg *cfg)
 }
 #endif // __LIBJJ_CAN_TCP_H__
 
+#ifdef __LIBJJ_CAN_UDP_H__
+static void jbuf_canudp_add(jbuf_t *b, const char *key, struct canudp_cfg *cfg)
+{
+        void *obj = jbuf_obj_open(b, key);
+
+        jbuf_udpmc_cfg_add(b, "mc", &cfg->mc);
+
+        jbuf_bool_add(b, "can_rx_forward", cfg->can_rx_fwd);
+        jbuf_bool_add(b, "udp_rx_accept", cfg->udp_rx_accept);
+
+        jbuf_obj_close(b, obj);
+}
+#endif // __LIBJJ_CAN_UDP_H__
+
 #endif // __LIBJJ_JBUF_MAKER_H__

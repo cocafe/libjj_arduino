@@ -182,9 +182,6 @@ static void can_tcp_recv_cb(can_frame_t *f, struct can_rlimit_node *rlimit)
         }
 #endif
 
-        f->magic = htole32(CAN_DATA_MAGIC);
-        f->id = htole32(f->id);
-
         if ((n = send(sockfd, (uint8_t *)f, (size_t)(sizeof(can_frame_t) + f->dlc), 0)) < 0) {
                 if (errno == EINTR) {
                         return;

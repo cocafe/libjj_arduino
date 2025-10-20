@@ -8,13 +8,15 @@
 
 enum {
         CAN_RLIMIT_TYPE_TCP,
+        CAN_RLIMIT_TYPE_UDP,
         CAN_RLIMIT_TYPE_RC,
         NUM_CAN_RLIMIT_TYPES,
 };
 
 static const char *str_rlimit_types[NUM_CAN_RLIMIT_TYPES] = {
         [CAN_RLIMIT_TYPE_TCP] = "tcp",
-        [CAN_RLIMIT_TYPE_RC] = "rc",
+        [CAN_RLIMIT_TYPE_UDP] = "udp",
+        [CAN_RLIMIT_TYPE_RC]  = "rc",
 };
 
 struct can_rlimit_cfg {
@@ -42,18 +44,24 @@ struct can_rlimit_ctx {
 static struct can_rlimit_cfg can_rlimit_default_cfg = { };
 static struct can_rlimit_ctx can_rlimit = { };
 
-static inline unsigned update_hz_to_ms(unsigned hz)
+static inline int update_hz_to_ms(int hz)
 {
         if (hz == 0)
                 return 0;
 
+        if (hz < 0)
+                return -1;
+
         return 1 * 1000 / hz;
 }
 
-static inline unsigned update_ms_to_hz(unsigned ms)
+static inline int update_ms_to_hz(int ms)
 {
         if (ms == 0)
                 return 0;
+
+        if (ms < 0)
+                return -1;
 
         return 1 * 1000 / ms;
 }
@@ -74,7 +82,7 @@ static inline struct can_rlimit_node *can_ratelimit_add(unsigned can_id)
 
         for (unsigned i = 0; i < ARRAY_SIZE(n->data); i++) {
                 struct can_rlimit_data *d = &n->data[i];
-                d->update_ms = can_rlimit.cfg->default_hz[i];
+                d->update_ms = update_hz_to_ms(can_rlimit.cfg->default_hz[i]);
         }
 
         pr_dbg("can_id 0x%03x\n", can_id);
@@ -199,7 +207,7 @@ static int can_ratelimit_init(struct can_rlimit_cfg *cfg)
         can_rlimit.cfg = cfg;
 
         if (!cfg) {
-                can_rlimit.cfg = &can_rlimit_default_cfg; 
+                can_rlimit.cfg = &can_rlimit_default_cfg;
         }
 
         for (int i = 0; i < ARRAY_SIZE(can_rlimit.htbl); i++) {

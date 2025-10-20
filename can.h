@@ -148,6 +148,9 @@ static void can_recv_one(can_frame_t *f)
         pr_raw("\n");
 #endif
 
+        f->magic = htole32(CAN_DATA_MAGIC);
+        f->id = htole32(f->id);
+
         for (int i = 0; i < ARRAY_SIZE(can_recv_cbs); i++) {
                 if (can_recv_cbs[i].cb) {
                         can_recv_cbs[i].cb(f,

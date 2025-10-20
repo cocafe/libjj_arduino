@@ -6,12 +6,19 @@
 #include <errno.h>
 
 #include "utils.h"
+#include "list.h"
 #include "logging.h"
 #include "socket.h"
 #include "can_tcp.h"
 
-static char can_udp_mc_addr[24] = "239.0.0.1";
-static int can_udp_mc_port = 4090;
+struct canudp_cfg {
+        struct udp_mc_cfg mc;
+        uint8_t can_rx_fwd;
+        uint8_t udp_rx_accept;
+};
+
+static struct canudp_cfg *g_canudp_cfg;
+
 static int can_udp_mc_sock = -1;
 static sockaddr_in can_udp_mc_skaddr;
 
@@ -48,6 +55,7 @@ unlock:
         return err;
 }
 
+// NOTE. esp32 c5, 750~800ptk/s is the max throughput.
 static int __unused can_udp_mc_send(can_frame_t *f)
 {
         int sock = READ_ONCE(can_udp_mc_sock);
@@ -60,6 +68,7 @@ static int __unused can_udp_mc_send(can_frame_t *f)
                         (struct sockaddr *)&can_udp_mc_skaddr,
                         sizeof(can_udp_mc_skaddr));
         if (rc != sendsz) {
+                pr_dbg("sendto(): rc: %d err: %d %s\n", rc, errno, strerror(abs(errno)));
                 cnt_can_udp_send_error++;
 
                 if (rc <= 0) {
@@ -123,6 +132,27 @@ static void task_can_udp_recv(void *arg)
         }
 }
 
+static void can_udp_recv_cb(can_frame_t *f, struct can_rlimit_node *rlimit)
+{
+#ifdef CONFIG_HAVE_CAN_RLIMIT
+        if (is_can_id_ratelimited(rlimit, CAN_RLIMIT_TYPE_UDP, esp32_millis())) {
+                return;
+        }
+#endif
+
+        if (can_udp_mc_send(f)) {
+                return;
+        }
+
+#if 0
+        pr_raw("udp send: id: 0x%04lx len: %u ", le32toh(f->id), f->dlc);
+        for (uint8_t i = 0; i < f->dlc; i++) {
+                pr_raw("0x%02x ", f->data[i]);
+        }
+        pr_raw("\n");
+#endif
+}
+
 static int can_udp_mc_create(const char *if_addr, const char *mc_addr, unsigned port)
 {
         int sock = udp_mc_sock_create(if_addr, mc_addr, port, &can_udp_mc_skaddr);
@@ -132,6 +162,11 @@ static int can_udp_mc_create(const char *if_addr, const char *mc_addr, unsigned 
 
         WRITE_ONCE(can_udp_mc_sock, sock);
         pr_info("%s:%u\n", mc_addr, port);
+
+        // {
+        //         int sndbuf = 8192;
+        //         setsockopt(can_udp_mc_sock, SOL_SOCKET, SO_SNDBUF, &sndbuf, sizeof(sndbuf));
+        // }
 
         return 0;
 }
@@ -148,8 +183,8 @@ static void can_fwd_wifi_event_cb(int event)
 {
         switch (event) {
         case WIFI_EVENT_IP_GOT:
-                if (READ_ONCE(can_udp_mc_sock) < 0) {
-                        can_udp_mc_create(WiFi.localIP().toString().c_str(), can_udp_mc_addr, can_udp_mc_port);
+                if (READ_ONCE(can_udp_mc_sock) < 0 && g_canudp_cfg) {
+                        can_udp_mc_create(WiFi.localIP().toString().c_str(), g_canudp_cfg->mc.mcaddr, g_canudp_cfg->mc.port);
                 }
 
                 break;
@@ -163,27 +198,30 @@ static void can_fwd_wifi_event_cb(int event)
         }
 }
 
-static void __unused can_udp_init(struct udp_mc_cfg *cfg, int recv_enabled)
+static void __unused can_udp_init(struct canudp_cfg *cfg)
 {
         if (!cfg)
                 return;
 
-        if (!cfg->enabled)
+        if (!cfg->mc.enabled)
                 return;
+
+        g_canudp_cfg = cfg;
 
         lck_can_udp_cb = xSemaphoreCreateMutex();
 
-        strncpy(can_udp_mc_addr, cfg->mcaddr, sizeof(can_udp_mc_addr));
-        can_udp_mc_port = cfg->port;
-
         if (wifi_mode_get() == WIFI_AP) {
-                can_udp_mc_create(WiFi.softAPIP().toString().c_str(), can_udp_mc_addr, can_udp_mc_port);
+                can_udp_mc_create(WiFi.softAPIP().toString().c_str(), cfg->mc.mcaddr, cfg->mc.port);
         } else { // STA, STA_AP
                 wifi_event_cb_register(can_fwd_wifi_event_cb);
         }
 
-        if (recv_enabled)
+        if (cfg->udp_rx_accept)
                 xTaskCreatePinnedToCore(task_can_udp_recv, "rc_fwd", 4096, NULL, 1, NULL, CPU1);
+
+        if (cfg->can_rx_fwd && can_dev) {
+                can_recv_cb_register(can_udp_recv_cb);
+        }
 }
 
 #endif // __LIBJJ_CAN_UDP_H__

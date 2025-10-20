@@ -53,7 +53,7 @@ void rpc_can_add(void)
 c += snprintf(&buf[c], sizeof(buf) - c, "# HELP twai_stats\n");
                 c += snprintf(&buf[c], sizeof(buf) - c, "# TYPE twai_stats gauge\n");
                 c += snprintf(&buf[c], sizeof(buf) - c, "twai_stats{t=\"rxq_full\"} %llu\n", cnt_twai_rxq_full);
-                c += snprintf(&buf[c], sizeof(buf) - c, "twai_stats{t=\"rxq_len\"} %d\n", spsc_rbuf_qlen_get(&twai_rxq));
+                c += snprintf(&buf[c], sizeof(buf) - c, "twai_stats{t=\"rxq_len\"} %lu\n", spsc_rbuf_qlen_get(&twai_rxq));
                 c += snprintf(&buf[c], sizeof(buf) - c, "twai_stats{t=\"bus_err\"} %llu\n", cnt_twai_bus_error);
                 c += snprintf(&buf[c], sizeof(buf) - c, "twai_stats{t=\"state\"} %d\n", twai_node_state);
 #endif // CONFIG_TWAI_NEW_API
