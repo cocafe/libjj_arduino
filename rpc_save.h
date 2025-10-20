@@ -24,6 +24,29 @@ void rpc_save_add(void)
                 http_rpc.send(200, "text/plain", "OK\n");
         });
 
+        http_rpc.on("/defcfg_to_json", HTTP_GET, [](){
+                jbuf_t jkey_cfg = { };
+
+                if (!jbuf_cfg_make) {
+                        http_rpc.send(500, "text/plain", "unsupported\n");
+                        return;
+                }
+
+                jbuf_cfg_make(&jkey_cfg, &g_cfg_default);
+
+                char *buf = jbuf_json_text_save(&jkey_cfg, NULL);
+
+                if (!buf)
+                        http_rpc.send(500, "text/plain", "ERROR\n");
+                else
+                        http_rpc.send(200, "text/plain", buf);
+
+                if (buf)
+                        free(buf);
+
+                jbuf_deinit(&jkey_cfg);
+        });
+
         http_rpc.on("/cfg_to_json", HTTP_GET, [](){
                 jbuf_t jkey_cfg = { };
 
