@@ -57,8 +57,6 @@ void *spsc_rbuf_rptr_get(struct spsc_rbuf *rbuf)
                 return NULL;
         }
 
-        rbuf->ridx = RBUF_IDX_INC(ridx, rbuf->qlen);
-
         return (void *)(&rbuf->ring[ridx * rbuf->elesz]);
 }
 
