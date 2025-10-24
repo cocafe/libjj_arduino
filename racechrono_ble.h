@@ -81,7 +81,7 @@ static char *ble_device_name_generate(char *str)
                 pr_err("failed to get BT mac address\n");
                 snprintf(dev_name, sizeof(dev_name), "%s ??:??:??", buf);
         } else {
-                snprintf(dev_name, sizeof(dev_name), "%s %x:%x:%x", buf, mac[3], mac[4], mac[5]);
+                snprintf(dev_name, sizeof(dev_name), "%s %02x:%02x:%02x", buf, mac[3], mac[4], mac[5]);
         }
 
         return dev_name;
