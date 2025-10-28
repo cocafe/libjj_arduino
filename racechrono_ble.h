@@ -48,6 +48,9 @@ static uint8_t rc_deny_all = 0;
 static uint8_t rc_allow_all = 0;
 
 static uint8_t rc_ready_to_send = 0;
+
+static unsigned rc_hz_overall = 0;
+
 static void rc_ready_to_send_timer(void *arg)
 {
         if (ble_is_connected) {
@@ -104,6 +107,10 @@ static void __rc_ble_can_frame_send(struct ble_ctx *ctx, uint32_t pid, uint8_t *
 
 static void rc_ble_can_frame_send(can_frame_t *f, struct can_rlimit_node *rlimit)
 {
+        static uint32_t ts_hz_stats = 0;
+        static unsigned hz_overall = 0;
+        uint32_t now = esp32_millis();
+
         if (unlikely(!rc_ready_to_send))
                 return;
 
@@ -114,7 +121,7 @@ static void rc_ble_can_frame_send(can_frame_t *f, struct can_rlimit_node *rlimit
                 goto send;
 
 #ifdef CONFIG_HAVE_CAN_RLIMIT
-        if (is_can_id_ratelimited(rlimit, CAN_RLIMIT_TYPE_RC, esp32_millis())) {
+        if (is_can_id_ratelimited(rlimit, CAN_RLIMIT_TYPE_RC, now)) {
                 return;
         }
 #endif
@@ -124,7 +131,14 @@ send:
         __rc_ble_can_frame_send(&rc_ble, f->id, f->data, f->dlc);
         xSemaphoreGive(lck_ble_send);
 
+        if (now - ts_hz_stats >= 1000) {
+                ts_hz_stats = now;
+                rc_hz_overall = hz_overall;
+                hz_overall = 0;
+        }
+
         cnt_can_ble_send++;
+        hz_overall++;
 
 #ifdef CAN_BLE_LED_BLINK
         can_ble_txrx = 1;

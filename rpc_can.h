@@ -33,6 +33,7 @@ void rpc_can_add(void)
 #endif
 #ifdef __LIBJJ_RACECHRONO_BLE_H__
                 c += snprintf(&buf[c], sizeof(buf) - c, "can_stats{t=\"ble_send\"} %llu\n", cnt_can_ble_send);
+                c += snprintf(&buf[c], sizeof(buf) - c, "can_stats{t=\"ble_send_hz\"} %u\n", rc_hz_overall);
 #endif
 
 #if (defined CONFIG_HAVE_CAN_TWAI && !defined CONFIG_TWAI_NEW_API)
@@ -50,7 +51,7 @@ void rpc_can_add(void)
 #endif // CONFIG_HAVE_CAN_TWAI
 
 #if (defined CONFIG_HAVE_CAN_TWAI && defined CONFIG_TWAI_NEW_API)
-c += snprintf(&buf[c], sizeof(buf) - c, "# HELP twai_stats\n");
+                c += snprintf(&buf[c], sizeof(buf) - c, "# HELP twai_stats\n");
                 c += snprintf(&buf[c], sizeof(buf) - c, "# TYPE twai_stats gauge\n");
                 c += snprintf(&buf[c], sizeof(buf) - c, "twai_stats{t=\"rxq_full\"} %llu\n", cnt_twai_rxq_full);
                 c += snprintf(&buf[c], sizeof(buf) - c, "twai_stats{t=\"rxq_len\"} %lu\n", spsc_rbuf_qlen_get(&twai_rxq));
