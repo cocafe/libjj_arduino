@@ -57,6 +57,7 @@ static void rc_ready_to_send_timer(void *arg)
                 rc_ready_to_send = 1;
         } else {
                 rc_ready_to_send = 0;
+                rc_hz_overall = 0;
         }
 
         pr_info("ready to send: %u\n", rc_ready_to_send);
