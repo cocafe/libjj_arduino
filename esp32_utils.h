@@ -18,6 +18,7 @@
 #include <driver/temperature_sensor.h>
 
 #include "utils.h"
+#include "logging.h"
 
 #ifdef CONFIG_FREERTOS_UNICORE
 #define CPU0                            (0)
@@ -333,6 +334,23 @@ int esp32_tsens_init(void)
         esp32_tsens = ret;
 
         return 0;
+}
+
+static __unused void esp32_stack_print(const char *tag)
+{
+        if (tag)
+                printf("%s: ", tag);
+
+        printf("\"free_heap\" %u \"min_free_heap\" %u\n", heap_caps_get_free_size(MALLOC_CAP_INTERNAL), heap_caps_get_minimum_free_size(MALLOC_CAP_INTERNAL));
+        // heap_caps_print_heap_info(MALLOC_CAP_INTERNAL);
+}
+
+static __unused void task_esp32_stack_print(void *arg)
+{
+        while (1) {
+                esp32_stack_print(NULL);
+                vTaskDelay(pdMS_TO_TICKS(3000));
+        }
 }
 
 #endif // __LIBJJ_ESP32_UTILS_H__
