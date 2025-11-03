@@ -14,7 +14,8 @@
 #define cJSON_Boolean                   (cJSON_False | cJSON_True)
 #define cJSON_Compound                  (cJSON_Object | cJSON_Array)
 
-#define JBUF_INIT_ALLOC_KEYS            (20)
+#define JBUF_GROW_CNT                   (5)
+#define JBUF_INIT_ALLOC_KEYS            (5)
 #define JBUF_GROW_ARR_REALLOC_INCR      (5)
 
 static uint8_t json_print_on_load = 0;
@@ -271,13 +272,14 @@ static int jbuf_grow(jbuf_t *b, size_t jk_cnt)
                 return -ENOMEM;
         }
 
-        pr_info("new: %p %zu\n", t, new_sz);
+        // pr_info("new: %p %zu\n", t, new_sz);
 
         b->base = t;
         b->alloc_sz = new_sz;
         b->head = (uint8_t *)b->base + offset;
         b->end  = (uint8_t *)b->base + b->alloc_sz;
 
+        // clear new allocated memory
         memset((uint8_t *)b->head, 0, (intptr_t)((uint8_t *)b->end - (uint8_t *)b->head));
 
         return 0;
@@ -294,7 +296,7 @@ static int jbuf_head_next(jbuf_t *b)
                 return -ENODATA;
 
         if ((uint8_t *)b->head + sizeof(jkey_t) > (uint8_t *)b->end)
-                if ((err = jbuf_grow(b, 10)))
+                if ((err = jbuf_grow(b, JBUF_GROW_CNT)))
                         return err;
 
         b->head = (uint8_t *)b->head + sizeof(jkey_t);
