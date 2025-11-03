@@ -50,15 +50,16 @@ struct json_key {
         jkey_size_t             cjson_type;
 
         struct {
-                uint16_t        ref_ptr         : 1;    // is @ref pointing to a pointer? (double pointer)
-                uint16_t        ref_parent      : 1;    // is @ref referencing parent's @data.ref?
+                uint8_t         ref_ptr         : 1;    // is @ref pointing to a pointer? (double pointer)
+                uint8_t         ref_parent      : 1;    // is @ref referencing parent's @data.ref?
                                                         // data_key of array actually refs parent,
                                                         // but this flag is not set for data_key.
-                uint16_t        ref_malloc      : 1;    // TODO: REMOVE?
+                uint8_t         ref_malloc      : 1;    // TODO: REMOVE?
+                uint8_t         is_short_float  : 1;
 
-                uint16_t        base_ref_ptr    : 1;    // is @base_ref pointing to a pointer?
-                uint16_t        base_ref_malloc : 1;    // TODO: REMOVE?
-                uint16_t        base_ref_parent : 1;    // is @base_ref referencing parent's @data.ref?
+                uint8_t         base_ref_ptr    : 1;    // is @base_ref pointing to a pointer?
+                uint8_t         base_ref_malloc : 1;    // TODO: REMOVE?
+                uint8_t         base_ref_parent : 1;    // is @base_ref referencing parent's @data.ref?
                                                         //                                   ^^^^^^^^^
         } flags;
 
@@ -70,14 +71,11 @@ struct json_key {
                         void           *ref;                    // (data, obj): refer to data
                         unsigned        ref_offs;               // offset address of parent's ref
 
-                        union {
-                                uint8_t                 is_short_float;
-                                uint8_t                 int_base;
-                                struct {
-                                        char          **map;
-                                        jkey_cnt_t      cnt;
-                                } strval;
-                        };
+                        uint8_t                 int_base;
+                        struct {
+                                char          **map;
+                                jkey_cnt_t      cnt;
+                        } strval;
                 } data;
 
                 struct {
@@ -647,7 +645,7 @@ void *__jbuf_float_add(jbuf_t *b, const char *key, float *ref)
         void *cookie = jbuf_key_add(b, JKEY_TYPE_DOUBLE, key, ref, sizeof(double));
         jkey_t *k = jbuf_key_get(b, cookie);
 
-        k->data.is_short_float = 1;
+        k->flags.is_short_float = 1;
 
         return cookie;
 }
@@ -814,7 +812,7 @@ static int jkey_float_write(jkey_t *jkey, cJSON *node)
                 return -ENODATA;
         }
 
-        if (jkey->data.is_short_float) {
+        if (jkey->flags.is_short_float) {
                 *(float *)dst = (float)val;
         } else {
 #ifdef __ARM_ARCH_7A__
@@ -1173,12 +1171,15 @@ static int jkey_grow_array_realloc(jkey_t *arr, size_t idx)
         } else { // if in management routine, do realloc()
                 size_t *extern_ele_cnt = arr->obj.arr.grow.ext_ele_cnt;
                 size_t old_sz = (*extern_ele_cnt) * arr->obj.sz;
+                void *t;
 
-                base_ref = realloc_safe(base_ref, old_sz, new_sz);
-                if (!base_ref) {
+                t = realloc(base_ref, new_sz);
+                if (!t) {
                         pr_err("failed to realloc() array [%s] data\n", nullstr_guard(arr->key));
                         return -ENOMEM;
                 }
+
+                base_ref = t;
         }
 
         arr->obj.arr.grow.alloc_cnt = need_alloc;
@@ -1694,13 +1695,13 @@ int jbuf_traverse_print_post(jkey_t *jkey, int has_next, int depth, int argc, va
                         break;
                 }
 
-                if (jkey->data.strval.map) {
+                if (jkey->data.int_base == 16) {
+                        printf_wrap(buf, buf_pos, buf_len, hex_fmt, d);
+                } else if (jkey->data.strval.map) {
                         if (d < jkey->data.strval.cnt)
                                 printf_wrap(buf, buf_pos, buf_len, "\"%s\"", nullstr_guard(jkey->data.strval.map[d]));
                         else
                                 printf_wrap(buf, buf_pos, buf_len, "null");
-                } else if (jkey->data.int_base == 16) {
-                        printf_wrap(buf, buf_pos, buf_len, hex_fmt, d);
                 } else {
                         printf_wrap(buf, buf_pos, buf_len, "%ju", d);
                 }
@@ -1763,7 +1764,7 @@ int jbuf_traverse_print_post(jkey_t *jkey, int has_next, int depth, int argc, va
         }
 
         case JKEY_TYPE_DOUBLE:
-                if (jkey->data.is_short_float)
+                if (jkey->flags.is_short_float)
                         printf_wrap(buf, buf_pos, buf_len, "%.4f", *(float *)jkey->data.ref);
                 else
                         printf_wrap(buf, buf_pos, buf_len, "%.6lf", *(double *)jkey->data.ref);
@@ -2076,8 +2077,11 @@ int jbuf_json_file_save(jbuf_t *jbuf, const char *path)
         char *buf = (char *)calloc(len, sizeof(char));
         int err;
 
+        // TODO: replace snprintf with file stream write
         if ((err = jbuf_traverse_snprintf(jbuf, &buf, &pos, &len)))
                 goto free;
+
+        pr_dbg("file: %s len: %zu\n", path, len);
 
         if ((err = spiffs_file_write(path, (uint8_t *)buf, pos))) {
                 pr_err("failed to write %s, err = %d %s\n", path, err, strerror(abs(err)));
