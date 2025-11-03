@@ -475,10 +475,12 @@ int vprintf_resize(char **buf, size_t *pos, size_t *len, const char *fmt, va_lis
 
                 // do realloc
                 if (*pos + append_len > *len) {
-                        sbuf = (char *)realloc_safe(*buf, *len, new_len);
-                        if (!sbuf)
+                        char *t = (char *)realloc(*buf, new_len);
+                        if (!t) {
                                 return -ENOMEM;
+                        }
 
+                        sbuf = t;
                         *buf = sbuf;
                         *len = new_len;
                 }
