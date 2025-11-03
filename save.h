@@ -190,6 +190,8 @@ static void save_init(int (*jbuf_maker)(jbuf_t *, struct config *))
         char fwhash[32 * 2 + 2] = { };
         uint8_t f = json_print_on_load;
 
+        memcpy(&g_cfg, &g_cfg_default, sizeof(g_cfg));
+
         if (!jbuf_maker) {
                 pr_err("to use save, must define constructor for json\n");
                 return;
