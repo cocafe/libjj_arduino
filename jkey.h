@@ -40,60 +40,71 @@ enum json_key_types {
         NUM_JKEY_TYPES,
 };
 
+typedef size_t jkey_cnt_t;
+typedef size_t jkey_size_t;
+
 struct json_key {
         const char             *key;
-        unsigned                type;
-        unsigned                cjson_type;
+        jkey_size_t             type;
+        jkey_size_t             cjson_type;
 
         struct {
-                size_t          sz;                     // (int, strptr): @data.ref points to data block sz
-                                                        // (strbuf): length of static allocated string buffer
-                                                        // (strref): this should be 0
-
-                void           *ref;                    // (data, obj): refer to data
-                ssize_t         ref_offs;               // offset address of parent's ref
-                uint8_t         ref_ptr;                // is @ref pointing to a pointer? (double pointer)
-                uint8_t         ref_parent;             // is @ref referencing parent's @data.ref?
+                uint16_t        ref_ptr         : 1;    // is @ref pointing to a pointer? (double pointer)
+                uint16_t        ref_parent      : 1;    // is @ref referencing parent's @data.ref?
                                                         // data_key of array actually refs parent,
                                                         // but this flag is not set for data_key.
-                uint8_t         ref_malloc;             // TODO: REMOVE?
-                uint8_t         int_base;
-                uint8_t         is_float;
-        } data;
+                uint16_t        ref_malloc      : 1;    // TODO: REMOVE?
 
-        struct {
-                void           *base_ref;               // (arrptr, objptr): base ref address
-                ssize_t         base_ref_offs;
-                uint8_t         base_ref_ptr;           // is @base_ref pointing to a pointer?
-                uint8_t         base_ref_malloc;        // TODO: REMOVE?
-                uint8_t         base_ref_parent;        // is @base_ref referencing parent's @data.ref?
+                uint16_t        base_ref_ptr    : 1;    // is @base_ref pointing to a pointer?
+                uint16_t        base_ref_malloc : 1;    // TODO: REMOVE?
+                uint16_t        base_ref_parent : 1;    // is @base_ref referencing parent's @data.ref?
                                                         //                                   ^^^^^^^^^
-                size_t          sz;
-                union {
-                        struct {
-                                size_t  ele_cnt;
-                        } fixed;
-                        struct {
-                                ssize_t offs_head;
-                                ssize_t offs_data;
-                                uint8_t head_inited;
-                        } list;
-                        struct {
-                                size_t  alloc_cnt;      // allocated element count
-                                size_t *ext_ele_cnt;    // element count for external iteration
-                                ssize_t ext_ele_cnt_offs;       // extern counter offset of parent's @data.ref
-                        } grow;
-                } arr;
-        } obj;
+        } flags;
 
-        struct {
-                char          **map;
-                size_t          cnt;
-        } strval;
+        union {
+                struct {
+                        jkey_size_t     sz;                     // (int, strptr): @data.ref points to data block sz
+                                                                // (strbuf): length of static allocated string buffer
+                                                                // (strref): this should be 0
+                        void           *ref;                    // (data, obj): refer to data
+                        unsigned        ref_offs;               // offset address of parent's ref
 
-        unsigned                child_cnt;
-        uint8_t                 child[] __attribute__((aligned(8)));
-};
+                        union {
+                                uint8_t                 is_short_float;
+                                uint8_t                 int_base;
+                                struct {
+                                        char          **map;
+                                        jkey_cnt_t      cnt;
+                                } strval;
+                        };
+                } data;
+
+                struct {
+                        void           *base_ref;               // (arrptr, objptr): base ref address
+                        unsigned        base_ref_offs;
+
+                        jkey_size_t     sz;
+                        union {
+                                struct {
+                                        jkey_cnt_t  ele_cnt;
+                                } fixed;
+                                struct {
+                                        jkey_cnt_t  offs_head;
+                                        jkey_cnt_t  offs_data;
+                                        jkey_cnt_t  head_inited;
+                                } list;
+                                struct {
+                                        jkey_cnt_t  alloc_cnt;      // allocated element count
+                                        jkey_cnt_t *ext_ele_cnt;    // element count for external iteration
+                                        jkey_cnt_t  ext_ele_cnt_offs;       // extern counter offset of parent's @data.ref
+                                } grow;
+                        } arr;
+
+                        jkey_size_t              child_cnt;
+                        uint8_t                  child[];
+                } obj;
+        };
+} __attribute__((packed));
 
 struct json_key_buf {
         size_t          alloc_sz;
@@ -218,19 +229,19 @@ static int is_jkey_compound(jkey_t *jkey)
 
 static int is_jkey_ref_ptr(jkey_t *jkey)
 {
-        return jkey->data.ref_ptr || jkey->obj.base_ref_ptr;
+        return jkey->flags.ref_ptr || jkey->flags.base_ref_ptr;
 }
 
 static int is_jkey_ref_null(jkey_t *jkey)
 {
-        if (jkey->data.ref_ptr) {
+        if (jkey->flags.ref_ptr) {
                 if (jkey->data.ref)
                         return (*(uint8_t **)jkey->data.ref == NULL) ? 1 : 0;
                 else
                         return 1;
         }
 
-        if (jkey->obj.base_ref_ptr) {
+        if (jkey->flags.base_ref_ptr) {
                 if (jkey->obj.base_ref)
                         return (*(uint8_t **)jkey->obj.base_ref == NULL) ? 1 : 0;
                 else
@@ -243,6 +254,7 @@ static int is_jkey_ref_null(jkey_t *jkey)
 static int jbuf_grow(jbuf_t *b, size_t jk_cnt)
 {
         size_t offset, new_sz;
+        void *t;
 
         if (!b)
                 return -EINVAL;
@@ -253,13 +265,20 @@ static int jbuf_grow(jbuf_t *b, size_t jk_cnt)
         offset = (uint8_t *)b->head - (uint8_t *)b->base;
         new_sz = b->alloc_sz + (jk_cnt * sizeof(jkey_t));
 
-        b->base = realloc_safe(b->base, b->alloc_sz, new_sz);
-        if (!b->base)
+        t = realloc(b->base, new_sz);
+        if (!t) {
+                pr_err("no memory\n");
                 return -ENOMEM;
+        }
 
+        pr_info("new: %p %zu\n", t, new_sz);
+
+        b->base = t;
         b->alloc_sz = new_sz;
         b->head = (uint8_t *)b->base + offset;
         b->end  = (uint8_t *)b->base + b->alloc_sz;
+
+        memset((uint8_t *)b->head, 0, (intptr_t)((uint8_t *)b->end - (uint8_t *)b->head));
 
         return 0;
 }
@@ -347,18 +366,18 @@ static jkey_t *jkey_array_data_key_get(jkey_t *arr)
         if (!is_cjson_type(arr->cjson_type, cJSON_Array))
                 return NULL;
 
-        if (arr->child_cnt == 0)
+        if (arr->obj.child_cnt == 0)
                 return NULL;
 
-        return &(((jkey_t *)arr->child)[0]);
+        return &(((jkey_t *)arr->obj.child)[0]);
 }
 
 static void jkey_strptr_set(jbuf_t *b, void *cookie)
 {
         jkey_t *k = jbuf_key_get(b, cookie);
         k->data.sz = 0;
-        k->data.ref_ptr = 1;
-        k->data.ref_malloc = 1;
+        k->flags.ref_ptr = 1;
+        k->flags.ref_malloc = 1;
 }
 
 void jkey_int_base_set(jbuf_t *b, void *cookie, uint8_t int_base)
@@ -376,7 +395,7 @@ void jkey_ref_parent_set(jbuf_t *b, void *cookie, ssize_t offset)
 
         k = jbuf_key_get(b, cookie);
         k->data.ref_offs = offset;
-        k->data.ref_parent = 1;
+        k->flags.ref_parent = 1;
 }
 
 void jkey_base_ref_parent_set(jbuf_t *b, void *cookie, ssize_t offset)
@@ -385,7 +404,7 @@ void jkey_base_ref_parent_set(jbuf_t *b, void *cookie, ssize_t offset)
 
         k = jbuf_key_get(b, cookie);
         k->obj.base_ref_offs = offset;
-        k->obj.base_ref_parent = 1;
+        k->flags.base_ref_parent = 1;
 }
 
 void *jbuf_obj_open(jbuf_t *b, const char *key)
@@ -402,8 +421,8 @@ void *jbuf_objptr_open(jbuf_t *b, const char *key, void *ref, size_t sz)
 
         k = jbuf_key_get(b, cookie);
         k->obj.base_ref = ref;
-        k->obj.base_ref_ptr = 1;
-        k->obj.base_ref_malloc = 1;
+        k->flags.base_ref_ptr = 1;
+        k->flags.base_ref_malloc = 1;
 
         return cookie;
 }
@@ -413,7 +432,7 @@ void jbuf_obj_close(jbuf_t *b, void *cookie)
         jkey_t *k = (jkey_t *)((size_t)b->base + (size_t)cookie);
         size_t len = ((size_t)b->head - (size_t)k - sizeof(jkey_t));
 
-        k->child_cnt = len / sizeof(jkey_t);
+        k->obj.child_cnt = len / sizeof(jkey_t);
 }
 
 void *jbuf_arr_open(jbuf_t *b, const char *key)
@@ -450,8 +469,8 @@ void __jbuf_fixed_arr_setup(jbuf_t *b, void *cookie, void *ref, size_t ele_cnt, 
         k->obj.arr.fixed.ele_cnt        = ele_cnt;
 
         if (base_ref_ptr) {
-                k->obj.base_ref_ptr     = 1;
-                k->obj.base_ref_malloc  = 1;
+                k->flags.base_ref_ptr     = 1;
+                k->flags.base_ref_malloc  = 1;
         }
 }
 
@@ -480,8 +499,8 @@ void jbuf_grow_arr_setup(jbuf_t *b, void *cookie, void **ref, size_t *ext_ele_cn
 
         k->data.ref                     = NULL;
         k->obj.base_ref                 = ref;
-        k->obj.base_ref_ptr             = 1;
-        k->obj.base_ref_malloc          = 1;
+        k->flags.base_ref_ptr             = 1;
+        k->flags.base_ref_malloc          = 1;
         k->obj.sz                       = ele_sz;
         k->obj.arr.grow.alloc_cnt       = 0;
         k->obj.arr.grow.ext_ele_cnt     = ext_ele_cnt;
@@ -521,8 +540,8 @@ void jbuf_list_arr_setup(jbuf_t *b,
         k->data.ref                     = NULL;
         k->data.sz                      = ctnr_data_sz;
         k->obj.base_ref                 = head;
-        k->obj.base_ref_ptr             = 0;
-        k->obj.base_ref_malloc          = 0;
+        k->flags.base_ref_ptr             = 0;
+        k->flags.base_ref_malloc          = 0;
         k->obj.sz                       = ctnr_sz;
         k->obj.arr.list.offs_head       = offsof_ctnr_head;
         k->obj.arr.list.offs_data       = offsof_ctnr_data;
@@ -585,8 +604,8 @@ void *__jbuf_strval_add(jbuf_t *b, const char *key, void *ref, size_t refsz, cha
                 return NULL;
 
         k = jbuf_key_get(b, cookie);
-        k->strval.map = map;
-        k->strval.cnt = map_cnt;
+        k->data.strval.map = map;
+        k->data.strval.cnt = map_cnt;
         k->cjson_type = cJSON_String;
 
         return cookie;
@@ -626,7 +645,7 @@ void *__jbuf_float_add(jbuf_t *b, const char *key, float *ref)
         void *cookie = jbuf_key_add(b, JKEY_TYPE_DOUBLE, key, ref, sizeof(double));
         jkey_t *k = jbuf_key_get(b, cookie);
 
-        k->data.is_float = 1;
+        k->data.is_short_float = 1;
 
         return cookie;
 }
@@ -700,13 +719,13 @@ static inline void jkey_data_ptr_deref(jkey_t *jkey, void **out, size_t new_sz)
 {
         *out = NULL;
 
-        if (jkey->data.ref_ptr) {
+        if (jkey->flags.ref_ptr) {
                 void *data_ref = *(uint8_t **)jkey->data.ref;
 
                 if (NULL == jkey->data.ref)
                         return;
 
-                if (NULL == data_ref && jkey->data.ref_malloc) {
+                if (NULL == data_ref && jkey->flags.ref_malloc) {
                         size_t data_sz = jkey->data.sz;
 
                         if (new_sz)
@@ -793,7 +812,7 @@ static int jkey_float_write(jkey_t *jkey, cJSON *node)
                 return -ENODATA;
         }
 
-        if (jkey->data.is_float) {
+        if (jkey->data.is_short_float) {
                 *(float *)dst = (float)val;
         } else {
 #ifdef __ARM_ARCH_7A__
@@ -879,10 +898,10 @@ static int jkey_string_write(jkey_t *jkey, cJSON *node)
                 if (jkey->data.int_base) {
                         uint64_t t = strtoull(json_str, NULL, jkey->data.int_base);
                         return ptr_word_write(dst, jkey->data.sz, t);
-                } else if (jkey->strval.map) {
+                } else if (jkey->data.strval.map) {
                         return strval_map_to_int(dst, jkey->data.sz, json_str,
-                                                 (char **)jkey->strval.map,
-                                                 jkey->strval.cnt);
+                                                 (char **)jkey->data.strval.map,
+                                                 jkey->data.strval.cnt);
                 } else {
                         pr_err("cannot convert string to number for key [%s]\n", nullstr_guard(jkey->key));
                         return -EINVAL;
@@ -916,7 +935,7 @@ static int jkey_string_write(jkey_t *jkey, cJSON *node)
                 break;
 
         default:
-                pr_err("invalid jkey type: %d, key [%s]\n", jkey->type, nullstr_guard(jkey->key));
+                pr_err("invalid jkey type: %zu, key [%s]\n", jkey->type, nullstr_guard(jkey->key));
                 return -EINVAL;
         }
 
@@ -1018,7 +1037,7 @@ static int jkey_array_key_check(jkey_t *arr)
             arr->type != JKEY_TYPE_LIST_ARRAY)
                 return -ECANCELED;
 
-        if (arr->child_cnt == 0) {
+        if (arr->obj.child_cnt == 0) {
                 pr_err("array key [%s] does not have any child keys to parse itself\n", nullstr_guard(arr->key));
                 return -EINVAL;
         }
@@ -1038,7 +1057,7 @@ static int jkey_array_key_check(jkey_t *arr)
 
 static int jkey_array_data_key_check(jkey_t *arr_key, jkey_t *data_key)
 {
-        if (!data_key->data.ref_parent && !data_key->obj.base_ref_parent) {
+        if (!data_key->flags.ref_parent && !data_key->flags.base_ref_parent) {
                 pr_err("array [%s] data key should ref its parent\n", nullstr_guard(arr_key->key));
                 return -EINVAL;
         }
@@ -1051,8 +1070,8 @@ static int jkey_base_ref_alloc(jkey_t *jkey, size_t base_sz)
         void *base_ref;
 
         if (!jkey->obj.base_ref ||
-            !jkey->obj.base_ref_ptr ||
-            !jkey->obj.base_ref_malloc)
+            !jkey->flags.base_ref_ptr ||
+            !jkey->flags.base_ref_malloc)
                 return 0;
 
         if (!base_sz) {
@@ -1104,7 +1123,7 @@ static int jkey_fixed_grow_array_ref_update(jkey_t *arr_key, jkey_t *data_key, s
                 return -EINVAL;
         }
 
-        if (arr_key->obj.base_ref_ptr)
+        if (arr_key->flags.base_ref_ptr)
                 base_ref = *((uint8_t **)arr_key->obj.base_ref);
 
         if (base_ref == NULL) {
@@ -1112,10 +1131,10 @@ static int jkey_fixed_grow_array_ref_update(jkey_t *arr_key, jkey_t *data_key, s
                 return -ENODATA;
         }
 
-        if (data_key->data.ref_parent)
+        if (data_key->flags.ref_parent)
                 data_key->data.ref = (uint8_t *)base_ref + idx_offset;
 
-        if (data_key->obj.base_ref_parent)
+        if (data_key->flags.base_ref_parent)
                 data_key->obj.base_ref = (uint8_t *)base_ref + idx_offset;
 
         return 0;
@@ -1131,14 +1150,14 @@ static int jkey_grow_array_realloc(jkey_t *arr, size_t idx)
                 return 0;
         }
 
-        if (!arr->obj.base_ref_ptr || !arr->obj.base_ref || !arr->obj.sz) {
+        if (!arr->flags.base_ref_ptr || !arr->obj.base_ref || !arr->obj.sz) {
                 pr_err("invalid grow array [%s]\n", nullstr_guard(arr->key));
                 return -EINVAL;
         }
 
         base_ref = *(uint8_t **)arr->obj.base_ref;
         if (base_ref == NULL) {
-                if (!arr->obj.base_ref_malloc) {
+                if (!arr->flags.base_ref_malloc) {
                         pr_err("array [%s] refer NULL pointer and not do_malloc\n", nullstr_guard(arr->key));
                         return -EINVAL;
                 }
@@ -1215,10 +1234,10 @@ static int jkey_list_array_alloc(jkey_t *arr_key, void **container)
 
 static int jkey_list_array_ref_update(jkey_t *arr_key, jkey_t *data_key, void *container)
 {
-        if (data_key->data.ref_parent)
+        if (data_key->flags.ref_parent)
                 data_key->data.ref = (uint8_t *)container + arr_key->obj.arr.list.offs_data;
 
-        if (data_key->obj.base_ref_parent)
+        if (data_key->flags.base_ref_parent)
                 data_key->obj.base_ref = (uint8_t *)container + arr_key->obj.arr.list.offs_data;
 
         return 0;
@@ -1226,7 +1245,7 @@ static int jkey_list_array_ref_update(jkey_t *arr_key, jkey_t *data_key, void *c
 
 static int jkey_obj_key_ref_update(jkey_t *jkey)
 {
-        if (jkey->obj.base_ref && jkey->obj.base_ref_ptr)
+        if (jkey->obj.base_ref && jkey->flags.base_ref_ptr)
                 jkey->data.ref = *(uint8_t **)jkey->obj.base_ref;
 
         return 0;
@@ -1239,18 +1258,18 @@ static int jkey_child_key_ref_update(jkey_t *parent)
         if (!parent->data.ref)
                 return 0;
 
-        for (size_t i = 0; i < parent->child_cnt; i++) {
-                child = &((jkey_t *)parent->child)[i];
+        for (size_t i = 0; i < parent->obj.child_cnt; i++) {
+                child = &((jkey_t *)parent->obj.child)[i];
 
                 if (is_jkey_compound(child)) {
-                        if (child->child_cnt)
-                                i += child->child_cnt;
+                        if (child->obj.child_cnt)
+                                i += child->obj.child_cnt;
                 }
 
-                if (child->data.ref_parent)
+                if (child->flags.ref_parent)
                         child->data.ref = (uint8_t *)parent->data.ref + child->data.ref_offs;
 
-                if (child->obj.base_ref_parent)
+                if (child->flags.base_ref_parent)
                         child->obj.base_ref = (uint8_t *)parent->data.ref + child->obj.base_ref_offs;
         }
 
@@ -1261,18 +1280,18 @@ static int jkey_child_arr_key_update(jkey_t *parent)
 {
         jkey_t *child;
 
-        for (size_t i = 0; i < parent->child_cnt; i++) {
-                child = &((jkey_t *)parent->child)[i];
+        for (size_t i = 0; i < parent->obj.child_cnt; i++) {
+                child = &((jkey_t *)parent->obj.child)[i];
 
                 if (is_jkey_compound(child)) {
-                        if (child->child_cnt)
-                                i += child->child_cnt;
+                        if (child->obj.child_cnt)
+                                i += child->obj.child_cnt;
                 }
 
                 if (!is_jkey_writable_array(child))
                         continue;
 
-                if (!child->obj.base_ref_parent)
+                if (!child->flags.base_ref_parent)
                         continue;
 
                 switch (child->type) {
@@ -1299,15 +1318,15 @@ static int jkey_child_arr_key_update(jkey_t *parent)
 
 static jkey_t *jkey_child_key_find(jkey_t *parent, cJSON *child_node)
 {
-        for (size_t i = 0; i < parent->child_cnt; i++) {
-                jkey_t *k = &((jkey_t *)parent->child)[i];
+        for (size_t i = 0; i < parent->obj.child_cnt; i++) {
+                jkey_t *k = &((jkey_t *)parent->obj.child)[i];
 
                 if (is_jkey_cjson_node_match(k, child_node))
                         return k;
 
                 if (is_jkey_compound(k)) {
-                        if (k->child_cnt)
-                                i += k->child_cnt;
+                        if (k->obj.child_cnt)
+                                i += k->obj.child_cnt;
                 }
         }
 
@@ -1392,7 +1411,7 @@ int jkey_cjson_load_recursive(jkey_t *jkey, cJSON *node, int depth)
 
                 // always take the first child,
                 // since mono-type array is only supported
-                data_key = &((jkey_t *)arr_key->child)[0];
+                data_key = &((jkey_t *)arr_key->obj.child)[0];
 
                 if ((err = jkey_array_data_key_check(arr_key, data_key)))
                         return err;
@@ -1632,7 +1651,7 @@ int jbuf_traverse_print_post(jkey_t *jkey, int has_next, int depth, int argc, va
         if (jkey->data.ref) {
                 ref = jkey->data.ref;
 
-                if (jkey->data.ref_ptr)
+                if (jkey->flags.ref_ptr)
                         ref = *(uint8_t **)jkey->data.ref;
         }
 
@@ -1673,9 +1692,9 @@ int jbuf_traverse_print_post(jkey_t *jkey, int has_next, int depth, int argc, va
                         break;
                 }
 
-                if (jkey->strval.map) {
-                        if (d < jkey->strval.cnt)
-                                printf_wrap(buf, buf_pos, buf_len, "\"%s\"", nullstr_guard(jkey->strval.map[d]));
+                if (jkey->data.strval.map) {
+                        if (d < jkey->data.strval.cnt)
+                                printf_wrap(buf, buf_pos, buf_len, "\"%s\"", nullstr_guard(jkey->data.strval.map[d]));
                         else
                                 printf_wrap(buf, buf_pos, buf_len, "null");
                 } else if (jkey->data.int_base == 16) {
@@ -1742,7 +1761,7 @@ int jbuf_traverse_print_post(jkey_t *jkey, int has_next, int depth, int argc, va
         }
 
         case JKEY_TYPE_DOUBLE:
-                if (jkey->data.is_float)
+                if (jkey->data.is_short_float)
                         printf_wrap(buf, buf_pos, buf_len, "%.4f", *(float *)jkey->data.ref);
                 else
                         printf_wrap(buf, buf_pos, buf_len, "%.6lf", *(double *)jkey->data.ref);
@@ -1750,7 +1769,7 @@ int jbuf_traverse_print_post(jkey_t *jkey, int has_next, int depth, int argc, va
                 break;
 
         default:
-                pr_err("unknown data type: %u\n", jkey->type);
+                pr_err("unknown data type: %zu\n", jkey->type);
                 break;
         }
 
@@ -1865,17 +1884,17 @@ static int jkey_null_child_conut(jkey_t *parent)
         int sum = 0;
         jkey_t *child;
 
-        for (size_t i = 0; i < parent->child_cnt; i++) {
-                child = &((jkey_t *)parent->child)[i];
+        for (size_t i = 0; i < parent->obj.child_cnt; i++) {
+                child = &((jkey_t *)parent->obj.child)[i];
 
                 if (is_jkey_compound(child)) {
-                        if (child->child_cnt)
-                                i += child->child_cnt;
+                        if (child->obj.child_cnt)
+                                i += child->obj.child_cnt;
                 }
 
                 if (is_jkey_ref_ptr(child) && is_jkey_ref_null(child)) {
                         if (is_jkey_compound(child))
-                                sum += 1 + child->child_cnt; // 1: child self
+                                sum += 1 + child->obj.child_cnt; // 1: child self
                         else
                                 sum++;
                 }
@@ -1911,12 +1930,12 @@ int _jbuf_traverse_recursive(jkey_t *jkey,
                         return err == -ECANCELED ? 0 : err;
         }
 
-        for (size_t i = 0; i < jkey->child_cnt; i++) {
-                jkey_t *child = &(((jkey_t *)jkey->child)[i]);
+        for (size_t i = 0; i < jkey->obj.child_cnt; i++) {
+                jkey_t *child = &(((jkey_t *)jkey->obj.child)[i]);
 
                 if (is_jkey_compound(child)) {
-                        if (child->child_cnt)
-                                i += child->child_cnt;
+                        if (child->obj.child_cnt)
+                                i += child->obj.child_cnt;
                 }
 
                 // fixed/grow/list array
@@ -1926,7 +1945,7 @@ int _jbuf_traverse_recursive(jkey_t *jkey,
                 } else { // ro array/object/data
                         int last_one = 0;
 
-                        if (i + 1 + null_child_cnt >= jkey->child_cnt)
+                        if (i + 1 + null_child_cnt >= jkey->obj.child_cnt)
                                 last_one = 1;
 
                         if ((err = _jbuf_traverse_recursive(child, pre, post, !last_one, depth + 1, argc, arg)))
@@ -2027,7 +2046,7 @@ int jbuf_json_file_load(jbuf_t *jbuf, const char *path)
 
         text = (char *)spiffs_file_read(path, &err, &len);
         if (!text) {
-                pr_err("failed to read file %s, err = %d %s\n", path, err, strerror(abs(err)));
+                pr_err("failed to read file %s\n", path);
                 return -EIO;
         }
 
@@ -2096,7 +2115,7 @@ int jkey_ref_free(jkey_t *jkey)
         if (!jkey->data.ref)
                 return 0;
 
-        if (!jkey->data.ref_ptr || !jkey->data.ref_malloc)
+        if (!jkey->flags.ref_ptr || !jkey->flags.ref_malloc)
                 return 0;
 
         ref = *(uint8_t **)jkey->data.ref;
@@ -2119,7 +2138,7 @@ int jkey_base_ref_free(jkey_t *jkey)
         if (!jkey->obj.base_ref)
                 return 0;
 
-        if (!jkey->obj.base_ref_ptr || !jkey->obj.base_ref_malloc)
+        if (!jkey->flags.base_ref_ptr || !jkey->flags.base_ref_malloc)
                 return 0;
 
         base_ref = *(uint8_t **)jkey->obj.base_ref;
