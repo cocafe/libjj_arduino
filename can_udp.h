@@ -83,6 +83,19 @@ static int __unused can_udp_mc_send(can_frame_t *f)
         return 0;
 }
 
+static void can_udp_mc_send_ratelimited(can_frame_t *f)
+{
+#ifdef CONFIG_HAVE_CAN_RLIMIT
+        if (is_can_id_ratelimited(can_ratelimit_get(f->id),
+                                  CAN_RLIMIT_TYPE_UDP,
+                                  esp32_millis())) {
+                return;
+        }
+#endif
+
+        can_udp_mc_send(f);
+}
+
 static int can_udp_mc_recv(void)
 {
         static uint8_t buf[(sizeof(can_frame_t) + 8) + 1] = { };
