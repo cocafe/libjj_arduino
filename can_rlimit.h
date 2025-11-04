@@ -46,6 +46,17 @@ struct can_rlimit_ctx {
 static struct can_rlimit_cfg can_rlimit_default_cfg = { };
 static struct can_rlimit_ctx can_rlimit = { };
 
+static inline int update_hz_to_us(int hz)
+{
+        if (hz == 0)
+                return 0;
+
+        if (hz < 0)
+                return -1;
+        
+        return 1ULL * 1000 * 1000 / hz;
+}
+
 static inline int update_hz_to_ms(int hz)
 {
         if (hz == 0)
