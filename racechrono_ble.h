@@ -42,7 +42,6 @@ struct ble_ctx {
 };
 
 static struct ble_ctx rc_ble;
-static SemaphoreHandle_t lck_ble_send;
 
 static uint8_t rc_deny_all = 0;
 static uint8_t rc_allow_all = 0;
@@ -93,7 +92,8 @@ static char *ble_device_name_generate(char *str)
 
 static void __rc_ble_can_frame_send(struct ble_ctx *ctx, uint32_t pid, uint8_t *data, uint8_t len)
 {
-        static uint8_t buffer[8 + 4] = { };
+        static uint32_t lock = 0;
+        uint8_t buffer[8 + 4];
 
         if (len > 8)
                 len = 8;
@@ -103,8 +103,15 @@ static void __rc_ble_can_frame_send(struct ble_ctx *ctx, uint32_t pid, uint8_t *
         buffer[2] = (pid >> 16) & 0xFF;
         buffer[3] = (pid >> 24) & 0xFF;
         memcpy(&buffer[4], data, len);
+
+        while (!esp_cpu_compare_and_set(&lock, 0, 1)) {
+                taskYIELD();
+        }
+
         ctx->char_canbus->setValue(buffer, 4 + len);
         ctx->char_canbus->notify();
+
+        WRITE_ONCE(lock, 0);
 }
 
 static void rc_ble_can_frame_send(can_frame_t *f, struct can_rlimit_node *rlimit)
@@ -129,9 +136,7 @@ static void rc_ble_can_frame_send(can_frame_t *f, struct can_rlimit_node *rlimit
 #endif
 
 send:
-        xSemaphoreTake(lck_ble_send, portMAX_DELAY);
         __rc_ble_can_frame_send(&rc_ble, f->id, f->data, f->dlc);
-        xSemaphoreGive(lck_ble_send);
 
         if (now - ts_hz_stats >= 1000) {
                 ts_hz_stats = now;
@@ -152,9 +157,7 @@ static void rc_ble_can_frame_send_ratelimited(can_frame_t *f)
         static struct can_rlimit_node *rlimit = NULL;
 
 #ifdef CONFIG_HAVE_CAN_RLIMIT
-        if (!rlimit || f->id != rlimit->can_id) {
-                rlimit = can_ratelimit_get(f->id);
-        }
+        rlimit = can_ratelimit_get(f->id);
 #endif
 
         rc_ble_can_frame_send(f, rlimit);
@@ -176,7 +179,7 @@ class ServerCallbacks : public NimBLEServerCallbacks
                 ble_is_connected = 1;
 
                 if (!esp_timer_is_active(rc_ready_timer)) {
-                        esp_timer_start_once(rc_ready_timer, 5ULL * 1000 * 1000);
+                        esp_timer_start_once(rc_ready_timer, 6ULL * 1000 * 1000);
                         pr_dbg("rc ready timer started\n");
                 }
 
@@ -199,7 +202,7 @@ class ServerCallbacks : public NimBLEServerCallbacks
 
                 // delay to cancel ready
                 if (!esp_timer_is_active(rc_ready_timer)) {
-                        esp_timer_start_once(rc_ready_timer, 5ULL * 1000 * 1000);
+                        esp_timer_start_once(rc_ready_timer, 2ULL * 1000 * 1000);
                 }
 
                 NimBLEDevice::startAdvertising();
@@ -269,7 +272,7 @@ static void rc_char_pid_on_write(const uint8_t *data, uint16_t len)
 
                 break;
 
-        case 1: 
+        case 1:
                 if (len == 3) {
                         uint16_t update_intv_ms = data[1] << 8 | data[2];
                         pr_info("allow all pid, update_intv_ms: %u\n", update_intv_ms);
@@ -295,7 +298,7 @@ static void rc_char_pid_on_write(const uint8_t *data, uint16_t len)
                         unsigned update_hz = rc_ble.cfg->update_hz;
 
                         rlimit = can_ratelimit_get(pid);
-                        
+
                         if (!rlimit) {
                                 rlimit = can_ratelimit_add(pid);
                         }
@@ -366,8 +369,6 @@ static void racechrono_nimble_init(struct ble_ctx *ctx)
 static int __unused racechrono_ble_init(struct ble_cfg *cfg)
 {
         struct ble_ctx *ctx = &rc_ble;
-
-        lck_ble_send = xSemaphoreCreateMutex();
 
         if (!cfg)
                 return -EINVAL;
