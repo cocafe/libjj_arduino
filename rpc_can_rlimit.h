@@ -69,13 +69,10 @@ void rpc_can_rlimit_add(void)
                                 if (n) {
                                         http_rpc.send(500, "text/plain", "Already in hash table\n");
                                 } else {
-                                        can_rlimit_lock();
                                         n = can_ratelimit_add(id);
 
                                         if (n)
                                                 can_ratelimit_set(n, type, hz);
-
-                                        can_rlimit_unlock();
 
                                         if (!n)
                                                 http_rpc.send(500, "text/plain", "No memory\n");
@@ -123,9 +120,7 @@ void rpc_can_rlimit_add(void)
 
                                         http_rpc.send(200, "text/plain", buf);
                                 } else {
-                                        can_rlimit_lock();
                                         can_ratelimit_del(n);
-                                        can_rlimit_unlock();
 
                                         http_rpc.send(200, "text/plain", "OK\n");
                                 }
@@ -137,7 +132,6 @@ void rpc_can_rlimit_add(void)
                         struct can_rlimit_node *n;
                         unsigned bkt;
 
-                        can_rlimit_lock();
                         hash_for_each(can_rlimit.htbl, bkt, n, hnode) {
                                 c += snprintf(&buf[c], sizeof(buf) - c, "0x%03x ", n->can_id);
 
@@ -147,7 +141,6 @@ void rpc_can_rlimit_add(void)
 
                                 c += snprintf(&buf[c], sizeof(buf) - c, "\n");
                         }
-                        can_rlimit_unlock();
 
                         http_rpc.send(200, "text/plain", buf);
                 }

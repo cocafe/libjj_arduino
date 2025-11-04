@@ -126,7 +126,6 @@ static void can_recv_one(can_frame_t *f)
         struct can_rlimit_node *rlimit = NULL;
 
         if (can_rlimit.cfg->enabled) {
-                can_rlimit_lock();
 
                 if (!rlimit || rlimit->can_id != f->id) {
                         rlimit = can_ratelimit_get(f->id);
@@ -162,12 +161,6 @@ static void can_recv_one(can_frame_t *f)
                         );
                 }
         }
-
-#ifdef CONFIG_HAVE_CAN_RLIMIT
-        if (can_rlimit.cfg->enabled) {
-                can_rlimit_unlock();
-        }
-#endif
 
 #ifdef CAN_LED_BLINK
         can_txrx = 1;

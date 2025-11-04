@@ -6,6 +6,8 @@
 #include "list.h"
 #include "hashtable.h"
 
+#define CAN_RLIMIT_BKT_SIZE             (5)
+
 enum {
         CAN_RLIMIT_TYPE_TCP,
         CAN_RLIMIT_TYPE_UDP,
@@ -36,8 +38,8 @@ struct can_rlimit_node {
 };
 
 struct can_rlimit_ctx {
-        struct hlist_head htbl[1 << 5];
-        SemaphoreHandle_t lck;
+        struct hlist_head htbl[1 << CAN_RLIMIT_BKT_SIZE];
+        portMUX_TYPE lck[1 << CAN_RLIMIT_BKT_SIZE];
         struct can_rlimit_cfg *cfg;
 };
 
@@ -75,21 +77,25 @@ static inline struct can_rlimit_node *can_ratelimit_add(unsigned can_id)
         }
 
         INIT_HLIST_NODE(&n->hnode);
-
         n->can_id = can_id;
-
-        hash_add(can_rlimit.htbl, &n->hnode, n->can_id);
 
         for (unsigned i = 0; i < ARRAY_SIZE(n->data); i++) {
                 struct can_rlimit_data *d = &n->data[i];
                 d->update_ms = update_hz_to_ms(can_rlimit.cfg->default_hz[i]);
         }
 
+        uint32_t bkt = hash_bkt(can_rlimit.htbl, can_id);
+
+        taskENTER_CRITICAL(&can_rlimit.lck[bkt]);
+        hash_add(can_rlimit.htbl, &n->hnode, n->can_id);
+        taskEXIT_CRITICAL(&can_rlimit.lck[bkt]);
+
         pr_dbg("can_id 0x%03x\n", can_id);
 
         return n;
 }
 
+// FIXME: rarely invoke, did not lock...
 static inline void can_ratelimit_del(struct can_rlimit_node *n)
 {
         hash_del(&n->hnode);
@@ -188,20 +194,6 @@ static int is_can_id_ratelimited(struct can_rlimit_node *n, unsigned type, uint3
         return ret;
 }
 
-static void can_rlimit_lock(void)
-{
-#ifdef CONFIG_HAVE_CAN_RLIMIT
-        xSemaphoreTake(can_rlimit.lck, portMAX_DELAY);
-#endif
-}
-
-static void can_rlimit_unlock(void)
-{
-#ifdef CONFIG_HAVE_CAN_RLIMIT
-        xSemaphoreGive(can_rlimit.lck);
-#endif
-}
-
 static int can_ratelimit_init(struct can_rlimit_cfg *cfg)
 {
         can_rlimit.cfg = cfg;
@@ -210,11 +202,14 @@ static int can_ratelimit_init(struct can_rlimit_cfg *cfg)
                 can_rlimit.cfg = &can_rlimit_default_cfg;
         }
 
+        for (int i = 0; i < ARRAY_SIZE(can_rlimit.lck); i++) {
+                can_rlimit.lck[i] = portMUX_INITIALIZER_UNLOCKED;
+        }
+
         for (int i = 0; i < ARRAY_SIZE(can_rlimit.htbl); i++) {
                 can_rlimit.htbl[i].first = NULL;
         }
 
-        can_rlimit.lck = xSemaphoreCreateMutex();
         hash_init(can_rlimit.htbl);
 
         return 0;

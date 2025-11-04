@@ -93,10 +93,11 @@ static char *ble_device_name_generate(char *str)
 
 static void __rc_ble_can_frame_send(struct ble_ctx *ctx, uint32_t pid, uint8_t *data, uint8_t len)
 {
+        static uint8_t buffer[8 + 4] = { };
+
         if (len > 8)
                 len = 8;
 
-        uint8_t buffer[8 + 4] = { 0 };
         buffer[0] = pid & 0xFF;
         buffer[1] = (pid >> 8) & 0xFF;
         buffer[2] = (pid >> 16) & 0xFF;
@@ -162,9 +163,7 @@ static void rc_ble_can_frame_send_ratelimited(can_frame_t *f)
 static void rc_can_rlimit_set_all(int update_hz)
 {
 #ifdef CONFIG_HAVE_CAN_RLIMIT
-        can_rlimit_lock();
         can_ratelimit_set_all(CAN_RLIMIT_TYPE_RC, update_hz);
-        can_rlimit_unlock();
 #endif
 }
 
@@ -295,8 +294,6 @@ static void rc_char_pid_on_write(const uint8_t *data, uint16_t len)
                         struct can_rlimit_node *rlimit;
                         unsigned update_hz = rc_ble.cfg->update_hz;
 
-                        can_rlimit_lock();
-
                         rlimit = can_ratelimit_get(pid);
                         
                         if (!rlimit) {
@@ -304,8 +301,6 @@ static void rc_char_pid_on_write(const uint8_t *data, uint16_t len)
                         }
 
                         can_ratelimit_set(rlimit, CAN_RLIMIT_TYPE_RC, update_hz);
-
-                        can_rlimit_unlock();
 
                         pr_info("allow pid: 0x%03lx update_intv_ms: %u\n", pid, update_hz ? update_hz_to_ms(update_hz) : 0);
 #else
