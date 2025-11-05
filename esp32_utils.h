@@ -6,6 +6,7 @@
 #include <string.h>
 #include <errno.h>
 
+#include <chip-debug-report.h>
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
 #include <Arduino.h>
