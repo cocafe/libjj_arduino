@@ -91,25 +91,26 @@ static char *ble_device_name_generate(char *str)
         return dev_name;
 }
 
-static void __rc_ble_can_frame_send(struct ble_ctx *ctx, uint32_t pid, uint8_t *data, uint8_t len)
+static void __rc_ble_can_frame_send(struct ble_ctx *ctx, can_frame_t *f)
 {
         static uint32_t lock = 0;
-        uint8_t buffer[8 + 4];
+        uint8_t *buf;
 
-        if (len > 8)
-                len = 8;
+        // CAN ID litten endian
+        // buffer[0] = pid & 0xFF;
+        // buffer[1] = (pid >> 8) & 0xFF;
+        // buffer[2] = (pid >> 16) & 0xFF;
+        // buffer[3] = (pid >> 24) & 0xFF;
 
-        buffer[0] = pid & 0xFF;
-        buffer[1] = (pid >> 8) & 0xFF;
-        buffer[2] = (pid >> 16) & 0xFF;
-        buffer[3] = (pid >> 24) & 0xFF;
-        memcpy(&buffer[4], data, len);
+        // payload format: 4bytes ID + data sequences
+
+        buf = (uint8_t *)&f->id;
 
         while (!esp_cpu_compare_and_set(&lock, 0, 1)) {
                 taskYIELD();
         }
 
-        ctx->char_canbus->setValue(buffer, 4 + len);
+        ctx->char_canbus->setValue(buf, 4 + f->dlc);
         ctx->char_canbus->notify();
 
         WRITE_ONCE(lock, 0);
@@ -137,7 +138,7 @@ static void rc_ble_can_frame_send(can_frame_t *f, struct can_rlimit_node *rlimit
 #endif
 
 send:
-        __rc_ble_can_frame_send(&rc_ble, f->id, f->data, f->dlc);
+        __rc_ble_can_frame_send(&rc_ble, f);
 
         if (now - ts_hz_stats >= 1000) {
                 ts_hz_stats = now;

@@ -57,7 +57,6 @@ struct can_hdr_fc {
 
 struct can_frame_t {
         __le32 magic;
-        __le32 id;
         union {
                 struct {
                         uint8_t heartbeat : 1;
@@ -68,6 +67,7 @@ struct can_frame_t {
                 uint8_t flags;
         };
         uint8_t dlc;
+        __le32 id;
         uint8_t data[];
 } __attribute__((packed));
 
