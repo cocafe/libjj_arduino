@@ -77,6 +77,7 @@ static char *ble_device_name_generate(char *str)
         static char dev_name[64];
 
         if (str) {
+                memset(buf, '\0', sizeof(buf));
                 strncpy(buf, str, sizeof(buf) < strlen(str) ? sizeof(buf) : strlen(str));
         }
 
