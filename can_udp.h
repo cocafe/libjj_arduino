@@ -83,7 +83,7 @@ static int __unused can_udp_mc_send(can_frame_t *f)
         return 0;
 }
 
-static void can_udp_mc_send_ratelimited(can_frame_t *f)
+static void __unused can_udp_mc_send_ratelimited(can_frame_t *f)
 {
 #ifdef CONFIG_HAVE_CAN_RLIMIT
         if (is_can_id_ratelimited(can_ratelimit_get(f->id),
@@ -136,7 +136,7 @@ static void task_can_udp_recv(void *arg)
         pr_info("started\n");
 
         while (1) {
-                if (READ_ONCE(can_udp_mc_sock) < -1) {
+                if (READ_ONCE(can_udp_mc_sock) < 0) {
                         vTaskDelay(pdMS_TO_TICKS(5000));
                         continue;
                 }
@@ -192,22 +192,18 @@ static void can_udp_mc_close(void)
         }
 }
 
-static void can_fwd_wifi_event_cb(int event)
+static void can_fwd_wifi_event_cb(esp_event_base_t event_base, int32_t event_id, void *event_data, void *userdata)
 {
-        switch (event) {
-        case WIFI_EVENT_IP_GOT:
+        if (event_base == IP_EVENT && event_id == IP_EVENT_STA_GOT_IP) {
                 if (READ_ONCE(can_udp_mc_sock) < 0 && g_canudp_cfg) {
-                        can_udp_mc_create(WiFi.localIP().toString().c_str(), g_canudp_cfg->mc.mcaddr, g_canudp_cfg->mc.port);
+                        ip_addr_t addr;
+                        wifi_netif_ip4_get(esp_netif_get_default_netif(), (esp_ip4_addr_t *)&addr);
+                        can_udp_mc_create(inet_ntoa(addr), g_canudp_cfg->mc.mcaddr, g_canudp_cfg->mc.port);
                 }
-
-                break;
+        }
         
-        case WIFI_EVENT_DISCONNECTED:
+        if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_DISCONNECTED) {
                 can_udp_mc_close();
-                break;
-
-        default:
-                break;
         }
 }
 
@@ -223,10 +219,12 @@ static void __unused can_udp_init(struct canudp_cfg *cfg)
 
         lck_can_udp_cb = xSemaphoreCreateMutex();
 
-        if (wifi_mode_get() == WIFI_AP) {
-                can_udp_mc_create(WiFi.softAPIP().toString().c_str(), cfg->mc.mcaddr, cfg->mc.port);
+        if (wifi_mode_get() == ESP_WIFI_MODE_AP) {
+                ip_addr_t addr;
+                wifi_netif_ip4_get(esp_netif_get_default_netif(), (esp_ip4_addr_t *)&addr);
+                can_udp_mc_create(inet_ntoa(addr), g_canudp_cfg->mc.mcaddr, g_canudp_cfg->mc.port);
         } else { // STA, STA_AP
-                wifi_event_cb_register(can_fwd_wifi_event_cb);
+                wifi_event_cb_register(can_fwd_wifi_event_cb, NULL);
         }
 
         if (cfg->udp_rx_accept)

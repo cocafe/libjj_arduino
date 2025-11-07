@@ -157,7 +157,7 @@ static int can_ratelimit_set(struct can_rlimit_node *n, unsigned type, int updat
         return 0;
 }
 
-static void can_ratelimit_set_all(unsigned type, int update_hz)
+static __unused void can_ratelimit_set_all(unsigned type, int update_hz)
 {
         uint32_t bkt;
         struct hlist_node *tmp;
@@ -189,7 +189,7 @@ static int __is_can_id_ratelimited(struct can_rlimit_node *n, unsigned type, uin
         return 1;
 }
 
-static int is_can_id_ratelimited(struct can_rlimit_node *n, unsigned type, uint32_t now)
+static __unused int is_can_id_ratelimited(struct can_rlimit_node *n, unsigned type, uint32_t now)
 {
         int ret;
 
@@ -205,7 +205,7 @@ static int is_can_id_ratelimited(struct can_rlimit_node *n, unsigned type, uint3
         return ret;
 }
 
-static int can_ratelimit_init(struct can_rlimit_cfg *cfg)
+static __unused int can_ratelimit_init(struct can_rlimit_cfg *cfg)
 {
         can_rlimit.cfg = cfg;
 

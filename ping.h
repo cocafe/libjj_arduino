@@ -105,22 +105,16 @@ static void __ping4_deinit(void *arg)
         }
 }
 
-struct ping_ctx *ping4_init(const char *tgt, ping_cb_t cb, void *userdata)
+struct ping_ctx *ping4_init_ip4(ip_addr_t tgt, ping_cb_t cb, void *userdata)
 {
-        ip_addr_t target_ip;
         struct ping_ctx *ctx;
-
-        if (!ipaddr_aton(tgt, &target_ip)) {
-                pr_info("invalid ip addr: %s\n", tgt);
-                return NULL;
-        }
 
         ctx = (struct ping_ctx *)calloc(1, sizeof(struct ping_ctx));
         if (!ctx)
                 return NULL;
 
         ctx->sem = xSemaphoreCreateBinary();
-        ctx->tgt = target_ip;
+        ctx->tgt = tgt;
         ctx->cb = cb;
         ctx->userdata = userdata;
 
@@ -136,6 +130,18 @@ struct ping_ctx *ping4_init(const char *tgt, ping_cb_t cb, void *userdata)
         }
 
         return ctx;
+}
+
+struct ping_ctx *ping4_init(const char *tgt, ping_cb_t cb, void *userdata)
+{
+        ip_addr_t dst;
+
+        if (!ipaddr_aton(tgt, &dst)) {
+                pr_info("invalid ip addr: %s\n", tgt);
+                return NULL;
+        }
+
+        return ping4_init_ip4(dst, cb, userdata);
 }
 
 int ping4_send(struct ping_ctx *ctx)

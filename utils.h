@@ -7,6 +7,10 @@
 #include <endian.h>
 #include <memory.h>
 
+#include <lwip/inet.h>
+#include <lwip/netdb.h>
+#include <lwip/sockets.h>
+
 typedef uint32_t __u32;
 typedef uint64_t __u64;
 
@@ -524,6 +528,13 @@ int snprintf_resize(char **buf, size_t *pos, size_t *len, const char *fmt, ...)
         va_end(ap);
 
         return ret;
+}
+
+static int is_valid_ipaddr(char *ipstr, int ipver)
+{
+        unsigned char buf[sizeof(struct in6_addr)];
+
+        return (inet_pton(ipver, ipstr, buf) == 1);
 }
 
 #endif // __LIBJJ_UTLIS_H__

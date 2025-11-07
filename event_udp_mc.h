@@ -173,7 +173,7 @@ static void task_event_udp_mc_recv(void *arg)
         pr_info("started\n");
 
         while (1) {
-                if (READ_ONCE(evt_udp_mc_sock) < -1) {
+                if (READ_ONCE(evt_udp_mc_sock) < 0) {
                         vTaskDelay(pdMS_TO_TICKS(5000));
                         continue;
                 }
@@ -203,21 +203,18 @@ static void event_udp_mc_sock_close(void)
         }
 }
 
-static void event_udp_mc_wifi_event_cb(int event)
+static void event_udp_mc_wifi_event_cb(esp_event_base_t event_base, int32_t event_id, void *event_data, void *userdata)
 {
-        switch (event) {
-        case WIFI_EVENT_IP_GOT:
+        if (event_base == IP_EVENT && event_id == IP_EVENT_STA_GOT_IP) {
                 if (READ_ONCE(evt_udp_mc_sock) < 0) {
-                        event_udp_mc_sock_create(WiFi.localIP().toString().c_str(), evt_udp_mc_addr, evt_udp_mc_port);
+                        ip_addr_t addr;
+                        wifi_netif_ip4_get(esp_netif_get_default_netif(), (esp_ip4_addr_t *)&addr);
+                        event_udp_mc_sock_create(inet_ntoa(addr), evt_udp_mc_addr, evt_udp_mc_port);
                 }
-                break;
+        }
         
-        case WIFI_EVENT_DISCONNECTED:
+        if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_DISCONNECTED) {
                 event_udp_mc_sock_close();
-                break;
-
-        default:
-                break;
         }
 }
 
@@ -233,10 +230,12 @@ static void __unused event_udp_mc_init(struct udp_mc_cfg *cfg, unsigned cpu)
         strncpy(evt_udp_mc_addr, cfg->mcaddr, sizeof(evt_udp_mc_addr));
         evt_udp_mc_port = cfg->port;
 
-        if (wifi_mode_get() == WIFI_AP) {
-                event_udp_mc_sock_create(WiFi.softAPIP().toString().c_str(), evt_udp_mc_addr, evt_udp_mc_port);
+        if (wifi_mode_get() == ESP_WIFI_MODE_AP) {
+                ip_addr_t addr;
+                wifi_netif_ip4_get(esp_netif_get_default_netif(), (esp_ip4_addr_t *)&addr);
+                event_udp_mc_sock_create(inet_ntoa(addr), evt_udp_mc_addr, evt_udp_mc_port);
         } else { // STA, STA_AP
-                wifi_event_cb_register(event_udp_mc_wifi_event_cb);
+                wifi_event_cb_register(event_udp_mc_wifi_event_cb, NULL);
         }
 
         xTaskCreatePinnedToCore(task_event_udp_mc_recv, "udp_event", 4096, NULL, 1, NULL, cpu);

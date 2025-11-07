@@ -3,61 +3,50 @@
 
 void rpc_wifi_add(void)
 {
-#ifndef CONFIG_WIFI_AP_ONLY
-        http_rpc.on("/wifi_rssi", HTTP_GET, [](){
-                char buf[16] = { };
-                
-                snprintf(buf, sizeof(buf), "%d dBm\n", WiFi.RSSI());
+#if ESP_IDF_VERSION_MAJOR >= 5 && ESP_IDF_VERSION_MINOR > 5
+        http_rpc.on("/wifi_band", HTTP_GET, [](){
+                char buf[32] = { };
+                int band, band_mode;
+
+                if (ESP_OK != esp_wifi_get_band(&band)) {
+                        http_rpc.send(500, "text/plain", "error\n");
+
+                if (ESP_OK != esp_wifi_get_band_mode(&band_mode)) {
+                        http_rpc.send(500, "text/plain", "error\n");
+
+                if (band >= ARRAY_SIZE(str_wifi_bands) || band_mode >= ARRAY_SIZE(str_wifi_band_modes))
+                        http_rpc.send(500, "text/plain", "error\n");
+
+                snprintf(buf, sizeof(buf), "%s %s\n", str_wifi_bands[band], str_wifi_band_modes[band_mode]);
 
                 http_rpc.send(200, "text/plain", buf);
         });
 #endif
 
         http_rpc.on("/wifi_tx_power", HTTP_GET, [](){
-                if (http_rpc.hasArg("set")) {
-                        String data = http_rpc.arg("set");
-                        int match = 0;
-                        int i = 0;
+                char buf[16] = { };
+                int rssi = 0;
 
-                        for (i = 0; i < ARRAY_SIZE(str_wifi_txpwr); i++) {
-                                if (is_str_equal((char *)str_wifi_txpwr[i], (char *)data.c_str(), CASELESS)) {
-                                        match = 1;
-                                        break;
-                                }
-                        }
-
-                        if (!match) {
-                                http_rpc.send(404, "text/plain", "Invalid value\n");
-                                return;
-                        }
-
-                        g_cfg.wifi_cfg.tx_power = i;
-                        WiFi.setTxPower((wifi_power_t)(cfg_wifi_txpwr_convert[i]));
-
-                        http_rpc.send(200, "text/plain", "OK\n");
-                } else {
-                        char buf[256] = { };
-                        size_t c = 0;
-                        int r = -1;
-
-                        wifi_power_t curr = WiFi.getTxPower();
-
-                        for (int i = 0; i < ARRAY_SIZE(cfg_wifi_txpwr_convert); i++) {
-                                if (cfg_wifi_txpwr_convert[i] == curr) {
-                                        r = i;
-                                        break;
-                                }
-                        }
-
-                        for (int i = 0; i < ARRAY_SIZE(str_wifi_txpwr); i++) {
-                                c += snprintf(&buf[c], sizeof(buf) - c, "%s %s %s\n",
-                                        str_wifi_txpwr[i],
-                                        g_cfg.wifi_cfg.tx_power == i ? "[*]" : "",
-                                        r == i ? "[v]" : "");
-                        }
-
-                        http_rpc.send(200, "text/plain", buf);
+                if (ESP_OK != esp_wifi_sta_get_rssi(&rssi)) {
+                        http_rpc.send(500, "text/plain", "error\n");
                 }
+
+                snprintf(buf, sizeof(buf), "%u\n", rssi);
+
+                http_rpc.send(200, "text/plain", buf);
+        });
+
+        http_rpc.on("/wifi_tx_power", HTTP_GET, [](){
+                char buf[16] = { };
+                int8_t pwr = 0;
+
+                if (ESP_OK != esp_wifi_get_max_tx_power(&pwr)) {
+                        http_rpc.send(500, "text/plain", "error\n");
+                }
+
+                snprintf(buf, sizeof(buf), "%u dBm\n", pwr / 4);
+
+                http_rpc.send(200, "text/plain", buf);
         });
 
         http_rpc.on("/wifi_ps", HTTP_GET, [](){

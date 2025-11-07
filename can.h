@@ -50,7 +50,7 @@ static __unused const char *str_can_baudrates[] = {
         [CAN_BAUDRATE_1000KBPS] = "CAN_1000KBPS",
 };
 
-static uint32_t can_baudrates_vals[] = {
+static __unused uint32_t can_baudrates_vals[] = {
         [CAN_BAUDRATE_4K096BPS] = 4096,
         [CAN_BAUDRATE_5KBPS]    = 5000,
         [CAN_BAUDRATE_10KBPS]   = 10000,
@@ -79,11 +79,11 @@ typedef struct can_device can_device_t;
 
 static can_device_t *can_dev;
 
-static uint64_t cnt_can_send;
-static uint64_t cnt_can_send_error;
-static uint64_t cnt_can_recv;
-static uint64_t cnt_can_recv_error;
-static uint64_t cnt_can_recv_rtr;
+static __unused uint64_t cnt_can_send;
+static __unused uint64_t cnt_can_send_error;
+static __unused uint64_t cnt_can_recv;
+static __unused uint64_t cnt_can_recv_error;
+static __unused uint64_t cnt_can_recv_rtr;
 static __unused uint64_t cnt_can_recv_drop;
 
 #ifdef CAN_LED_BLINK
