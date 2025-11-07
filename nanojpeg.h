@@ -348,6 +348,7 @@ struct _nj_ctx {
     int output_fmt;
     int output_no_internal_free;
     unsigned char *rgb;
+    unsigned rgb_bufsz;
 };
 
 static const char njZZ[64] = { 0, 1, 8, 16, 9, 2, 3, 10, 17, 24, 32, 25, 18,
@@ -588,31 +589,41 @@ NJ_INLINE void njDecodeSOF(nj_context_t *nj) {
     }
     if (nj->ncomp == 3) {
         int ncmp = 0;
+        unsigned rgb_bufsz;
 
         switch (nj->output_fmt) {
         case NJ_OUTPUT_RGB888_24:
             ncmp = 3;
             break;
-        
+
         case NJ_OUTPUT_RGB888A_32:
             ncmp = 4;
             break;
-        
+
         case NJ_OUTPUT_RGB565_16:
         case NJ_OUTPUT_RGB565_16_SWAPPED:
             ncmp = 2;
             break;
-        
+
         default:
             njThrow(nj, NJ_INTERNAL_ERR);
             break;
         }
 
-        if (!nj->rgb) {
-            nj->rgb = (unsigned char *)njAllocMem(nj->width * nj->height * ncmp);
+        rgb_bufsz = nj->width * nj->height * ncmp;
+
+        if (!nj->rgb || nj->rgb_bufsz != rgb_bufsz) {
+            if (nj->rgb) {
+                pr_err("pic size changed\n");
+                njFreeMem((void*)nj->rgb);
+            }
+
+            nj->rgb = (unsigned char *)njAllocMem(rgb_bufsz);
 
             if (!nj->rgb)
                 njThrow(nj, NJ_OUT_OF_MEM);
+
+            nj->rgb_bufsz = rgb_bufsz;
         }
     }
     njSkip(nj, nj->length);
@@ -887,7 +898,7 @@ NJ_INLINE void njConvert(nj_context_t *nj) {
                 int y = py[x] << 8;
                 int cb = pcb[x] - 128;
                 int cr = pcr[x] - 128;
-                uint8_t r, g, b; 
+                uint8_t r, g, b;
 
                 r = njClip((y            + 359 * cr + 128) >> 8);
                 g = njClip((y -  88 * cb - 183 * cr + 128) >> 8);
@@ -900,7 +911,7 @@ NJ_INLINE void njConvert(nj_context_t *nj) {
                     *prgb++ = b;
 
                     break;
-                
+
                 case NJ_OUTPUT_RGB888A_32:
                     *prgb++ = r;
                     *prgb++ = g;
@@ -908,7 +919,7 @@ NJ_INLINE void njConvert(nj_context_t *nj) {
                     *prgb++ = 0x00;
 
                     break;
-                
+
                 case NJ_OUTPUT_RGB565_16:
                 case NJ_OUTPUT_RGB565_16_SWAPPED: {
                     union {
@@ -923,10 +934,10 @@ NJ_INLINE void njConvert(nj_context_t *nj) {
 
                     *prgb++ = rgb565.d8[0];
                     *prgb++ = rgb565.d8[1];
-    
+
                     break;
                     }
-                
+
                 default:
                     break;
                 }
@@ -969,7 +980,7 @@ void njDone(nj_context_t *nj) {
 
     for (i = 0;  i < 3;  ++i)
         if (nj->comp[i].pixels) njFreeMem((void*) nj->comp[i].pixels);
-    
+
     if (nj->rgb)
         njFreeMem((void*) nj->rgb);
 
@@ -981,6 +992,7 @@ void __njDone(nj_context_t *nj) {
     int output_fmt = nj->output_fmt;
     int no_output_free = nj->output_no_internal_free;
     unsigned char *rgb = nj->rgb;
+    unsigned rgb_bufsz = nj->rgb_bufsz;
     int i;
 
     for (i = 0;  i < 3;  ++i)
@@ -997,6 +1009,7 @@ void __njDone(nj_context_t *nj) {
 
     njSetOutputFmt(nj, output_fmt);
     njSetOutputNoInternalFree(nj, no_output_free);
+    nj->rgb_bufsz = rgb_bufsz;
 }
 
 nj_result_t njDecode(nj_context_t *nj, const void* jpeg, const int size) {
