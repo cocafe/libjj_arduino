@@ -39,7 +39,7 @@ static inline int esp32_mac_get(esp_mac_type_t type, uint8_t *mac)
         return 0;
 }
 
-static inline void *esp32_psram_alloc(size_t size)
+static inline void *esp32_psram_malloc(size_t size)
 {
         return heap_caps_malloc(size, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
 }

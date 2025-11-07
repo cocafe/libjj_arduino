@@ -131,6 +131,22 @@ unsigned roundup_pow2(unsigned v)
         return v;
 }
 
+uint8_t *pattern_find(uint8_t *haystack, size_t haystack_len,
+                             uint8_t *needle, size_t needle_len)
+{
+        if (needle_len == 0 || haystack_len < needle_len) {
+                return NULL;
+        }
+
+        for (size_t i = 0; i <= haystack_len - needle_len; i++) {
+                if (memcmp(&haystack[i], needle, needle_len) == 0) {
+                        return &haystack[i];
+                }
+        }
+
+        return NULL;
+}
+
 /*
  * Prevent the compiler from merging or refetching reads or writes. The
  * compiler is also forbidden from reordering successive instances of

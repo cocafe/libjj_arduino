@@ -88,22 +88,6 @@ static int is_valid_can_frame(can_frame_t *f)
         return 1;
 }
 
-static uint8_t *pattern_find(uint8_t *haystack, size_t haystack_len,
-                             uint8_t *needle, size_t needle_len)
-{
-        if (needle_len == 0 || haystack_len < needle_len) {
-                return NULL;
-        }
-
-        for (size_t i = 0; i <= haystack_len - needle_len; i++) {
-                if (memcmp(&haystack[i], needle, needle_len) == 0) {
-                        return &haystack[i];
-                }
-        }
-
-        return NULL;
-}
-
 static int can_frames_input(uint8_t *buf, int len)
 {
         int pos;
@@ -116,7 +100,7 @@ static int can_frames_input(uint8_t *buf, int len)
                 uint8_t *ret = pattern_find(buf, len, pattern, sizeof(magic));
 
                 if (!ret) {
-                        // pr_info("%s(): invalid packet\n", __func__);
+                        // pr_info("invalid packet\n", __func__);
                         cnt_can_tcp_recv_invalid++;
                         return -EINVAL;
                 }

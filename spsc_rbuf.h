@@ -5,6 +5,7 @@
 #include <memory.h>
 
 #include "utils.h"
+#include "esp32_utils.h"
 
 #define RBUF_IDX_INC(x, qlen) mod_2((x) + 1, qlen)
 
@@ -29,6 +30,22 @@ int spsc_rbuf_init(struct spsc_rbuf *rbuf, size_t qlen, size_t ele_sz)
         rbuf->elesz = ele_sz;
 
         pr_info("allocated %zu bytes for ring\n", qlen * ele_sz);
+
+        return 0;
+}
+
+size_t spsc_rbuf_ring_size_compute(size_t qlen, size_t ele_sz)
+{
+        return qlen * ele_sz;
+}
+
+int spsc_rbuf_init_extern_alloc(struct spsc_rbuf *rbuf, uint8_t *ring, size_t qlen, size_t ele_sz)
+{
+        memset(rbuf, 0x00, sizeof(struct spsc_rbuf));
+
+        rbuf->ring = ring;
+        rbuf->qlen = qlen;
+        rbuf->elesz = ele_sz;
 
         return 0;
 }
