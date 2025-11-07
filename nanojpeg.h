@@ -346,6 +346,7 @@ struct _nj_ctx {
     int block[64];
     int rstinterval;
     int output_fmt;
+    int output_no_internal_free;
     unsigned char *rgb;
 };
 
@@ -459,7 +460,7 @@ NJ_INLINE void njColIDCT(const int* blk, unsigned char *out, int stride) {
     *out = njClip(((x7 - x1) >> 14) + 128);
 }
 
-#define njThrow(nj, e) do { nj->error = e; return; } while (0)
+#define njThrow(nj, e) do { nj->error = e; /*printf("%s(): line:%d\n", __func__, __LINE__);*/ return; } while (0)
 #define njCheckError(nj) do { if (nj->error) return; } while (0)
 
 static int njShowBits(nj_context_t *nj, int bits) {
@@ -607,8 +608,12 @@ NJ_INLINE void njDecodeSOF(nj_context_t *nj) {
             break;
         }
 
-        nj->rgb = (unsigned char *)njAllocMem(nj->width * nj->height * ncmp);
-        if (!nj->rgb) njThrow(nj, NJ_OUT_OF_MEM);
+        if (!nj->rgb) {
+            nj->rgb = (unsigned char *)njAllocMem(nj->width * nj->height * ncmp);
+
+            if (!nj->rgb)
+                njThrow(nj, NJ_OUT_OF_MEM);
+        }
     }
     njSkip(nj, nj->length);
 }
@@ -953,18 +958,49 @@ void njSetOutputFmt(nj_context_t *nj, int fmt)
     nj->output_fmt = fmt;
 }
 
+void njSetOutputNoInternalFree(nj_context_t *nj, int yes)
+{
+    nj->output_no_internal_free = yes;
+}
+
 void njDone(nj_context_t *nj) {
     int output_fmt = nj->output_fmt;
     int i;
+
     for (i = 0;  i < 3;  ++i)
         if (nj->comp[i].pixels) njFreeMem((void*) nj->comp[i].pixels);
-    if (nj->rgb) njFreeMem((void*) nj->rgb);
+    
+    if (nj->rgb)
+        njFreeMem((void*) nj->rgb);
+
     njInit(nj);
     njSetOutputFmt(nj, output_fmt);
 }
 
+void __njDone(nj_context_t *nj) {
+    int output_fmt = nj->output_fmt;
+    int no_output_free = nj->output_no_internal_free;
+    unsigned char *rgb = nj->rgb;
+    int i;
+
+    for (i = 0;  i < 3;  ++i)
+        if (nj->comp[i].pixels) njFreeMem((void*) nj->comp[i].pixels);
+
+    if (nj->rgb && !nj->output_no_internal_free) {
+        njFreeMem((void*) nj->rgb);
+    }
+
+    njInit(nj);
+
+    if (no_output_free)
+        nj->rgb = rgb;
+
+    njSetOutputFmt(nj, output_fmt);
+    njSetOutputNoInternalFree(nj, no_output_free);
+}
+
 nj_result_t njDecode(nj_context_t *nj, const void* jpeg, const int size) {
-    njDone(nj);
+    __njDone(nj);
     nj->pos = (const unsigned char*) jpeg;
     nj->size = size & 0x7FFFFFFF;
     if (nj->size < 2) return NJ_NO_JPEG;
