@@ -2,7 +2,6 @@
 #define __LIBJJ_JBUF_MAKER_H__
 
 #ifdef __LIBJJ_ESP32_WIFI_H__
-
 void jbuf_wifi_assoc_cfg_add(jbuf_t *b, const char *key, struct wifi_assoc_cfg *cfg)
 {
         void *obj = jbuf_obj_open(b, key);
@@ -59,10 +58,11 @@ void jbuf_wifi_cfg_add(jbuf_t *b, const char *key, struct wifi_cfg *cfg)
         jbuf_strval_add(b, "mode", cfg->mode, str_wifi_modes);
 
         {
-                void *adv = jbuf_obj_open(b, "advanced");
+                // void *adv = jbuf_obj_open(b, "advanced");
 
-                jbuf_uint_add(b, "tx_power_dBm", cfg->adv.tx_power);
+                jbuf_strval_add(b, "band", cfg->adv.band_mode, str_wifi_band_modes);
                 jbuf_strval_add(b, "ps", cfg->adv.ps_mode, str_wifi_ps_modes);
+                jbuf_uint_add(b, "tx_power_dBm", cfg->adv.tx_power);
                 jbuf_bool_add(b, "dynamic_cs", cfg->adv.dynamic_cs);
                 jbuf_bool_add(b, "csi", cfg->adv.csi);
                 jbuf_bool_add(b, "ampdu_rx", cfg->adv.ampdu_rx);
@@ -74,12 +74,11 @@ void jbuf_wifi_cfg_add(jbuf_t *b, const char *key, struct wifi_cfg *cfg)
                 jbuf_strval_add(b, "bw_2g", cfg->adv.bw_2g, str_wifi_bw);
                 jbuf_strval_add(b, "bw_5g", cfg->adv.bw_5g, str_wifi_bw);
 
-                jbuf_obj_close(b, adv);
+                // jbuf_obj_close(b, adv);
         }
 
         jbuf_obj_close(b, obj);
 }
-
 #endif
 
 #ifdef __LIBJJ_EVENT_UDP_MC_H__

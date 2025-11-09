@@ -52,6 +52,49 @@ enum {
         NUM_ESP_WIFI_AUTH_MODES,
 };
 
+enum {
+        ESP_WIFI_PHY_RATE_NOT_USE,
+        ESP_WIFI_PHY_RATE_1M_L,
+        ESP_WIFI_PHY_RATE_2M_L,
+        ESP_WIFI_PHY_RATE_5M_L,
+        ESP_WIFI_PHY_RATE_11M_L,
+        ESP_WIFI_PHY_RATE_2M_S,
+        ESP_WIFI_PHY_RATE_5M_S,
+        ESP_WIFI_PHY_RATE_11M_S,
+        ESP_WIFI_PHY_RATE_48M,
+        ESP_WIFI_PHY_RATE_24M,
+        ESP_WIFI_PHY_RATE_12M,
+        ESP_WIFI_PHY_RATE_6M,
+        ESP_WIFI_PHY_RATE_54M,
+        ESP_WIFI_PHY_RATE_36M,
+        ESP_WIFI_PHY_RATE_18M,
+        ESP_WIFI_PHY_RATE_9M,
+        ESP_WIFI_PHY_RATE_MCS0_LGI,
+        ESP_WIFI_PHY_RATE_MCS1_LGI,
+        ESP_WIFI_PHY_RATE_MCS2_LGI,
+        ESP_WIFI_PHY_RATE_MCS3_LGI,
+        ESP_WIFI_PHY_RATE_MCS4_LGI,
+        ESP_WIFI_PHY_RATE_MCS5_LGI,
+        ESP_WIFI_PHY_RATE_MCS6_LGI,
+        ESP_WIFI_PHY_RATE_MCS7_LGI,
+        ESP_WIFI_PHY_RATE_MCS0_SGI,
+        ESP_WIFI_PHY_RATE_MCS1_SGI,
+        ESP_WIFI_PHY_RATE_MCS2_SGI,
+        ESP_WIFI_PHY_RATE_MCS3_SGI,
+        ESP_WIFI_PHY_RATE_MCS4_SGI,
+        ESP_WIFI_PHY_RATE_MCS5_SGI,
+        ESP_WIFI_PHY_RATE_MCS6_SGI,
+        ESP_WIFI_PHY_RATE_MCS7_SGI,
+        NUM_ESP_WIFI_PHY_RATES,
+};
+
+enum {
+        ESP_WIFI_BAND_MODE_2G_ONLY,
+        ESP_WIFI_BAND_MODE_5G_ONLY,
+        ESP_WIFI_BAND_MODE_AUTO,
+        NUM_ESP_WIFI_BAND_MODES,
+};
+
 static const char *str_wifi_modes[] = {
         [ESP_WIFI_MODE_OFF]     = "OFF",
         [ESP_WIFI_MODE_STA]     = "STA",
@@ -80,89 +123,114 @@ static const char *str_wifi_bw[] = {
 };
 
 static const char *str_wifi_auth_modes[NUM_ESP_WIFI_AUTH_MODES] = {
-        [ESP_WIFI_AUTH_OPEN]                            = "OPEN",
-        [ESP_WIFI_AUTH_WPA_PSK]                         = "WPA_PSK",
-        [ESP_WIFI_AUTH_WPA2_PSK]                        = "WPA2_PSK",
-        [ESP_WIFI_AUTH_WPA_WPA2_PSK]                    = "WPA_WPA2_PSK",
-        [ESP_WIFI_AUTH_WPA3_PSK]                        = "WPA3_PSK",
-        [ESP_WIFI_AUTH_WPA2_WPA3_PSK]                   = "WPA2_WPA3_PSK",
-        [ESP_WIFI_AUTH_WPA3_ENT_192]                    = "WPA3_ENT_192",
-        [ESP_WIFI_AUTH_WPA3_EXT_PSK]                    = "WPA3_EXT_PSK",
-        [ESP_WIFI_AUTH_WPA3_EXT_PSK_MIXED_MODE]         = "WPA3_EXT_PSK_MIXED_MODE",
+        [ESP_WIFI_AUTH_OPEN]                    = "OPEN",
+        [ESP_WIFI_AUTH_WPA_PSK]                 = "WPA_PSK",
+        [ESP_WIFI_AUTH_WPA2_PSK]                = "WPA2_PSK",
+        [ESP_WIFI_AUTH_WPA_WPA2_PSK]            = "WPA_WPA2_PSK",
+        [ESP_WIFI_AUTH_WPA3_PSK]                = "WPA3_PSK",
+        [ESP_WIFI_AUTH_WPA2_WPA3_PSK]           = "WPA2_WPA3_PSK",
+        [ESP_WIFI_AUTH_WPA3_ENT_192]            = "WPA3_ENT_192",
+        [ESP_WIFI_AUTH_WPA3_EXT_PSK]            = "WPA3_EXT_PSK",
+        [ESP_WIFI_AUTH_WPA3_EXT_PSK_MIXED_MODE] = "WPA3_EXT_PSK_MIXED_MODE",
 };
 
 static const char *str_wifi_cipher_types[] = {
-        [WIFI_CIPHER_TYPE_NONE]                         = "NONE",
-        [WIFI_CIPHER_TYPE_WEP40]                        = "WEP40",
-        [WIFI_CIPHER_TYPE_WEP104]                       = "WEP104",
-        [WIFI_CIPHER_TYPE_TKIP]                         = "TKIP",
-        [WIFI_CIPHER_TYPE_CCMP]                         = "CCMP",
-        [WIFI_CIPHER_TYPE_TKIP_CCMP]                    = "TKIP_CCMP",
-        [WIFI_CIPHER_TYPE_AES_CMAC128]                  = "AES_CMAC128",
-        [WIFI_CIPHER_TYPE_SMS4]                         = "SMS4",
-        [WIFI_CIPHER_TYPE_GCMP]                         = "GCMP",
-        [WIFI_CIPHER_TYPE_GCMP256]                      = "GCMP256",
-        [WIFI_CIPHER_TYPE_AES_GMAC128]                  = "AES_GMAC128",
-        [WIFI_CIPHER_TYPE_AES_GMAC256]                  = "AES_GMAC256",
-        [WIFI_CIPHER_TYPE_UNKNOWN]                      = "UNKNOWN",
+        [WIFI_CIPHER_TYPE_NONE]                 = "NONE",
+        [WIFI_CIPHER_TYPE_WEP40]                = "WEP40",
+        [WIFI_CIPHER_TYPE_WEP104]               = "WEP104",
+        [WIFI_CIPHER_TYPE_TKIP]                 = "TKIP",
+        [WIFI_CIPHER_TYPE_CCMP]                 = "CCMP",
+        [WIFI_CIPHER_TYPE_TKIP_CCMP]            = "TKIP_CCMP",
+        [WIFI_CIPHER_TYPE_AES_CMAC128]          = "AES_CMAC128",
+        [WIFI_CIPHER_TYPE_SMS4]                 = "SMS4",
+        [WIFI_CIPHER_TYPE_GCMP]                 = "GCMP",
+        [WIFI_CIPHER_TYPE_GCMP256]              = "GCMP256",
+        [WIFI_CIPHER_TYPE_AES_GMAC128]          = "AES_GMAC128",
+        [WIFI_CIPHER_TYPE_AES_GMAC256]          = "AES_GMAC256",
+        [WIFI_CIPHER_TYPE_UNKNOWN]              = "UNKNOWN",
 };
-
-// use the reserved index as default
-#define WIFI_PHY_RATE_DEFAULT (4)
 
 static const char *str_wifi_tx_rates[] = {
-        [WIFI_PHY_RATE_1M_L]        = "1M_LGI",
-        [WIFI_PHY_RATE_2M_L]        = "2M_LGI",
-        [WIFI_PHY_RATE_5M_L]        = "5M_LGI",
-        [WIFI_PHY_RATE_11M_L]       = "11M_LGI",
-        [4]                         = "DEFAULT",
-        [WIFI_PHY_RATE_2M_S]        = "2M_SGI",
-        [WIFI_PHY_RATE_5M_S]        = "5M_SGI",
-        [WIFI_PHY_RATE_11M_S]       = "11M_SGI",
-        [WIFI_PHY_RATE_48M]         = "48M",
-        [WIFI_PHY_RATE_24M]         = "24M",
-        [WIFI_PHY_RATE_12M]         = "12M",
-        [WIFI_PHY_RATE_6M]          = "6M",
-        [WIFI_PHY_RATE_54M]         = "54M",
-        [WIFI_PHY_RATE_36M]         = "36M",
-        [WIFI_PHY_RATE_18M]         = "18M",
-        [WIFI_PHY_RATE_9M]          = "9M",
-        [WIFI_PHY_RATE_MCS0_LGI]    = "MCS0_LGI",
-        [WIFI_PHY_RATE_MCS1_LGI]    = "MCS1_LGI",
-        [WIFI_PHY_RATE_MCS2_LGI]    = "MCS2_LGI",
-        [WIFI_PHY_RATE_MCS3_LGI]    = "MCS3_LGI",
-        [WIFI_PHY_RATE_MCS4_LGI]    = "MCS4_LGI",
-        [WIFI_PHY_RATE_MCS5_LGI]    = "MCS5_LGI",
-        [WIFI_PHY_RATE_MCS6_LGI]    = "MCS6_LGI",
-        [WIFI_PHY_RATE_MCS7_LGI]    = "MCS7_LGI",
-#ifdef CONFIG_SOC_WIFI_HE_SUPPORT
-        [WIFI_PHY_RATE_MCS8_LGI]    = "MCS8_LGI",
-        [WIFI_PHY_RATE_MCS9_LGI]    = "MCS9_LGI",
-#endif
-        [WIFI_PHY_RATE_MCS0_SGI]    = "MCS0_SGI",
-        [WIFI_PHY_RATE_MCS1_SGI]    = "MCS1_SGI",
-        [WIFI_PHY_RATE_MCS2_SGI]    = "MCS2_SGI",
-        [WIFI_PHY_RATE_MCS3_SGI]    = "MCS3_SGI",
-        [WIFI_PHY_RATE_MCS4_SGI]    = "MCS4_SGI",
-        [WIFI_PHY_RATE_MCS5_SGI]    = "MCS5_SGI",
-        [WIFI_PHY_RATE_MCS6_SGI]    = "MCS6_SGI",
-        [WIFI_PHY_RATE_MCS7_SGI]    = "MCS7_SGI",
-#if CONFIG_SOC_WIFI_HE_SUPPORT
-        [WIFI_PHY_RATE_MCS8_SGI]    = "MCS8_SGI",
-        [WIFI_PHY_RATE_MCS9_SGI]    = "MCS9_SGI",
-#endif
-};
-
-#if ESP_IDF_VERSION_MAJOR >= 5 && ESP_IDF_VERSION_MINOR > 5
-static const char *str_wifi_bands[] = {
-        [WIFI_BAND_2G]          = "2.4G",
-        [WIFI_BAND_5G]          = "5G",
+        [ESP_WIFI_PHY_RATE_NOT_USE]             = "DEFAULT",
+        [ESP_WIFI_PHY_RATE_1M_L]                = "1M_LGI",
+        [ESP_WIFI_PHY_RATE_2M_L]                = "2M_LGI",
+        [ESP_WIFI_PHY_RATE_5M_L]                = "5M_LGI",
+        [ESP_WIFI_PHY_RATE_11M_L]               = "11M_LGI",
+        [ESP_WIFI_PHY_RATE_2M_S]                = "2M_SGI",
+        [ESP_WIFI_PHY_RATE_5M_S]                = "5M_SGI",
+        [ESP_WIFI_PHY_RATE_11M_S]               = "11M_SGI",
+        [ESP_WIFI_PHY_RATE_48M]                 = "48M",
+        [ESP_WIFI_PHY_RATE_24M]                 = "24M",
+        [ESP_WIFI_PHY_RATE_12M]                 = "12M",
+        [ESP_WIFI_PHY_RATE_6M]                  = "6M",
+        [ESP_WIFI_PHY_RATE_54M]                 = "54M",
+        [ESP_WIFI_PHY_RATE_36M]                 = "36M",
+        [ESP_WIFI_PHY_RATE_18M]                 = "18M",
+        [ESP_WIFI_PHY_RATE_9M]                  = "9M",
+        [ESP_WIFI_PHY_RATE_MCS0_LGI]            = "MCS0_LGI",
+        [ESP_WIFI_PHY_RATE_MCS1_LGI]            = "MCS1_LGI",
+        [ESP_WIFI_PHY_RATE_MCS2_LGI]            = "MCS2_LGI",
+        [ESP_WIFI_PHY_RATE_MCS3_LGI]            = "MCS3_LGI",
+        [ESP_WIFI_PHY_RATE_MCS4_LGI]            = "MCS4_LGI",
+        [ESP_WIFI_PHY_RATE_MCS5_LGI]            = "MCS5_LGI",
+        [ESP_WIFI_PHY_RATE_MCS6_LGI]            = "MCS6_LGI",
+        [ESP_WIFI_PHY_RATE_MCS7_LGI]            = "MCS7_LGI",
+        [ESP_WIFI_PHY_RATE_MCS0_SGI]            = "MCS0_SGI",
+        [ESP_WIFI_PHY_RATE_MCS1_SGI]            = "MCS1_SGI",
+        [ESP_WIFI_PHY_RATE_MCS2_SGI]            = "MCS2_SGI",
+        [ESP_WIFI_PHY_RATE_MCS3_SGI]            = "MCS3_SGI",
+        [ESP_WIFI_PHY_RATE_MCS4_SGI]            = "MCS4_SGI",
+        [ESP_WIFI_PHY_RATE_MCS5_SGI]            = "MCS5_SGI",
+        [ESP_WIFI_PHY_RATE_MCS6_SGI]            = "MCS6_SGI",
+        [ESP_WIFI_PHY_RATE_MCS7_SGI]            = "MCS7_SGI",
 };
 
 static const char *str_wifi_band_modes[] = {
-        [WIFI_BAND_MODE_2G_ONLY] = "2.4G",
-        [WIFI_BAND_MODE_5G_ONLY] = "5G",
-        [WIFI_BAND_MODE_AUTO]    = "AUTO",
+        [ESP_WIFI_BAND_MODE_2G_ONLY]            = "2.4G",
+        [ESP_WIFI_BAND_MODE_5G_ONLY]            = "5G",
+        [ESP_WIFI_BAND_MODE_AUTO]               = "AUTO",
+};
+
+static const wifi_phy_rate_t wifi_phy_rate_convert[] = {
+        [ESP_WIFI_PHY_RATE_NOT_USE]             = WIFI_PHY_RATE_54M,
+        [ESP_WIFI_PHY_RATE_1M_L]                = WIFI_PHY_RATE_1M_L,
+        [ESP_WIFI_PHY_RATE_2M_L]                = WIFI_PHY_RATE_2M_L,
+        [ESP_WIFI_PHY_RATE_5M_L]                = WIFI_PHY_RATE_5M_L,
+        [ESP_WIFI_PHY_RATE_11M_L]               = WIFI_PHY_RATE_11M_L,
+        [ESP_WIFI_PHY_RATE_2M_S]                = WIFI_PHY_RATE_2M_S,
+        [ESP_WIFI_PHY_RATE_5M_S]                = WIFI_PHY_RATE_5M_S,
+        [ESP_WIFI_PHY_RATE_11M_S]               = WIFI_PHY_RATE_11M_S,
+        [ESP_WIFI_PHY_RATE_48M]                 = WIFI_PHY_RATE_48M,
+        [ESP_WIFI_PHY_RATE_24M]                 = WIFI_PHY_RATE_24M,
+        [ESP_WIFI_PHY_RATE_12M]                 = WIFI_PHY_RATE_12M,
+        [ESP_WIFI_PHY_RATE_6M]                  = WIFI_PHY_RATE_6M,
+        [ESP_WIFI_PHY_RATE_54M]                 = WIFI_PHY_RATE_54M,
+        [ESP_WIFI_PHY_RATE_36M]                 = WIFI_PHY_RATE_36M,
+        [ESP_WIFI_PHY_RATE_18M]                 = WIFI_PHY_RATE_18M,
+        [ESP_WIFI_PHY_RATE_9M]                  = WIFI_PHY_RATE_9M,
+        [ESP_WIFI_PHY_RATE_MCS0_LGI]            = WIFI_PHY_RATE_MCS0_LGI,
+        [ESP_WIFI_PHY_RATE_MCS1_LGI]            = WIFI_PHY_RATE_MCS1_LGI,
+        [ESP_WIFI_PHY_RATE_MCS2_LGI]            = WIFI_PHY_RATE_MCS2_LGI,
+        [ESP_WIFI_PHY_RATE_MCS3_LGI]            = WIFI_PHY_RATE_MCS3_LGI,
+        [ESP_WIFI_PHY_RATE_MCS4_LGI]            = WIFI_PHY_RATE_MCS4_LGI,
+        [ESP_WIFI_PHY_RATE_MCS5_LGI]            = WIFI_PHY_RATE_MCS5_LGI,
+        [ESP_WIFI_PHY_RATE_MCS6_LGI]            = WIFI_PHY_RATE_MCS6_LGI,
+        [ESP_WIFI_PHY_RATE_MCS7_LGI]            = WIFI_PHY_RATE_MCS7_LGI,
+        [ESP_WIFI_PHY_RATE_MCS0_SGI]            = WIFI_PHY_RATE_MCS0_SGI,
+        [ESP_WIFI_PHY_RATE_MCS1_SGI]            = WIFI_PHY_RATE_MCS1_SGI,
+        [ESP_WIFI_PHY_RATE_MCS2_SGI]            = WIFI_PHY_RATE_MCS2_SGI,
+        [ESP_WIFI_PHY_RATE_MCS3_SGI]            = WIFI_PHY_RATE_MCS3_SGI,
+        [ESP_WIFI_PHY_RATE_MCS4_SGI]            = WIFI_PHY_RATE_MCS4_SGI,
+        [ESP_WIFI_PHY_RATE_MCS5_SGI]            = WIFI_PHY_RATE_MCS5_SGI,
+        [ESP_WIFI_PHY_RATE_MCS6_SGI]            = WIFI_PHY_RATE_MCS6_SGI,
+        [ESP_WIFI_PHY_RATE_MCS7_SGI]            = WIFI_PHY_RATE_MCS7_SGI,
+};
+
+#if ESP_IDF_VERSION_MAJOR >= 5 && ESP_IDF_VERSION_MINOR >= 5
+static const wifi_band_mode_t wifi_band_mode_convert[] = {
+        [ESP_WIFI_BAND_MODE_2G_ONLY]            = WIFI_BAND_MODE_2G_ONLY,
+        [ESP_WIFI_BAND_MODE_5G_ONLY]            = WIFI_BAND_MODE_5G_ONLY,
+        [ESP_WIFI_BAND_MODE_AUTO]               = WIFI_BAND_MODE_AUTO,
 };
 #endif
 
@@ -229,11 +297,9 @@ struct wifi_adv_cfg {
         uint8_t amsdu_tx;
         uint8_t sta_disconnected_pm;
         uint8_t use_nvs;
-#if ESP_IDF_VERSION_MAJOR >= 5 && ESP_IDF_VERSION_MINOR > 5
         uint8_t band_mode;
-#endif
         uint8_t no_11b_rate;
-        uint8_t proto_bitmap;
+        // uint8_t proto_bitmap;
         uint16_t phy_rate;
         uint16_t bw_2g;
         uint16_t bw_5g;
@@ -894,7 +960,7 @@ int wifi_start(struct wifi_ctx *ctx, struct wifi_cfg *cfg)
                         return -EIO;
                 }
 
-                if (cfg->adv.phy_rate != WIFI_PHY_RATE_DEFAULT) {
+                if (cfg->adv.phy_rate != ESP_WIFI_PHY_RATE_NOT_USE) {
                         ret = esp_wifi_config_80211_tx_rate(WIFI_IF_AP, (wifi_phy_rate_t)cfg->adv.phy_rate);
                         if (ret != ESP_OK) {
                                 pr_err("esp_wifi_config_80211_tx_rate(): 0x%x\n", ret);
@@ -906,7 +972,7 @@ int wifi_start(struct wifi_ctx *ctx, struct wifi_cfg *cfg)
                         pr_err("esp_wifi_config_80211_tx_rate(): 0x%x\n", ret);
                 }
 
-#if ESP_IDF_VERSION_MAJOR >= 5 && ESP_IDF_VERSION_MINOR > 5
+#if ESP_IDF_VERSION_MAJOR >= 5 && ESP_IDF_VERSION_MINOR >= 5
                 wifi_bandwidths_t bw = { };
                 bw.ghz_2g = (wifi_bandwidth_t)cfg->adv.bw_2g;
                 bw.ghz_5g = (wifi_bandwidth_t)cfg->adv.bw_5g;
@@ -928,7 +994,7 @@ int wifi_start(struct wifi_ctx *ctx, struct wifi_cfg *cfg)
                         return -EIO;
                 }
 
-                if (cfg->adv.phy_rate != WIFI_PHY_RATE_DEFAULT) {
+                if (cfg->adv.phy_rate != ESP_WIFI_PHY_RATE_NOT_USE) {
                         ret = esp_wifi_config_80211_tx_rate(WIFI_IF_STA, (wifi_phy_rate_t)cfg->adv.phy_rate);
                         if (ret != ESP_OK) {
                                 pr_err("esp_wifi_config_80211_tx_rate(): 0x%x\n", ret);
@@ -940,7 +1006,7 @@ int wifi_start(struct wifi_ctx *ctx, struct wifi_cfg *cfg)
                         pr_err("esp_wifi_config_80211_tx_rate(): 0x%x\n", ret);
                 }
 
-#if ESP_IDF_VERSION_MAJOR >= 5 && ESP_IDF_VERSION_MINOR > 5
+#if ESP_IDF_VERSION_MAJOR >= 5 && ESP_IDF_VERSION_MINOR >= 5
                 wifi_bandwidths_t bw = { };
                 bw.ghz_2g = (wifi_bandwidth_t)cfg->adv.bw_2g;
                 bw.ghz_5g = (wifi_bandwidth_t)cfg->adv.bw_5g;
@@ -954,18 +1020,20 @@ int wifi_start(struct wifi_ctx *ctx, struct wifi_cfg *cfg)
                 }
         }
 
-#if ESP_IDF_VERSION_MAJOR >= 5 && ESP_IDF_VERSION_MINOR > 5
-        ret = esp_wifi_set_band_mode(cfg->adv.band_mode);
-        if (ret != ESP_OK) {
-                pr_err("esp_wifi_set_band_mode(): 0x%x\n", ret);
-        }
-#endif
-
         ret = esp_wifi_start();
         if (ret != ESP_OK) {
                 pr_err("esp_wifi_start(): 0x%x\n", ret);
                 return -EIO;
         }
+
+#if ESP_IDF_VERSION_MAJOR >= 5 && ESP_IDF_VERSION_MINOR >= 5
+        if (cfg->adv.band_mode < NUM_ESP_WIFI_MODES) {
+                ret = esp_wifi_set_band_mode(wifi_band_mode_convert[cfg->adv.band_mode]);
+                if (ret != ESP_OK) {
+                        pr_err("esp_wifi_set_band_mode(): 0x%x\n", ret);
+                }
+        }
+#endif
 
         ret = esp_wifi_set_ps((wifi_ps_type_t)cfg->adv.ps_mode);
         if (ESP_OK != ret) {
@@ -1002,7 +1070,7 @@ int wifi_start(struct wifi_ctx *ctx, struct wifi_cfg *cfg)
                         return -ENOMEM;
                 }
 
-// #if ESP_IDF_VERSION_MAJOR >= 5 && ESP_IDF_VERSION_MINOR > 5
+// #if ESP_IDF_VERSION_MAJOR >= 5 && ESP_IDF_VERSION_MINOR >= 5
 //                 if (cfg->adv.band_mode != WIFI_BAND_MODE_AUTO)
 // #endif
 //                 {
@@ -1018,7 +1086,7 @@ int wifi_start(struct wifi_ctx *ctx, struct wifi_cfg *cfg)
                 //         pr_err("failed to enable NAPT on AP interface\n");
                 // }
 
-// #if ESP_IDF_VERSION_MAJOR >= 5 && ESP_IDF_VERSION_MINOR > 5
+// #if ESP_IDF_VERSION_MAJOR >= 5 && ESP_IDF_VERSION_MINOR >= 5
 //                 if (cfg->adv.band_mode != WIFI_BAND_MODE_AUTO)
 // #endif
 //                 {

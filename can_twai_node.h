@@ -173,6 +173,8 @@ int TWAI_init(struct twai_cfg *cfg)
 
         twai_cfg.tx_queue_depth = 5;
 
+        pr_info("tx_pin: %d\n", twai_cfg.io_cfg.tx);
+        pr_info("rx_pin: %d\n", twai_cfg.io_cfg.rx);
         pr_info("baudrate: %s\n", str_can_baudrates[cfg->baudrate]);
         pr_info("mode: %s\n", str_twai_mode[cfg->mode]);
         pr_info("tx_timedout_ms: %d\n", cfg->tx_timedout_ms);
