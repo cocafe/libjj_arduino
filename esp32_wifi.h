@@ -501,7 +501,6 @@ static void wifi_event_handle_internal(esp_event_base_t event_base,
                                        void *event_data)
 {
         struct wifi_ctx *ctx = &g_wifi_ctx;
-        esp_err_t ret = ESP_OK;
 
         if (event_base == WIFI_EVENT) {
                 switch (event_id) {

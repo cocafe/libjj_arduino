@@ -792,7 +792,10 @@ static int jkey_bool_write(jkey_t *jkey, cJSON *node)
         if (jkey->flags.is_bitmap) {
                 uint64_t d;
 
-                ptr_unsigned_word_read(dst, jkey->data.sz, &d);
+                if (ptr_unsigned_word_read(dst, jkey->data.sz, &d)) {
+                        pr_err("failed to read data ptr\n");
+                        return -ENODATA;
+                }
 
                 if (val) {
                         d |= BIT_ULL(jkey->data.bitmap_nr);
