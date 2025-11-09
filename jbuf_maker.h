@@ -1,36 +1,86 @@
 #ifndef __LIBJJ_JBUF_MAKER_H__
 #define __LIBJJ_JBUF_MAKER_H__
 
-// void jbuf_wifi_cfg_add(jbuf_t *b, const char *key, struct wifi_cfg *cfg)
-// {
-//         void *obj = jbuf_obj_open(b, key);
+#ifdef __LIBJJ_ESP32_WIFI_H__
 
-//         jbuf_strval_add(b, "mode", cfg->mode, str_wifi_modes);
-//         jbuf_strval_add(b, "tx_power", cfg->tx_power, str_wifi_txpwr);
-//         jbuf_strval_add(b, "ps", cfg->ps_mode, str_wifi_ps_modes);
-//         jbuf_uint_add(b, "inactive_sec", cfg->inactive_sec);
-//         jbuf_bool_add(b, "long_range", cfg->long_range);
-//         jbuf_bool_add(b, "static_buf", cfg->static_buf);
-//         jbuf_bool_add(b, "dynamic_cs", cfg->dynamic_cs);
+void jbuf_wifi_assoc_cfg_add(jbuf_t *b, const char *key, struct wifi_assoc_cfg *cfg)
+{
+        void *obj = jbuf_obj_open(b, key);
 
-//         jbuf_obj_close(b, obj);
-// }
+        jbuf_strbuf_add(b, "ssid", cfg->ssid);
+        jbuf_strbuf_add(b, "passwd", cfg->passwd);
+        jbuf_strval_add(b, "auth", cfg->auth, str_wifi_auth_modes);
+        jbuf_strval_add(b, "cipher", cfg->cipher, str_wifi_cipher_types);
+        jbuf_uint_add(b, "chnl", cfg->channel);
+        jbuf_strbuf_add(b, "local", cfg->local);
+        jbuf_strbuf_add(b, "gw", cfg->gw);
+        jbuf_strbuf_add(b, "subnet", cfg->subnet);
 
-// void jbuf_wifi_nw_cfg_add(jbuf_t *b, const char *key, struct wifi_nw_cfg *cfg)
-// {
-//         void *obj = jbuf_obj_open(b, key);
+        jbuf_obj_close(b, obj);
+}
 
-//         jbuf_strbuf_add(b, "ssid", cfg->ssid);
-//         jbuf_strbuf_add(b, "passwd", cfg->passwd);
-//         jbuf_bool_add(b, "ssid_with_sn", cfg->ssid_with_sn);
-//         jbuf_uint_add(b, "timeout_sec", cfg->timeout_sec);
-//         jbuf_bool_add(b, "use_dhcp", cfg->use_dhcp);
-//         jbuf_strbuf_add(b, "local", cfg->local);
-//         jbuf_strbuf_add(b, "gw", cfg->gw);
-//         jbuf_strbuf_add(b, "subnet", cfg->subnet);
+void jbuf_wifi_ap_cfg_add(jbuf_t *b, const char *key, struct wifi_ap_cfg *cfg)
+{
+        void *obj = jbuf_obj_open(b, key);
 
-//         jbuf_obj_close(b, obj);
-// }
+        jbuf_wifi_assoc_cfg_add(b, "assoc", &cfg->assoc);
+
+        jbuf_bool_add(b, "dhcps", cfg->dhcps);
+        jbuf_bool_add(b, "ssid_with_sn", cfg->ssid_with_sn);
+        jbuf_uint_add(b, "max_sta", cfg->max_sta);
+        jbuf_uint_add(b, "csa_cnt", cfg->csa_count);
+        jbuf_uint_add(b, "dtim_period", cfg->dtim_period);
+        jbuf_uint_add(b, "beacon_intv", cfg->beacon_intv);
+
+        jbuf_obj_close(b, obj);
+}
+
+void jbuf_wifi_sta_cfg_add(jbuf_t *b, const char *key, struct wifi_sta_cfg *cfg)
+{
+        void *obj = jbuf_obj_open(b, key);
+
+        jbuf_wifi_assoc_cfg_add(b, "assoc", &cfg->assoc);
+
+        jbuf_bool_add(b, "dhcpc", cfg->dhcpc);
+        jbuf_bool_add(b, "scan_mode", str_wifi_sta_scan_modes);
+        jbuf_bool_add(b, "rm", cfg->rm_enabled);
+        jbuf_bool_add(b, "btm", cfg->btm_enabled);
+        jbuf_bool_add(b, "mbo", cfg->mbo_enabled);
+        jbuf_bool_add(b, "retry_cnt", cfg->retry_count);
+        jbuf_bool_add(b, "inactive_sec", cfg->inactive_sec);
+
+        jbuf_obj_close(b, obj);
+}
+
+void jbuf_wifi_cfg_add(jbuf_t *b, const char *key, struct wifi_cfg *cfg)
+{
+        void *obj = jbuf_obj_open(b, key);
+
+        jbuf_strval_add(b, "mode", cfg->mode, str_wifi_modes);
+
+        {
+                void *adv = jbuf_obj_open(b, "advanced");
+
+                jbuf_uint_add(b, "tx_power_dBm", cfg->adv.tx_power);
+                jbuf_strval_add(b, "ps", cfg->adv.ps_mode, str_wifi_ps_modes);
+                jbuf_bool_add(b, "dynamic_cs", cfg->adv.dynamic_cs);
+                jbuf_bool_add(b, "csi", cfg->adv.csi);
+                jbuf_bool_add(b, "ampdu_rx", cfg->adv.ampdu_rx);
+                jbuf_bool_add(b, "ampdu_tx", cfg->adv.ampdu_tx);
+                jbuf_bool_add(b, "amsdu_tx", cfg->adv.amsdu_tx);
+                jbuf_bool_add(b, "sta_idle_pm", cfg->adv.sta_disconnected_pm);
+                jbuf_bool_add(b, "no_11b_rate", cfg->adv.no_11b_rate);
+                jbuf_strval_add(b, "phy_rate", cfg->adv.phy_rate, str_wifi_tx_rates);
+                jbuf_strval_add(b, "bw_2g", cfg->adv.bw_2g, str_wifi_bw);
+                jbuf_strval_add(b, "bw_5g", cfg->adv.bw_5g, str_wifi_bw);
+
+                jbuf_obj_close(b, adv);
+        }
+
+        jbuf_obj_close(b, obj);
+}
+
+#endif
 
 #ifdef __LIBJJ_EVENT_UDP_MC_H__
 void __unused jbuf_udpmc_cfg_add(jbuf_t *b, const char *key, struct udp_mc_cfg *cfg)

@@ -23,6 +23,88 @@ void rpc_wifi_add(void)
         });
 #endif
 
+        http_rpc.on("/wifi_proto", HTTP_GET, [](){
+                char buf[64] = { };
+                size_t c = 0;
+                uint8_t bitmap = 0;
+                struct {
+                        const char *s;
+                        uint8_t mask;
+                } protos[] = {
+                        { "B",  WIFI_PROTOCOL_11B },
+                        { "G",  WIFI_PROTOCOL_11G },
+                        { "N",  WIFI_PROTOCOL_11N },
+                        { "LR", WIFI_PROTOCOL_LR },
+                        { "A",  WIFI_PROTOCOL_11A },
+                        { "AC", WIFI_PROTOCOL_11AC },
+                        { "AX", WIFI_PROTOCOL_11AX },
+                };
+
+                if (wifi_mode_get() == ESP_WIFI_MODE_STA_AP || wifi_mode_get() == ESP_WIFI_MODE_AP) {
+                        if (ESP_OK != esp_wifi_get_protocol(WIFI_IF_AP, &bitmap)) {
+                                http_rpc.send(500, "text/plain", "error\n");
+                        }
+
+                        c += snprintf(&buf[c], sizeof(buf) - c, "AP: ");
+                        for (int i = 0; i < ARRAY_SIZE(protos); i++) {
+                                if (bitmap & protos[i].mask) {
+                                        c += snprintf(&buf[c], sizeof(buf) - c, "%s ", protos[i].s);
+                                }
+                        }
+
+                        c += snprintf(&buf[c], sizeof(buf) - c, "\n");
+                }
+
+                if (wifi_mode_get() == ESP_WIFI_MODE_STA_AP || wifi_mode_get() == ESP_WIFI_MODE_STA) {
+                        if (ESP_OK != esp_wifi_get_protocol(WIFI_IF_STA, &bitmap)) {
+                                http_rpc.send(500, "text/plain", "error\n");
+                        }
+
+                        c += snprintf(&buf[c], sizeof(buf) - c, "STA: ");
+                        for (int i = 0; i < ARRAY_SIZE(protos); i++) {
+                                if (bitmap & protos[i].mask) {
+                                        c += snprintf(&buf[c], sizeof(buf) - c, "%s ", protos[i].s);
+                                }
+                        }
+
+                        c += snprintf(&buf[c], sizeof(buf) - c, "\n");
+                }
+
+                http_rpc.send(200, "text/plain", buf);
+        });
+
+        http_rpc.on("/wifi_bw", HTTP_GET, [](){
+                char buf[64] = { };
+                size_t c = 0;
+                wifi_bandwidth_t bw;
+
+                if (wifi_mode_get() == ESP_WIFI_MODE_STA_AP || wifi_mode_get() == ESP_WIFI_MODE_AP) {
+                        if (ESP_OK != esp_wifi_get_bandwidth(WIFI_IF_AP, &bw)) {
+                                http_rpc.send(500, "text/plain", "error\n");
+                        }
+
+                        if (bw >= 0 && bw < ARRAY_SIZE(str_wifi_bw)) {
+                                c += snprintf(&buf[c], sizeof(buf) - c, "AP: %s\n", str_wifi_bw[bw]);
+                        } else {
+                                c += snprintf(&buf[c], sizeof(buf) - c, "AP: unknown: %d\n", bw);
+                        }
+                }
+
+                if (wifi_mode_get() == ESP_WIFI_MODE_STA_AP || wifi_mode_get() == ESP_WIFI_MODE_STA) {
+                        if (ESP_OK != esp_wifi_get_bandwidth(WIFI_IF_STA, &bw)) {
+                                http_rpc.send(500, "text/plain", "error\n");
+                        }
+
+                        if (bw >= 0 && bw < ARRAY_SIZE(str_wifi_bw)) {
+                                c += snprintf(&buf[c], sizeof(buf) - c, "STA: %s\n", str_wifi_bw[bw]);
+                        } else {
+                                c += snprintf(&buf[c], sizeof(buf) - c, "STA: unknown: %d\n", bw);
+                        }
+                }
+
+                http_rpc.send(200, "text/plain", buf);
+        });
+
         http_rpc.on("/wifi_tx_power", HTTP_GET, [](){
                 char buf[16] = { };
                 int rssi = 0;

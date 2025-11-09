@@ -39,24 +39,118 @@ enum {
         NUM_ESP_WIFI_MODES,
 };
 
-static int cfg_wifi_mode_convert[NUM_ESP_WIFI_MODES] = {
-        [ESP_WIFI_MODE_OFF]     = WIFI_MODE_NULL,
-        [ESP_WIFI_MODE_STA]     = WIFI_MODE_STA,
-        [ESP_WIFI_MODE_AP]      = WIFI_MODE_AP,
-        [ESP_WIFI_MODE_STA_AP]  = WIFI_MODE_APSTA,
+enum {
+        ESP_WIFI_AUTH_OPEN,
+        ESP_WIFI_AUTH_WPA_PSK,
+        ESP_WIFI_AUTH_WPA2_PSK,
+        ESP_WIFI_AUTH_WPA_WPA2_PSK,
+        ESP_WIFI_AUTH_WPA3_PSK,
+        ESP_WIFI_AUTH_WPA2_WPA3_PSK,
+        ESP_WIFI_AUTH_WPA3_ENT_192,
+        ESP_WIFI_AUTH_WPA3_EXT_PSK,
+        ESP_WIFI_AUTH_WPA3_EXT_PSK_MIXED_MODE,
+        NUM_ESP_WIFI_AUTH_MODES,
 };
 
-static __unused const char *str_wifi_modes[] = {
+static const char *str_wifi_modes[] = {
         [ESP_WIFI_MODE_OFF]     = "OFF",
         [ESP_WIFI_MODE_STA]     = "STA",
         [ESP_WIFI_MODE_AP]      = "AP",
         [ESP_WIFI_MODE_STA_AP]  = "STA_AP",
 };
 
+static const char *str_wifi_sta_scan_modes[] = {
+        [WIFI_FAST_SCAN]        = "FAST",
+        [WIFI_ALL_CHANNEL_SCAN] = "FULL",
+};
+
 static const char *str_wifi_ps_modes[] = {
         [WIFI_PS_NONE]          = "NONE",
         [WIFI_PS_MIN_MODEM]     = "PS_MIN",     // enabled PS
         [WIFI_PS_MAX_MODEM]     = "PS_MAX",     // MAX PS
+};
+
+static const char *str_wifi_bw[] = {
+        [0]                     = "unknown",
+        [WIFI_BW20]             = "20",
+        [WIFI_BW40]             = "40",
+        [WIFI_BW80]             = "80",
+        [WIFI_BW160]            = "160",
+        [WIFI_BW80_BW80]        = "80+80",
+};
+
+static const char *str_wifi_auth_modes[NUM_ESP_WIFI_AUTH_MODES] = {
+        [ESP_WIFI_AUTH_OPEN]                            = "OPEN",
+        [ESP_WIFI_AUTH_WPA_PSK]                         = "WPA_PSK",
+        [ESP_WIFI_AUTH_WPA2_PSK]                        = "WPA2_PSK",
+        [ESP_WIFI_AUTH_WPA_WPA2_PSK]                    = "WPA_WPA2_PSK",
+        [ESP_WIFI_AUTH_WPA3_PSK]                        = "WPA3_PSK",
+        [ESP_WIFI_AUTH_WPA2_WPA3_PSK]                   = "WPA2_WPA3_PSK",
+        [ESP_WIFI_AUTH_WPA3_ENT_192]                    = "WPA3_ENT_192",
+        [ESP_WIFI_AUTH_WPA3_EXT_PSK]                    = "WPA3_EXT_PSK",
+        [ESP_WIFI_AUTH_WPA3_EXT_PSK_MIXED_MODE]         = "WPA3_EXT_PSK_MIXED_MODE",
+};
+
+static const char *str_wifi_cipher_types[] = {
+        [WIFI_CIPHER_TYPE_NONE]                         = "NONE",
+        [WIFI_CIPHER_TYPE_WEP40]                        = "WEP40",
+        [WIFI_CIPHER_TYPE_WEP104]                       = "WEP104",
+        [WIFI_CIPHER_TYPE_TKIP]                         = "TKIP",
+        [WIFI_CIPHER_TYPE_CCMP]                         = "CCMP",
+        [WIFI_CIPHER_TYPE_TKIP_CCMP]                    = "TKIP_CCMP",
+        [WIFI_CIPHER_TYPE_AES_CMAC128]                  = "AES_CMAC128",
+        [WIFI_CIPHER_TYPE_SMS4]                         = "SMS4",
+        [WIFI_CIPHER_TYPE_GCMP]                         = "GCMP",
+        [WIFI_CIPHER_TYPE_GCMP256]                      = "GCMP256",
+        [WIFI_CIPHER_TYPE_AES_GMAC128]                  = "AES_GMAC128",
+        [WIFI_CIPHER_TYPE_AES_GMAC256]                  = "AES_GMAC256",
+        [WIFI_CIPHER_TYPE_UNKNOWN]                      = "UNKNOWN",
+};
+
+// use the reserved index as default
+#define WIFI_PHY_RATE_DEFAULT (4)
+
+static const char *str_wifi_tx_rates[] = {
+        [WIFI_PHY_RATE_1M_L]        = "1M_LGI",
+        [WIFI_PHY_RATE_2M_L]        = "2M_LGI",
+        [WIFI_PHY_RATE_5M_L]        = "5M_LGI",
+        [WIFI_PHY_RATE_11M_L]       = "11M_LGI",
+        [4]                         = "DEFAULT",
+        [WIFI_PHY_RATE_2M_S]        = "2M_SGI",
+        [WIFI_PHY_RATE_5M_S]        = "5M_SGI",
+        [WIFI_PHY_RATE_11M_S]       = "11M_SGI",
+        [WIFI_PHY_RATE_48M]         = "48M",
+        [WIFI_PHY_RATE_24M]         = "24M",
+        [WIFI_PHY_RATE_12M]         = "12M",
+        [WIFI_PHY_RATE_6M]          = "6M",
+        [WIFI_PHY_RATE_54M]         = "54M",
+        [WIFI_PHY_RATE_36M]         = "36M",
+        [WIFI_PHY_RATE_18M]         = "18M",
+        [WIFI_PHY_RATE_9M]          = "9M",
+        [WIFI_PHY_RATE_MCS0_LGI]    = "MCS0_LGI",
+        [WIFI_PHY_RATE_MCS1_LGI]    = "MCS1_LGI",
+        [WIFI_PHY_RATE_MCS2_LGI]    = "MCS2_LGI",
+        [WIFI_PHY_RATE_MCS3_LGI]    = "MCS3_LGI",
+        [WIFI_PHY_RATE_MCS4_LGI]    = "MCS4_LGI",
+        [WIFI_PHY_RATE_MCS5_LGI]    = "MCS5_LGI",
+        [WIFI_PHY_RATE_MCS6_LGI]    = "MCS6_LGI",
+        [WIFI_PHY_RATE_MCS7_LGI]    = "MCS7_LGI",
+#ifdef CONFIG_SOC_WIFI_HE_SUPPORT
+        [WIFI_PHY_RATE_MCS8_LGI]    = "MCS8_LGI",
+        [WIFI_PHY_RATE_MCS9_LGI]    = "MCS9_LGI",
+#endif
+        [WIFI_PHY_RATE_MCS0_SGI]    = "MCS0_SGI",
+        [WIFI_PHY_RATE_MCS1_SGI]    = "MCS1_SGI",
+        [WIFI_PHY_RATE_MCS2_SGI]    = "MCS2_SGI",
+        [WIFI_PHY_RATE_MCS3_SGI]    = "MCS3_SGI",
+        [WIFI_PHY_RATE_MCS4_SGI]    = "MCS4_SGI",
+        [WIFI_PHY_RATE_MCS5_SGI]    = "MCS5_SGI",
+        [WIFI_PHY_RATE_MCS6_SGI]    = "MCS6_SGI",
+        [WIFI_PHY_RATE_MCS7_SGI]    = "MCS7_SGI",
+#if CONFIG_SOC_WIFI_HE_SUPPORT
+        [WIFI_PHY_RATE_MCS8_SGI]    = "MCS8_SGI",
+        [WIFI_PHY_RATE_MCS9_SGI]    = "MCS9_SGI",
+#endif
 };
 
 #if ESP_IDF_VERSION_MAJOR >= 5 && ESP_IDF_VERSION_MINOR > 5
@@ -66,11 +160,30 @@ static const char *str_wifi_bands[] = {
 };
 
 static const char *str_wifi_band_modes[] = {
-        [WIFI_BAND_MODE_2G_ONLY]        = "2.4G",
-        [WIFI_BAND_MODE_5G_ONLY]        = "5G",
-        [WIFI_BAND_MODE_AUTO]           = "AUTO",
+        [WIFI_BAND_MODE_2G_ONLY] = "2.4G",
+        [WIFI_BAND_MODE_5G_ONLY] = "5G",
+        [WIFI_BAND_MODE_AUTO]    = "AUTO",
 };
-#endif // ESP_IDF_VERSION_MAJOR
+#endif
+
+static const wifi_auth_mode_t wifi_auth_mode_convert[] = {
+        [ESP_WIFI_AUTH_OPEN]                    = WIFI_AUTH_OPEN,
+        [ESP_WIFI_AUTH_WPA_PSK]                 = WIFI_AUTH_WPA_PSK,
+        [ESP_WIFI_AUTH_WPA2_PSK]                = WIFI_AUTH_WPA2_PSK,
+        [ESP_WIFI_AUTH_WPA_WPA2_PSK]            = WIFI_AUTH_WPA_WPA2_PSK,
+        [ESP_WIFI_AUTH_WPA3_PSK]                = WIFI_AUTH_WPA3_PSK,
+        [ESP_WIFI_AUTH_WPA2_WPA3_PSK]           = WIFI_AUTH_WPA2_WPA3_PSK,
+        [ESP_WIFI_AUTH_WPA3_ENT_192]            = WIFI_AUTH_WPA3_ENT_192,
+        [ESP_WIFI_AUTH_WPA3_EXT_PSK]            = WIFI_AUTH_WPA3_EXT_PSK,
+        [ESP_WIFI_AUTH_WPA3_EXT_PSK_MIXED_MODE] = WIFI_AUTH_WPA3_EXT_PSK_MIXED_MODE,
+};
+
+static const wifi_mode_t wifi_mode_convert[NUM_ESP_WIFI_MODES] = {
+        [ESP_WIFI_MODE_OFF]     = WIFI_MODE_NULL,
+        [ESP_WIFI_MODE_STA]     = WIFI_MODE_STA,
+        [ESP_WIFI_MODE_AP]      = WIFI_MODE_AP,
+        [ESP_WIFI_MODE_STA_AP]  = WIFI_MODE_APSTA,
+};
 
 struct wifi_assoc_cfg {
         char ssid[24];
@@ -87,15 +200,14 @@ struct wifi_assoc_cfg {
 struct wifi_ap_cfg {
         struct wifi_assoc_cfg assoc;
         uint8_t dhcps;
+        uint8_t ssid_with_sn;
         uint8_t max_sta;
         uint8_t csa_count;
         uint8_t dtim_period;
-        uint8_t ssid_with_sn;
         uint16_t beacon_intv;
 };
 
 // TODO: HE VHT configs
-// TODO: connection timed out
 struct wifi_sta_cfg {
         struct wifi_assoc_cfg assoc;
         uint8_t dhcpc;
@@ -116,6 +228,15 @@ struct wifi_adv_cfg {
         uint8_t ampdu_tx;
         uint8_t amsdu_tx;
         uint8_t sta_disconnected_pm;
+        uint8_t use_nvs;
+#if ESP_IDF_VERSION_MAJOR >= 5 && ESP_IDF_VERSION_MINOR > 5
+        uint8_t band_mode;
+#endif
+        uint8_t no_11b_rate;
+        uint8_t proto_bitmap;
+        uint16_t phy_rate;
+        uint16_t bw_2g;
+        uint16_t bw_5g;
 };
 
 struct wifi_buf_cfg {
@@ -131,10 +252,8 @@ struct wifi_buf_cfg {
         uint16_t rx_ba_win;
 };
 
-// TODO: tx rate config
 struct wifi_cfg {
         uint8_t mode;
-        uint8_t band;
         struct wifi_adv_cfg adv;
         struct wifi_buf_cfg buf;
         struct wifi_ap_cfg ap;
@@ -169,6 +288,13 @@ static __unused int wifi_mode_get(void)
 void wifi_ipinfo_print(esp_netif_t *netif)
 {
         esp_netif_ip_info_t ip_info;
+
+        if (netif == g_wifi_ctx.netif_ap) {
+                pr_info("AP netif:\n");
+        } else if (netif == g_wifi_ctx.netif_sta) {
+                pr_info("STA netif:\n");
+        }
+
         if (esp_netif_get_ip_info(netif, &ip_info) == ESP_OK) {
                 pr_info("address: " IPSTR "\n", IP2STR(&ip_info.ip));
                 pr_info("netmask: " IPSTR "\n", IP2STR(&ip_info.netmask));
@@ -196,7 +322,7 @@ int wifi_netif_ip4_get(esp_netif_t *netif, esp_ip4_addr_t *out)
         if (esp_netif_get_ip_info(netif, &ip_info) == ESP_OK) {
                 if (out)
                         *out = ip_info.ip;
-                
+
                 return 0;
         }
 
@@ -209,7 +335,7 @@ int wifi_netif_gw4_get(esp_netif_t *netif, esp_ip4_addr_t *out)
         if (esp_netif_get_ip_info(netif, &ip_info) == ESP_OK) {
                 if (out)
                         *out = ip_info.gw;
-                
+
                 return 0;
         }
 
@@ -281,7 +407,7 @@ static void task_wifi_sta_ping(void *arg)
                                 ping4_deinit(pctx);
                                 pctx = NULL;
                         }
-                        
+
                         pctx = ping4_init_ip4(dst, task_wifi_conn_ping_cb, (void *)&ping_success);
                         if (!pctx) {
                                 pr_err("failed to init ping4 context, abort\n");
@@ -370,10 +496,13 @@ static const esp_timer_create_args_t timer_args_wifi_sta_reconn = {
 };
 
 // https://docs.espressif.com/projects/esp-idf/en/stable/esp32/api-guides/wifi.html#wi-fi-reason-code
-static void __wifi_event_handle_internal(esp_event_base_t event_base,
-                                         int32_t event_id,
-                                         void *event_data)
+static void wifi_event_handle_internal(esp_event_base_t event_base,
+                                       int32_t event_id,
+                                       void *event_data)
 {
+        struct wifi_ctx *ctx = &g_wifi_ctx;
+        esp_err_t ret = ESP_OK;
+
         if (event_base == WIFI_EVENT) {
                 switch (event_id) {
                 case WIFI_EVENT_AP_STACONNECTED: {
@@ -381,17 +510,20 @@ static void __wifi_event_handle_internal(esp_event_base_t event_base,
                         pr_info("sta " MACSTR " joined, AID: %d\n", MAC2STR(e->mac), e->aid);
                         break;
                 }
-                
+
                 case WIFI_EVENT_AP_STADISCONNECTED: {
                         wifi_event_ap_stadisconnected_t *e = (wifi_event_ap_stadisconnected_t *)event_data;
                         pr_info("sta " MACSTR " left, AID: %d reason: %d\n", MAC2STR(e->mac), e->aid, e->reason);
                         break;
                 }
-                
+
                 case WIFI_EVENT_STA_START:
-                        esp_wifi_connect();
+                        if (ctx->netif_sta) {
+                                esp_wifi_connect();
+                                pr_info("sta connection started\n");
+                        }
                         break;
-                
+
                 case WIFI_EVENT_STA_CONNECTED: {
                         wifi_event_sta_connected_t *e = (wifi_event_sta_connected_t *)event_data;
                         pr_info("sta connected to %s (" MACSTR "), ch: %u\n", e->ssid, MAC2STR(e->bssid), e->channel);
@@ -451,7 +583,7 @@ static void wifi_event_handler(void *arg,
                                int32_t event_id,
                                void *event_data)
 {
-        __wifi_event_handle_internal(event_base, event_id, event_data);
+        wifi_event_handle_internal(event_base, event_id, event_data);
         wifi_event_cb_call(event_base, event_id, event_data);
 }
 
@@ -459,10 +591,10 @@ static int is_assoc_static_ip_valid(struct wifi_assoc_cfg *cfg)
 {
         if (!is_valid_ipaddr(cfg->local, AF_INET))
                 return 0;
-        
+
         if (!is_valid_ipaddr(cfg->gw, AF_INET))
-                return 0;           
-        
+                return 0;
+
         if (!is_valid_ipaddr(cfg->subnet, AF_INET))
                 return 0;
 
@@ -484,10 +616,15 @@ esp_netif_t *wifi_netif_softap_init(struct wifi_ap_cfg *cfg)
                 strncpy((char *)ap_cfg->ssid, cfg->assoc.ssid, sizeof(ap_cfg->ssid));
         }
 
+        if (cfg->assoc.auth >= NUM_ESP_WIFI_AUTH_MODES) {
+                pr_err("invalid auth mode\n");
+                return NULL;
+        }
+
         strncpy((char *)ap_cfg->password, cfg->assoc.passwd, sizeof(ap_cfg->password));
         ap_cfg->max_connection = cfg->max_sta;
-        ap_cfg->authmode = (wifi_auth_mode_t)cfg->assoc.auth; // TODO
-        ap_cfg->pairwise_cipher = (wifi_cipher_type_t )cfg->assoc.cipher; // TODO
+        ap_cfg->authmode = (wifi_auth_mode_t)wifi_auth_mode_convert[cfg->assoc.auth];
+        ap_cfg->pairwise_cipher = (wifi_cipher_type_t )cfg->assoc.cipher;
         ap_cfg->beacon_interval = cfg->beacon_intv;
         ap_cfg->csa_count = cfg->csa_count;
         ap_cfg->dtim_period = cfg->dtim_period;
@@ -506,7 +643,7 @@ esp_netif_t *wifi_netif_softap_init(struct wifi_ap_cfg *cfg)
         if (!cfg->dhcps) {
                 ret = esp_netif_dhcps_stop(netif);
                 if (ret != ESP_OK) {
-                        pr_err("esp_netif_dhcpc_stop(): %d\n", ret);
+                        pr_err("esp_netif_dhcpc_stop(): 0x%x\n", ret);
                         goto err;
                 }
         }
@@ -515,7 +652,7 @@ esp_netif_t *wifi_netif_softap_init(struct wifi_ap_cfg *cfg)
                 if (cfg->dhcps) {
                         ret = esp_netif_dhcps_stop(netif);
                         if (ret != ESP_OK) {
-                                pr_err("esp_netif_dhcpc_stop(): %d\n", ret);
+                                pr_err("esp_netif_dhcpc_stop(): 0x%x\n", ret);
                                 goto err;
                         }
                 }
@@ -527,9 +664,11 @@ esp_netif_t *wifi_netif_softap_init(struct wifi_ap_cfg *cfg)
 
                 ret = esp_netif_set_ip_info(netif, &ip_info);
                 if (ret != ESP_OK) {
-                        pr_err("esp_netif_set_ip_info(): %d\n", ret);
+                        pr_err("esp_netif_set_ip_info(): 0x%x\n", ret);
                         goto err;
                 }
+
+                wifi_ipinfo_print(netif);
 
                 if (is_valid_ipaddr(cfg->assoc.dns, AF_INET)) {
                         esp_netif_dns_info_t dns = { };
@@ -538,7 +677,7 @@ esp_netif_t *wifi_netif_softap_init(struct wifi_ap_cfg *cfg)
 
                         ret = esp_netif_set_dns_info(netif, ESP_NETIF_DNS_MAIN, &dns);
                         if (ret != ESP_OK) {
-                                pr_err("esp_netif_set_dns_info(): %d\n", ret);
+                                pr_err("esp_netif_set_dns_info(): 0x%x\n", ret);
                                 goto err;
                         }
 
@@ -546,13 +685,9 @@ esp_netif_t *wifi_netif_softap_init(struct wifi_ap_cfg *cfg)
                 }
 
                 if (cfg->dhcps) {
-                        // esp_netif_ip_info_t ip_start, ip_end;
-                        // ip_start.ip = ((uint32_t)(ip_info.ip) & 0xffffff00) | 0x02;
-                        // ip_end.ip = ((uint32_t)(ip_info.ip) & 0xffffff00) | 0x10;
-
                         ret = esp_netif_dhcps_start(netif);
                         if (ret != ESP_OK) {
-                                pr_err("esp_netif_dhcpc_stop(): %d\n", ret);
+                                pr_err("esp_netif_dhcps_start(): 0x%x\n", ret);
                                 goto err;
                         }
                 }
@@ -560,7 +695,7 @@ esp_netif_t *wifi_netif_softap_init(struct wifi_ap_cfg *cfg)
 
         ret = esp_wifi_set_config(WIFI_IF_AP, &wifi_cfg);
         if (ret != ESP_OK) {
-                pr_err("esp_wifi_set_config(): %d\n", ret);
+                pr_err("esp_wifi_set_config(): 0x%x\n", ret);
                 goto err;
         }
 
@@ -580,12 +715,20 @@ esp_netif_t *wifi_netif_sta_init(struct wifi_sta_cfg *cfg)
         esp_netif_t *netif;
         esp_err_t ret;
 
+        if (cfg->assoc.auth >= NUM_ESP_WIFI_AUTH_MODES) {
+                pr_err("invalid auth mode\n");
+                return NULL;
+        }
+
         strncpy((char *)sta_cfg->ssid, cfg->assoc.ssid, sizeof(sta_cfg->ssid));
         strncpy((char *)sta_cfg->password, cfg->assoc.passwd, sizeof(sta_cfg->password));
         sta_cfg->failure_retry_cnt = cfg->retry_count;
         sta_cfg->scan_method = (wifi_scan_method_t)cfg->scan_mode; // TODO
-        sta_cfg->threshold.authmode = (wifi_auth_mode_t)cfg->assoc.auth; // TODO
+        sta_cfg->threshold.authmode = (wifi_auth_mode_t)wifi_auth_mode_convert[cfg->assoc.auth];
         sta_cfg->sae_pwe_h2e = WPA3_SAE_PWE_BOTH;
+        sta_cfg->btm_enabled = cfg->btm_enabled;
+        sta_cfg->rm_enabled = cfg->rm_enabled;
+        sta_cfg->mbo_enabled = cfg->mbo_enabled;
 
         if (cfg->assoc.channel > 0) {
                 sta_cfg->channel = cfg->assoc.channel;
@@ -600,7 +743,7 @@ esp_netif_t *wifi_netif_sta_init(struct wifi_sta_cfg *cfg)
         if (!cfg->dhcpc && is_assoc_static_ip_valid(&cfg->assoc)) {
                 ret = esp_netif_dhcpc_stop(netif);
                 if (ret != ESP_OK) {
-                        pr_err("esp_netif_dhcpc_stop(): %d\n", ret);
+                        pr_err("esp_netif_dhcpc_stop(): 0x%x\n", ret);
                         goto err;
                 }
 
@@ -613,7 +756,7 @@ esp_netif_t *wifi_netif_sta_init(struct wifi_sta_cfg *cfg)
 
                 ret = esp_netif_set_ip_info(netif, &ip_info);
                 if (ret != ESP_OK) {
-                        pr_err("esp_netif_set_ip_info(): %d\n", ret);
+                        pr_err("esp_netif_set_ip_info(): 0x%x\n", ret);
                         goto err;
                 }
 
@@ -624,7 +767,7 @@ esp_netif_t *wifi_netif_sta_init(struct wifi_sta_cfg *cfg)
 
                         ret = esp_netif_set_dns_info(netif, ESP_NETIF_DNS_MAIN, &dns);
                         if (ret != ESP_OK) {
-                                pr_err("esp_netif_set_dns_info(): %d\n", ret);
+                                pr_err("esp_netif_set_dns_info(): 0x%x\n", ret);
                                 goto err;
                         }
 
@@ -634,7 +777,7 @@ esp_netif_t *wifi_netif_sta_init(struct wifi_sta_cfg *cfg)
 
         ret = esp_wifi_set_config(WIFI_IF_STA, &wifi_cfg);
         if (ret != ESP_OK) {
-                pr_err("esp_wifi_set_config(): %d\n", ret);
+                pr_err("esp_wifi_set_config(): 0x%x\n", ret);
                 goto err;
         }
 
@@ -646,18 +789,6 @@ err:
 
         return NULL;
 }
-
-// void softap_set_dns_addr(esp_netif_t *esp_netif_ap, esp_netif_t *esp_netif_sta)
-// {
-//         const uint8_t DHCPS_OFFER_DNS = 0x02;
-//         esp_netif_dns_info_t dns;
-//         esp_netif_get_dns_info(esp_netif_sta, ESP_NETIF_DNS_MAIN, &dns);
-//         uint8_t dhcps_offer_option = DHCPS_OFFER_DNS;
-//         ESP_ERROR_CHECK_WITHOUT_ABORT(esp_netif_dhcps_stop(esp_netif_ap));
-//         ESP_ERROR_CHECK(esp_netif_dhcps_option(esp_netif_ap, ESP_NETIF_OP_SET, ESP_NETIF_DOMAIN_NAME_SERVER, &dhcps_offer_option, sizeof(dhcps_offer_option)));
-//         ESP_ERROR_CHECK(esp_netif_set_dns_info(esp_netif_ap, ESP_NETIF_DNS_MAIN, &dns));
-//         ESP_ERROR_CHECK_WITHOUT_ABORT(esp_netif_dhcps_start(esp_netif_ap));
-// }
 
 void wifi_early_init(void)
 {
@@ -676,10 +807,17 @@ int wifi_start(struct wifi_ctx *ctx, struct wifi_cfg *cfg)
 {
         esp_err_t ret;
 
+        if (cfg->mode >= NUM_ESP_WIFI_MODES) {
+                pr_info("invalid mode\n");
+                return -EINVAL;
+        }
+
         if (cfg->mode == ESP_WIFI_MODE_OFF) {
                 pr_info("WiFi OFF\n");
                 return 0;
         }
+
+        ctx->cfg = cfg;
 
         wifi_early_init();
 
@@ -713,12 +851,17 @@ int wifi_start(struct wifi_ctx *ctx, struct wifi_cfg *cfg)
         defcfg.ampdu_tx_enable = cfg->adv.ampdu_tx;
         defcfg.amsdu_tx_enable = cfg->adv.amsdu_tx;
         defcfg.sta_disconnected_pm = cfg->adv.sta_disconnected_pm;
+        defcfg.nvs_enable = cfg->adv.use_nvs;
+
+        esp32_stack_print("before wifi init");
 
         ret = esp_wifi_init(&defcfg);
         if (ret != ESP_OK) {
-                pr_err("esp_wifi_init(): %d\n", ret);
+                pr_err("esp_wifi_init(): 0x%x\n", ret);
                 return -ENOMEM;
         }
+
+        esp32_stack_print("after wifi init");
 
         pr_info("basic config:\n");
         pr_info("\tstatic_rx_buf_num: %d\n", defcfg.static_rx_buf_num);
@@ -738,51 +881,120 @@ int wifi_start(struct wifi_ctx *ctx, struct wifi_cfg *cfg)
         pr_info("\tsta_disconnected_pm: %d\n", defcfg.sta_disconnected_pm);
         pr_info("\ttx_hetb_queue_num: %d\n", defcfg.tx_hetb_queue_num);
 
-        ret = esp_wifi_set_mode(WIFI_MODE_APSTA);
+        ret = esp_wifi_set_mode(wifi_mode_convert[cfg->mode]);
         if (ret != ESP_OK) {
-                pr_err("esp_wifi_set_mode(): %d\n", ret);
+                pr_err("esp_wifi_set_mode(): 0x%x\n", ret);
                 return -EIO;
         }
 
-        if (cfg->mode == ESP_WIFI_MODE_STA_AP || cfg->mode == ESP_WIFI_MODE_STA_AP) {
+        if (cfg->mode == ESP_WIFI_MODE_STA_AP || cfg->mode == ESP_WIFI_MODE_AP) {
                 ctx->netif_ap = wifi_netif_softap_init(&cfg->ap);
+
+                if (!ctx->netif_ap) {
+                        pr_err("failed to start ap netif\n");
+                        return -EIO;
+                }
+
+                if (cfg->adv.phy_rate != WIFI_PHY_RATE_DEFAULT) {
+                        ret = esp_wifi_config_80211_tx_rate(WIFI_IF_AP, (wifi_phy_rate_t)cfg->adv.phy_rate);
+                        if (ret != ESP_OK) {
+                                pr_err("esp_wifi_config_80211_tx_rate(): 0x%x\n", ret);
+                        }
+                }
+
+                ret = esp_wifi_config_11b_rate(WIFI_IF_AP, cfg->adv.no_11b_rate);
+                if (ret != ESP_OK) {
+                        pr_err("esp_wifi_config_80211_tx_rate(): 0x%x\n", ret);
+                }
+
+#if ESP_IDF_VERSION_MAJOR >= 5 && ESP_IDF_VERSION_MINOR > 5
+                wifi_bandwidths_t bw = { };
+                bw.ghz_2g = (wifi_bandwidth_t)cfg->adv.bw_2g;
+                bw.ghz_5g = (wifi_bandwidth_t)cfg->adv.bw_5g;
+
+                ret = esp_wifi_set_bandwidths(WIFI_IF_AP, &bw);
+#else
+                ret = esp_wifi_set_bandwidth(WIFI_IF_AP, (wifi_bandwidth_t)cfg->adv.bw_2g);
+#endif
+                if (ret != ESP_OK) {
+                        pr_err("esp_wifi_set_bandwidth(): 0x%x\n", ret);
+                }
         }
 
-        if (cfg->mode == ESP_WIFI_MODE_STA || cfg->mode == ESP_WIFI_MODE_STA_AP) {
+        if (cfg->mode == ESP_WIFI_MODE_STA_AP || cfg->mode == ESP_WIFI_MODE_STA) {
                 ctx->netif_sta = wifi_netif_sta_init(&cfg->sta);
+
+                if (!ctx->netif_sta) {
+                        pr_err("failed to start sta netif\n");
+                        return -EIO;
+                }
+
+                if (cfg->adv.phy_rate != WIFI_PHY_RATE_DEFAULT) {
+                        ret = esp_wifi_config_80211_tx_rate(WIFI_IF_STA, (wifi_phy_rate_t)cfg->adv.phy_rate);
+                        if (ret != ESP_OK) {
+                                pr_err("esp_wifi_config_80211_tx_rate(): 0x%x\n", ret);
+                        }
+                }
+
+                ret = esp_wifi_config_11b_rate(WIFI_IF_STA, cfg->adv.no_11b_rate);
+                if (ret != ESP_OK) {
+                        pr_err("esp_wifi_config_80211_tx_rate(): 0x%x\n", ret);
+                }
+
+#if ESP_IDF_VERSION_MAJOR >= 5 && ESP_IDF_VERSION_MINOR > 5
+                wifi_bandwidths_t bw = { };
+                bw.ghz_2g = (wifi_bandwidth_t)cfg->adv.bw_2g;
+                bw.ghz_5g = (wifi_bandwidth_t)cfg->adv.bw_5g;
+
+                ret = esp_wifi_set_bandwidths(WIFI_IF_STA, &bw);
+#else
+                ret = esp_wifi_set_bandwidth(WIFI_IF_STA, (wifi_bandwidth_t)cfg->adv.bw_2g);
+#endif
+                if (ret != ESP_OK) {
+                        pr_err("esp_wifi_set_bandwidth(): 0x%x\n", ret);
+                }
         }
+
+#if ESP_IDF_VERSION_MAJOR >= 5 && ESP_IDF_VERSION_MINOR > 5
+        ret = esp_wifi_set_band_mode(cfg->adv.band_mode);
+        if (ret != ESP_OK) {
+                pr_err("esp_wifi_set_band_mode(): 0x%x\n", ret);
+        }
+#endif
 
         ret = esp_wifi_start();
         if (ret != ESP_OK) {
-                pr_err("esp_wifi_start(): %d\n", ret);
+                pr_err("esp_wifi_start(): 0x%x\n", ret);
                 return -EIO;
         }
 
         ret = esp_wifi_set_ps((wifi_ps_type_t)cfg->adv.ps_mode);
         if (ESP_OK != ret) {
-                pr_err("esp_wifi_set_ps(): %d\n", ret);
+                pr_err("esp_wifi_set_ps(): 0x%x\n", ret);
         }
 
         {
                 uint8_t pwr = cfg->adv.tx_power;
-                
+
                 if (pwr > 21)
                         pwr = 21;
                 if (pwr < 2)
                         pwr = 2;
-                
+
                 ret = esp_wifi_set_max_tx_power(pwr * 4);
                 if (ret != ESP_OK) {
-                        pr_err("esp_wifi_set_max_tx_power(): %d\n", ret);
+                        pr_err("esp_wifi_set_max_tx_power(): 0x%x\n", ret);
                 }
         }
 
-        esp_wifi_set_dynamic_cs(cfg->adv.dynamic_cs);
-
         if (cfg->mode == ESP_WIFI_MODE_STA_AP || cfg->mode == ESP_WIFI_MODE_STA) {
                 esp_netif_set_default_netif(ctx->netif_sta);
+        } else {
+                esp_netif_set_default_netif(ctx->netif_ap);
+        }
 
-                // esp_wifi_set_inactive_time(WIFI_IF_STA, cfg->sta.inactive_sec);
+        if (cfg->mode == ESP_WIFI_MODE_STA_AP || cfg->mode == ESP_WIFI_MODE_STA) {
+                esp_wifi_set_inactive_time(WIFI_IF_STA, cfg->sta.inactive_sec);
 
                 xTaskCreatePinnedToCore(task_wifi_sta_ping, "ping_daemon", 4096, NULL, 1, &task_handle_sta_ping, CPU0);
 
@@ -790,17 +1002,33 @@ int wifi_start(struct wifi_ctx *ctx, struct wifi_cfg *cfg)
                         pr_err("failed to create timer\n");
                         return -ENOMEM;
                 }
-        } else {
-                esp_netif_set_default_netif(ctx->netif_ap);
+
+// #if ESP_IDF_VERSION_MAJOR >= 5 && ESP_IDF_VERSION_MINOR > 5
+//                 if (cfg->adv.band_mode != WIFI_BAND_MODE_AUTO)
+// #endif
+//                 {
+//                         ret = esp_wifi_set_protocol(WIFI_IF_STA, WIFI_PROTOCOL_11B|WIFI_PROTOCOL_11G|WIFI_PROTOCOL_11N);
+//                         if (ret != ESP_OK) {
+//                                 pr_err("esp_wifi_set_protocols(): 0x%x\n", ret);
+//                         }
+//                 }
         }
 
         if (cfg->mode == ESP_WIFI_MODE_STA_AP || cfg->mode == ESP_WIFI_MODE_AP) {
-                if (esp_netif_napt_enable(ctx->netif_ap) != ESP_OK) {
-                        pr_err("failed to enable NAPT on AP interface\n");
-                }
-        }
+                // if (esp_netif_napt_enable(ctx->netif_ap) != ESP_OK) {
+                //         pr_err("failed to enable NAPT on AP interface\n");
+                // }
 
-        ctx->cfg = cfg;
+// #if ESP_IDF_VERSION_MAJOR >= 5 && ESP_IDF_VERSION_MINOR > 5
+//                 if (cfg->adv.band_mode != WIFI_BAND_MODE_AUTO)
+// #endif
+//                 {
+//                         ret = esp_wifi_set_protocol(WIFI_IF_AP, cfg->adv.proto_bitmap);
+//                         if (ret != ESP_OK) {
+//                                 pr_err("esp_wifi_set_protocols(): 0x%x\n", ret);
+//                         }
+//                 }
+        }
 
         return 0;
 }

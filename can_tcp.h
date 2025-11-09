@@ -272,11 +272,11 @@ static void can_tcp_server_worker(void)
                                 } else {
                                         // err code 113 here, which should be 103 in posix
                                         // XXX: wifi stack got error?!
-                                        if (errno == ECONNABORTED) {
-                                                if (wifi_sta_connected) {
-                                                        esp_wifi_disconnect();
-                                                }
-                                        }
+                                        // if (errno == ECONNABORTED) {
+                                        //         if (wifi_sta_connected) {
+                                        //                 esp_wifi_disconnect();
+                                        //         }
+                                        // }
 
                                         // close connection now
                                         break;

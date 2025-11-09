@@ -185,6 +185,39 @@ static void save_factory_config_json_load(void)
         }
 }
 
+static int nvs_erase(void)
+{
+        esp_err_t err = nvs_flash_erase();
+
+        if (err != ESP_OK) {
+                pr_err("NVS erase failed: %d\n", err);
+                return -EIO;
+        }
+
+        pr_info("NVS erased successfully\n");
+        nvs_flash_init();
+
+        return 0;
+}
+
+static void save_cfg_reset(void)
+{
+        memcpy(&g_cfg, &g_cfg_default, sizeof(g_cfg));
+
+        // use factory config if found
+        if (!config_json_load(&g_cfg, CONFIG_FACTORY_JSON_PATH)) {
+                pr_info("factory json config found, config merged with it\n");
+        }
+
+        save_write(&g_cfg);
+}
+
+static void save_cfg_default_reset(void)
+{
+        memcpy(&g_cfg, &g_cfg_default, sizeof(g_cfg));
+        save_write(&g_cfg);
+}
+
 static void save_init(int (*jbuf_maker)(jbuf_t *, struct config *))
 {
         char fwhash[32 * 2 + 2] = { };
@@ -241,39 +274,6 @@ static void save_init(int (*jbuf_maker)(jbuf_t *, struct config *))
                 save_write(&g_cfg);
         }
         json_print_on_load = f;
-}
-
-static int nvs_erase(void)
-{
-        esp_err_t err = nvs_flash_erase();
-
-        if (err != ESP_OK) {
-                pr_err("NVS erase failed: %d\n", err);
-                return -EIO;
-        }
-
-        pr_info("NVS erased successfully\n");
-        nvs_flash_init();
-
-        return 0;
-}
-
-static void save_cfg_reset(void)
-{
-        memcpy(&g_cfg, &g_cfg_default, sizeof(g_cfg));
-
-        // use factory config if found
-        if (!config_json_load(&g_cfg, CONFIG_FACTORY_JSON_PATH)) {
-                pr_info("factory json config found, config merged with it\n");
-        }
-
-        save_write(&g_cfg);
-}
-
-static void save_cfg_default_reset(void)
-{
-        memcpy(&g_cfg, &g_cfg_default, sizeof(g_cfg));
-        save_write(&g_cfg);
 }
 
 static __unused void save_reset_gpio_check(unsigned gpio_rst)

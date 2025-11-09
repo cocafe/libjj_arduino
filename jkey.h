@@ -10,6 +10,7 @@
 #include "cJSON.h"
 #include "spiffs.h"
 #include "json.h"
+#include "bits.h"
 
 #define cJSON_Boolean                   (cJSON_False | cJSON_True)
 #define cJSON_Compound                  (cJSON_Object | cJSON_Array)
@@ -56,6 +57,7 @@ struct json_key {
                                                         // but this flag is not set for data_key.
                 uint8_t         ref_malloc      : 1;    // TODO: REMOVE?
                 uint8_t         is_short_float  : 1;
+                uint8_t         is_bitmap       : 1;
 
                 uint8_t         base_ref_ptr    : 1;    // is @base_ref pointing to a pointer?
                 uint8_t         base_ref_malloc : 1;    // TODO: REMOVE?
@@ -71,6 +73,7 @@ struct json_key {
                         void           *ref;                    // (data, obj): refer to data
                         unsigned        ref_offs;               // offset address of parent's ref
 
+                        uint8_t                 bitmap_nr;
                         uint8_t                 int_base;
                         struct {
                                 char          **map;
@@ -637,6 +640,28 @@ void *__jbuf_sint_add(jbuf_t *b, const char *key, void *ref, size_t refsz)
         return jbuf_key_add(b, JKEY_TYPE_INT, key, ref, refsz);
 }
 
+#define jbuf_bitmap_add(_b, _key, _ref, _bit) \
+        __jbuf_bitmap_add(_b, _key, _ref, sizeof(_ref), _bit)
+
+void *__jbuf_bitmap_add(jbuf_t *b, const char *key, void *ref, size_t refsz, uint8_t bit)
+{
+        void *cookie = jbuf_key_add(b, JKEY_TYPE_BOOL, key, ref, refsz);
+        jkey_t *k;
+
+        if (!cookie)
+                return NULL;
+
+        k = jbuf_key_get(b, cookie);
+        k->flags.is_bitmap = 1;
+
+        if (bit > 63)
+                bit = 63;
+
+        k->data.bitmap_nr = bit;
+
+        return cookie;
+}
+
 #define jbuf_float_add(_b, _key, _ref) \
         __jbuf_float_add(_b, _key, &_ref)
 
@@ -762,6 +787,20 @@ static int jkey_bool_write(jkey_t *jkey, cJSON *node)
         if (!dst) {
                 pr_err("data pointer is NULL\n");
                 return -ENODATA;
+        }
+
+        if (jkey->flags.is_bitmap) {
+                uint64_t d;
+
+                ptr_unsigned_word_read(dst, jkey->data.sz, &d);
+
+                if (val) {
+                        d |= BIT_ULL(jkey->data.bitmap_nr);
+                } else {
+                        d &= (~BIT_ULL(jkey->data.bitmap_nr));
+                }
+
+                return ptr_word_write(dst, jkey->data.sz, d);
         }
 
         return ptr_word_write(dst, jkey->data.sz, val);
@@ -1758,7 +1797,11 @@ int jbuf_traverse_print_post(jkey_t *jkey, int has_next, int depth, int argc, va
                 if (unlikely(ptr_unsigned_word_read(ref, jkey->data.sz, &d)))
                         break;
 
-                printf_wrap(buf, buf_pos, buf_len, "%s", d ? "true" : "false");
+                if (jkey->flags.is_bitmap) {
+                        printf_wrap(buf, buf_pos, buf_len, "%s", d & BIT_ULL(jkey->data.bitmap_nr) ? "true" : "false");
+                } else {
+                        printf_wrap(buf, buf_pos, buf_len, "%s", d ? "true" : "false");
+                }
 
                 break;
         }
