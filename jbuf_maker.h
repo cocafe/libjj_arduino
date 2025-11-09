@@ -45,8 +45,8 @@ void jbuf_wifi_sta_cfg_add(jbuf_t *b, const char *key, struct wifi_sta_cfg *cfg)
         jbuf_bool_add(b, "rm", cfg->rm_enabled);
         jbuf_bool_add(b, "btm", cfg->btm_enabled);
         jbuf_bool_add(b, "mbo", cfg->mbo_enabled);
-        jbuf_bool_add(b, "retry_cnt", cfg->retry_count);
-        jbuf_bool_add(b, "inactive_sec", cfg->inactive_sec);
+        jbuf_uint_add(b, "retry_cnt", cfg->retry_count);
+        jbuf_uint_add(b, "inactive_sec", cfg->inactive_sec);
 
         jbuf_obj_close(b, obj);
 }

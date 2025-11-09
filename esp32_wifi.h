@@ -733,8 +733,6 @@ esp_netif_t *wifi_netif_softap_init(struct wifi_ap_cfg *cfg)
                         goto err;
                 }
 
-                wifi_ipinfo_print(netif);
-
                 if (is_valid_ipaddr(cfg->assoc.dns, AF_INET)) {
                         esp_netif_dns_info_t dns = { };
                         ip4addr_aton(cfg->assoc.dns, (ip4_addr_t *)&dns.ip.u_addr.ip4);
@@ -960,6 +958,8 @@ int wifi_start(struct wifi_ctx *ctx, struct wifi_cfg *cfg)
                         return -EIO;
                 }
 
+                wifi_ipinfo_print(ctx->netif_ap);
+
                 if (cfg->adv.phy_rate != ESP_WIFI_PHY_RATE_NOT_USE) {
                         ret = esp_wifi_config_80211_tx_rate(WIFI_IF_AP, (wifi_phy_rate_t)cfg->adv.phy_rate);
                         if (ret != ESP_OK) {
@@ -970,19 +970,6 @@ int wifi_start(struct wifi_ctx *ctx, struct wifi_cfg *cfg)
                 ret = esp_wifi_config_11b_rate(WIFI_IF_AP, cfg->adv.no_11b_rate);
                 if (ret != ESP_OK) {
                         pr_err("esp_wifi_config_80211_tx_rate(): 0x%x\n", ret);
-                }
-
-#if ESP_IDF_VERSION_MAJOR >= 5 && ESP_IDF_VERSION_MINOR >= 5
-                wifi_bandwidths_t bw = { };
-                bw.ghz_2g = (wifi_bandwidth_t)cfg->adv.bw_2g;
-                bw.ghz_5g = (wifi_bandwidth_t)cfg->adv.bw_5g;
-
-                ret = esp_wifi_set_bandwidths(WIFI_IF_AP, &bw);
-#else
-                ret = esp_wifi_set_bandwidth(WIFI_IF_AP, (wifi_bandwidth_t)cfg->adv.bw_2g);
-#endif
-                if (ret != ESP_OK) {
-                        pr_err("esp_wifi_set_bandwidth(): 0x%x\n", ret);
                 }
         }
 
@@ -1004,19 +991,6 @@ int wifi_start(struct wifi_ctx *ctx, struct wifi_cfg *cfg)
                 ret = esp_wifi_config_11b_rate(WIFI_IF_STA, cfg->adv.no_11b_rate);
                 if (ret != ESP_OK) {
                         pr_err("esp_wifi_config_80211_tx_rate(): 0x%x\n", ret);
-                }
-
-#if ESP_IDF_VERSION_MAJOR >= 5 && ESP_IDF_VERSION_MINOR >= 5
-                wifi_bandwidths_t bw = { };
-                bw.ghz_2g = (wifi_bandwidth_t)cfg->adv.bw_2g;
-                bw.ghz_5g = (wifi_bandwidth_t)cfg->adv.bw_5g;
-
-                ret = esp_wifi_set_bandwidths(WIFI_IF_STA, &bw);
-#else
-                ret = esp_wifi_set_bandwidth(WIFI_IF_STA, (wifi_bandwidth_t)cfg->adv.bw_2g);
-#endif
-                if (ret != ESP_OK) {
-                        pr_err("esp_wifi_set_bandwidth(): 0x%x\n", ret);
                 }
         }
 
@@ -1060,6 +1034,27 @@ int wifi_start(struct wifi_ctx *ctx, struct wifi_cfg *cfg)
                 esp_netif_set_default_netif(ctx->netif_ap);
         }
 
+        if (cfg->mode == ESP_WIFI_MODE_STA_AP || cfg->mode == ESP_WIFI_MODE_AP) {
+                // if (esp_netif_napt_enable(ctx->netif_ap) != ESP_OK) {
+                //         pr_err("failed to enable NAPT on AP interface\n");
+                // }
+
+#if ESP_IDF_VERSION_MAJOR >= 5 && ESP_IDF_VERSION_MINOR >= 5
+                if (cfg->adv.band_mode != ESP_WIFI_BAND_MODE_AUTO) {
+                        wifi_bandwidths_t bw = { };
+                        bw.ghz_2g = (wifi_bandwidth_t)cfg->adv.bw_2g;
+                        bw.ghz_5g = (wifi_bandwidth_t)cfg->adv.bw_5g;
+
+                        ret = esp_wifi_set_bandwidths(WIFI_IF_AP, &bw);
+                }
+#else
+                ret = esp_wifi_set_bandwidth(WIFI_IF_AP, (wifi_bandwidth_t)cfg->adv.bw_2g);
+#endif
+                if (ret != ESP_OK) {
+                        pr_err("esp_wifi_set_bandwidth(): 0x%x\n", ret);
+                }
+        }
+
         if (cfg->mode == ESP_WIFI_MODE_STA_AP || cfg->mode == ESP_WIFI_MODE_STA) {
                 esp_wifi_set_inactive_time(WIFI_IF_STA, cfg->sta.inactive_sec);
 
@@ -1070,31 +1065,20 @@ int wifi_start(struct wifi_ctx *ctx, struct wifi_cfg *cfg)
                         return -ENOMEM;
                 }
 
-// #if ESP_IDF_VERSION_MAJOR >= 5 && ESP_IDF_VERSION_MINOR >= 5
-//                 if (cfg->adv.band_mode != WIFI_BAND_MODE_AUTO)
-// #endif
-//                 {
-//                         ret = esp_wifi_set_protocol(WIFI_IF_STA, WIFI_PROTOCOL_11B|WIFI_PROTOCOL_11G|WIFI_PROTOCOL_11N);
-//                         if (ret != ESP_OK) {
-//                                 pr_err("esp_wifi_set_protocols(): 0x%x\n", ret);
-//                         }
-//                 }
-        }
+#if ESP_IDF_VERSION_MAJOR >= 5 && ESP_IDF_VERSION_MINOR >= 5
+                if (cfg->adv.band_mode != ESP_WIFI_BAND_MODE_AUTO) {
+                        wifi_bandwidths_t bw = { };
+                        bw.ghz_2g = (wifi_bandwidth_t)cfg->adv.bw_2g;
+                        bw.ghz_5g = (wifi_bandwidth_t)cfg->adv.bw_5g;
 
-        if (cfg->mode == ESP_WIFI_MODE_STA_AP || cfg->mode == ESP_WIFI_MODE_AP) {
-                // if (esp_netif_napt_enable(ctx->netif_ap) != ESP_OK) {
-                //         pr_err("failed to enable NAPT on AP interface\n");
-                // }
-
-// #if ESP_IDF_VERSION_MAJOR >= 5 && ESP_IDF_VERSION_MINOR >= 5
-//                 if (cfg->adv.band_mode != WIFI_BAND_MODE_AUTO)
-// #endif
-//                 {
-//                         ret = esp_wifi_set_protocol(WIFI_IF_AP, cfg->adv.proto_bitmap);
-//                         if (ret != ESP_OK) {
-//                                 pr_err("esp_wifi_set_protocols(): 0x%x\n", ret);
-//                         }
-//                 }
+                        ret = esp_wifi_set_bandwidths(WIFI_IF_STA, &bw);
+                }
+#else
+                ret = esp_wifi_set_bandwidth(WIFI_IF_STA, (wifi_bandwidth_t)cfg->adv.bw_2g);
+#endif
+                if (ret != ESP_OK) {
+                        pr_err("esp_wifi_set_bandwidth(): 0x%x\n", ret);
+                }
         }
 
         return 0;
