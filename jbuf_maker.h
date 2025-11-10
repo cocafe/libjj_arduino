@@ -178,6 +178,8 @@ static __unused void jbuf_cantcp_add(jbuf_t *b, const char *key, struct cantcp_c
 
         jbuf_bool_add(b, "enabled", cfg->enabled);
         jbuf_bool_add(b, "nodelay", cfg->nodelay);
+        jbuf_uint_add(b, "port", cfg->port);
+        jbuf_uint_add(b, "sockbuf", cfg->sock_bufsz);
 
         jbuf_obj_close(b, obj);
 }

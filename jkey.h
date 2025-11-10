@@ -1211,7 +1211,6 @@ static int jkey_grow_array_realloc(jkey_t *arr, size_t idx)
                 }
 
         } else { // if in management routine, do realloc()
-                size_t *extern_ele_cnt = arr->obj.arr.grow.ext_ele_cnt;
                 void *t;
 
                 t = realloc(base_ref, new_sz);
