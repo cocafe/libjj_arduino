@@ -36,42 +36,6 @@ static uint64_t cnt_can_tcp_recv_bytes;
 static uint64_t cnt_can_tcp_recv_error;
 static uint64_t cnt_can_tcp_recv_invalid;
 
-#ifdef CAN_TCP_LED_BLINK
-static uint8_t can_tcp_txrx = 0;
-static uint8_t can_tcp_led = CAN_TCP_LED_BLINK;
-static uint8_t can_tcp_led_blink = 1;
-
-static void task_can_tcp_led_blink(void *arg)
-{
-        while (1) {
-                can_tcp_txrx = 0;
-
-                vTaskDelay(pdMS_TO_TICKS(500));
-
-                if (!can_tcp_led_blink)
-                        continue;
-
-                if (can_tcp_client_fd < 0)
-                        continue;
-
-                if (can_tcp_txrx) {
-                        static uint8_t last_on = 0;
-
-                        // blink
-                        if (!last_on) {
-                                led_on(can_tcp_led, 0, 255, 0);
-                                last_on = 1;
-                        } else {
-                                led_off(can_tcp_led);
-                                last_on = 0;
-                        }
-                } else {
-                        led_on(can_tcp_led, 0, 0, 255);
-                }
-        }
-}
-#endif // CAN_TCP_LED_BLINK
-
 static int is_valid_can_frame(can_frame_t *f)
 {
         if (unlikely(le32toh(f->magic) != CAN_DATA_MAGIC)) {
@@ -137,9 +101,7 @@ static int can_frames_input(uint8_t *buf, int len)
 
                 cnt_can_tcp_recv++;
 
-#ifdef CAN_TCP_LED_BLINK
-                can_tcp_txrx = 1;
-#endif
+                wifi_activity = 1;
 
 next_frame:
                 pos += dlen + sizeof(can_frame_t);
@@ -190,9 +152,7 @@ static void can_tcp_recv_cb(can_frame_t *f, struct can_rlimit_node *rlimit)
         pr_raw("\n");
 #endif
 
-#ifdef CAN_TCP_LED_BLINK
-        can_tcp_txrx = 1;
-#endif
+        wifi_activity = 1;
 }
 
 static void can_tcp_server_recv(int sockfd)
@@ -250,10 +210,6 @@ static void can_tcp_server_recv(int sockfd)
                         }
                 }
         }
-
-#ifdef CAN_TCP_LED_BLINK
-        led_off(can_tcp_led);
-#endif
 }
 
 static void task_can_tcp(void *arg)
@@ -351,9 +307,6 @@ static __unused void can_tcp_server_init(struct cantcp_cfg *cfg, unsigned cpu)
         can_recv_cb_register(can_tcp_recv_cb);
 
         xTaskCreatePinnedToCore(task_can_tcp, "cantcp_srv", 4096, g_cantcp_cfg, 1, NULL, cpu);
-#ifdef CAN_TCP_LED_BLINK
-        xTaskCreatePinnedToCore(task_can_tcp_led_blink, "led_blink_tcp", 4096, NULL, 1, NULL, cpu);
-#endif
 }
 
 #endif // __LIBJJ_CAN_TCP_H__

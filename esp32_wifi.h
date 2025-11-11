@@ -344,6 +344,7 @@ static portMUX_TYPE lck_wifi_event_cbs = portMUX_INITIALIZER_UNLOCKED;
 static struct wifi_ctx g_wifi_ctx;
 
 static uint8_t wifi_sta_connected;
+static uint8_t wifi_ap_got_sta_cnt;
 static uint8_t wifi_sta_ip_got;
 
 static __unused int wifi_mode_get(void)
@@ -406,6 +407,78 @@ int wifi_netif_gw4_get(esp_netif_t *netif, esp_ip4_addr_t *out)
         }
 
         return -EIO;
+}
+
+static uint8_t wifi_activity = 0;
+static int8_t  led_wifi_activity = -1;
+
+static void timer_cb_wifi_led(void *arg)
+{
+        if (wifi_ap_got_sta_cnt > 0 || wifi_sta_connected) {
+                if (wifi_activity) {
+                        static uint8_t last_on = 0;
+
+                        // blink
+                        if (!last_on) {
+                                led_on(led_wifi_activity, 0, 255, 0);
+                                last_on = 1;
+                        } else {
+                                led_off(led_wifi_activity);
+                                last_on = 0;
+                        }
+                } else {
+                        // keep on if connected but no activity
+                        led_on(led_wifi_activity, 0, 0, 255);
+                }
+
+                wifi_activity = 0;
+        } else {
+                // beacon blink to notice wifi
+                static uint8_t pattern[] = { 1, 1, 0, 0, 0, 0, 0, 0, 0, 0 };
+                static uint8_t i = 0;
+
+                if (pattern[i]) {
+                        led_on(led_wifi_activity, 0, 255, 0);
+                } else {
+                        led_off(led_wifi_activity);
+                }
+
+                i++;
+                if (i >= ARRAY_SIZE(pattern))
+                        i = 0;
+        }
+}
+
+static esp_timer_handle_t timer_wifi_led;
+static const esp_timer_create_args_t timer_args_wifi_led = {
+        .callback = timer_cb_wifi_led,
+        .arg = NULL,
+        .dispatch_method = ESP_TIMER_TASK,
+        .name = "led_wifi",
+};
+
+static int wifi_led_timer_init(unsigned tick_ms)
+{
+#ifdef WIFI_LED_BLINK
+        led_wifi_activity = WIFI_LED_BLINK;
+#endif
+
+        if (led_wifi_activity < 0) {
+                pr_err("led gpio not defined\n");
+                return -EINVAL;
+        }
+
+        if (esp_timer_create(&timer_args_wifi_led, &timer_wifi_led) != ESP_OK) {
+                pr_err("failed to create timer\n");
+                return -ENOMEM;
+        }
+
+        if (ESP_OK != esp_timer_start_periodic(timer_wifi_led, tick_ms * 1000UL)) {
+                pr_err("failed to start timer\n");
+                return -EFAULT;
+        }
+
+        return 0;
 }
 
 static TaskHandle_t task_handle_sta_ping;
@@ -573,12 +646,17 @@ static void wifi_event_handle_internal(esp_event_base_t event_base,
                 case WIFI_EVENT_AP_STACONNECTED: {
                         wifi_event_ap_staconnected_t *e = (wifi_event_ap_staconnected_t *)event_data;
                         pr_info("sta " MACSTR " joined, AID: %d\n", MAC2STR(e->mac), e->aid);
+                        wifi_ap_got_sta_cnt++;
                         break;
                 }
 
                 case WIFI_EVENT_AP_STADISCONNECTED: {
                         wifi_event_ap_stadisconnected_t *e = (wifi_event_ap_stadisconnected_t *)event_data;
                         pr_info("sta " MACSTR " left, AID: %d reason: %d\n", MAC2STR(e->mac), e->aid, e->reason);
+
+                        if (wifi_ap_got_sta_cnt > 0)
+                                wifi_ap_got_sta_cnt--;
+
                         break;
                 }
 

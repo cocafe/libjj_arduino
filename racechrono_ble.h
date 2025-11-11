@@ -149,9 +149,7 @@ send:
         cnt_can_ble_send++;
         hz_overall++;
 
-#ifdef BLE_LED_BLINK
         ble_activity = 1;
-#endif
 }
 
 static void rc_ble_can_frame_send_ratelimited(can_frame_t *f)
@@ -381,6 +379,8 @@ static int __unused racechrono_ble_init(struct ble_cfg *cfg)
         if (!cfg->enabled)
                 return 0;
 
+        esp32_stack_print("before nimble init");
+
         ctx->cfg = cfg;
         ctx->devname = ble_device_name_generate(cfg->devname);
 
@@ -400,6 +400,8 @@ static int __unused racechrono_ble_init(struct ble_cfg *cfg)
         if (can_dev) {
                 can_recv_cb_register(rc_ble_can_frame_send);
         }
+
+        esp32_stack_print("after nimble init");
 
         return 0;
 }

@@ -113,59 +113,76 @@ static int ble_is_connected = 0;
 
 static uint64_t cnt_can_ble_send; // send to remote
 
-#ifdef BLE_LED_BLINK
 static uint8_t ble_activity = 0;
-static uint8_t led_ble_activity = BLE_LED_BLINK;
+static int8_t led_ble_activity = -1;
 
-static void task_ble_led_activity(void *arg)
+static void timer_cb_ble_led(void *arg)
 {
-        while (1) {
-                if (ble_is_connected) {
-                        ble_activity = 0;
+        if (ble_is_connected) {
+                if (ble_activity) {
+                        static uint8_t last_on = 0;
 
-                        vTaskDelay(pdMS_TO_TICKS(500));
-
-                        if (ble_activity) {
-                                static uint8_t last_on = 0;
-
-                                // blink
-                                if (!last_on) {
-                                        led_on(led_ble_activity, 0, 255, 0);
-                                        last_on = 1;
-                                } else {
-                                        led_off(led_ble_activity);
-                                        last_on = 0;
-                                }
-                        } else {
-                                // keep on if connected but no activity
-                                led_on(led_ble_activity, 0, 0, 255);
-                        }
-                } else {
-                        // beacon blink to notice BLE on and we are powered on
-                        static uint8_t pattern[] = { 1, 0, 0, 0, 0, 0 };
-                        static uint8_t i = 0;
-
-                        if (pattern[i]) {
+                        // blink
+                        if (!last_on) {
                                 led_on(led_ble_activity, 0, 255, 0);
+                                last_on = 1;
                         } else {
                                 led_off(led_ble_activity);
+                                last_on = 0;
                         }
-
-                        i++;
-                        if (i >= ARRAY_SIZE(pattern))
-                                i = 0;
-
-                        vTaskDelay(pdMS_TO_TICKS(1000));
+                } else {
+                        // keep on if connected but no activity
+                        led_on(led_ble_activity, 0, 0, 255);
                 }
+
+                ble_activity = 0;
+        } else {
+                // beacon blink to notice BLE on and we are powered on
+                static uint8_t pattern[] = { 1, 1, 0, 0, 0, 0, 0, 0, 0, 0 };
+                static uint8_t i = 0;
+
+                if (pattern[i]) {
+                        led_on(led_ble_activity, 0, 255, 0);
+                } else {
+                        led_off(led_ble_activity);
+                }
+
+                i++;
+                if (i >= ARRAY_SIZE(pattern))
+                        i = 0;
         }
 }
-#endif // BLE_LED_BLINK
 
-static __unused void task_ble_blink_start(unsigned cpu)
+static esp_timer_handle_t timer_ble_led;
+static const esp_timer_create_args_t timer_args_ble_led = {
+        .callback = timer_cb_ble_led,
+        .arg = NULL,
+        .dispatch_method = ESP_TIMER_TASK,
+        .name = "led_ble",
+};
+
+static __unused int ble_led_timer_start(unsigned tick_ms)
 {
 #ifdef BLE_LED_BLINK
-        xTaskCreatePinnedToCore(task_ble_led_activity, "led_ble", 4096, NULL, 1, NULL, cpu);
+        led_ble_activity = BLE_LED_BLINK;
 #endif
+
+        if (led_ble_activity < 0) {
+                pr_err("led gpio not defined\n");
+                return -EINVAL;
+        }
+
+        if (esp_timer_create(&timer_args_ble_led, &timer_ble_led) != ESP_OK) {
+                pr_err("failed to create timer\n");
+                return -ENOMEM;
+        }
+
+        if (ESP_OK != esp_timer_start_periodic(timer_ble_led, tick_ms * 1000UL)) {
+                pr_err("failed to start timer\n");
+                return -EFAULT;
+        }
+
+        return 0;
 }
 
 static void task_ble_conn_broadcast(void *arg)
