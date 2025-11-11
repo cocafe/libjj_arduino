@@ -66,7 +66,7 @@ static int TWAI_send(uint32_t can_id, uint8_t len, uint8_t *data)
 static TaskHandle_t task_twai_rxq;
 static void task_twai_rxq_worker(void *arg)
 {
-        union twai_rx_slot *rx = NULL; 
+        union twai_rx_slot *rx = NULL;
 
         while (1) {
                 rx = (union twai_rx_slot *)spsc_rbuf_rptr_get(&twai_rxq);
@@ -119,7 +119,7 @@ static bool IRAM_ATTR TWAI_recv_cb(twai_node_handle_t handle,
                 cnt_can_recv_error++;
         }
 
-        return (woken == pdTRUE); 
+        return (woken == pdTRUE);
 }
 
 static bool IRAM_ATTR twai_listener_on_error_callback(twai_node_handle_t handle,
@@ -132,21 +132,21 @@ static bool IRAM_ATTR twai_listener_on_error_callback(twai_node_handle_t handle,
         return false;
 }
 
-static bool IRAM_ATTR twai_listener_on_state_change_callback(twai_node_handle_t handle,
-                                                             const twai_state_change_event_data_t *edata,
-                                                             void *user_ctx)
-{
-        twai_node_state = edata->new_sta;
+// static bool IRAM_ATTR twai_listener_on_state_change_callback(twai_node_handle_t handle,
+//                                                              const twai_state_change_event_data_t *edata,
+//                                                              void *user_ctx)
+// {
+//         twai_node_state = edata->new_sta;
 
-        if (edata->old_sta < ARRAY_SIZE(str_twai_states) || 
-                edata->new_sta < ARRAY_SIZE(str_twai_states)) {
-                pr_info("state changed: %s -> %s\n",
-                        str_twai_states[edata->old_sta],
-                        str_twai_states[edata->new_sta]);
-        }        
-        
-        return false;
-}
+//         if (edata->old_sta < ARRAY_SIZE(str_twai_states) ||
+//                 edata->new_sta < ARRAY_SIZE(str_twai_states)) {
+//                 pr_info("state changed: %s -> %s\n",
+//                         str_twai_states[edata->old_sta],
+//                         str_twai_states[edata->new_sta]);
+//         }
+
+//         return false;
+// }
 
 static can_device_t can_twai = {
         .send = TWAI_send,
@@ -209,7 +209,10 @@ int TWAI_init(struct twai_cfg *cfg)
         xTaskCreatePinnedToCore(task_twai_rxq_worker, "twai_rxq", 4096, NULL, 1, &task_twai_rxq, CPU1);
 
         twai_event_callbacks_t user_cbs = {
+                .on_tx_done = NULL,
                 .on_rx_done = TWAI_recv_cb,
+                .on_error = twai_listener_on_error_callback,
+                // .on_state_change = twai_listener_on_state_change_callback,
         };
         twai_node_register_event_callbacks(twai_node, &user_cbs, NULL);
 
@@ -227,13 +230,13 @@ int TWAI_exit(void)
 {
         if (!twai_node)
                 return -ENODEV;
-        
+
         if (twai_node_disable(twai_node) != ESP_OK)
                 return -EIO;
-        
+
         if (twai_node_delete(twai_node) != ESP_OK)
                 return -EIO;
-        
+
         twai_node = NULL;
 
         return 0;
