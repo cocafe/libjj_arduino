@@ -239,7 +239,7 @@ static void task_can_tcp(void *arg)
         }
 
         inet_ntop(AF_INET, &server_addr.sin_addr, addr_str, sizeof(addr_str));
-        pr_info("start stream server at %s:%d\n", addr_str, server_port);
+        pr_info("start server at %s:%d\n", addr_str, server_port);
 
         listen(listen_sock, 1);
 
