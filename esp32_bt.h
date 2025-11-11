@@ -113,40 +113,32 @@ static int ble_is_connected = 0;
 
 static uint64_t cnt_can_ble_send; // send to remote
 
-#ifdef CAN_BLE_LED_BLINK
-static uint8_t can_ble_txrx = 0;
-static uint8_t can_ble_led = CAN_BLE_LED_BLINK;
-static uint8_t can_ble_led_blink = 1;
-#endif // CAN_BLE_LED_BLINK
+#ifdef BLE_LED_BLINK
+static uint8_t ble_activity = 0;
+static uint8_t led_ble_activity = BLE_LED_BLINK;
 
-#ifdef CAN_BLE_LED_BLINK
-static void task_can_ble_led_blink(void *arg)
+static void task_ble_led_activity(void *arg)
 {
         while (1) {
-                if (!can_ble_led_blink) {
-                        vTaskDelay(pdMS_TO_TICKS(1000));
-                        continue;
-                }
-
                 if (ble_is_connected) {
-                        can_ble_txrx = 0;
+                        ble_activity = 0;
 
                         vTaskDelay(pdMS_TO_TICKS(500));
 
-                        if (can_ble_txrx) {
+                        if (ble_activity) {
                                 static uint8_t last_on = 0;
 
                                 // blink
                                 if (!last_on) {
-                                        led_on(can_ble_led, 0, 255, 0);
+                                        led_on(led_ble_activity, 0, 255, 0);
                                         last_on = 1;
                                 } else {
-                                        led_off(can_ble_led);
+                                        led_off(led_ble_activity);
                                         last_on = 0;
                                 }
                         } else {
                                 // keep on if connected but no activity
-                                led_on(can_ble_led, 0, 0, 255);
+                                led_on(led_ble_activity, 0, 0, 255);
                         }
                 } else {
                         // beacon blink to notice BLE on and we are powered on
@@ -154,9 +146,9 @@ static void task_can_ble_led_blink(void *arg)
                         static uint8_t i = 0;
 
                         if (pattern[i]) {
-                                led_on(can_ble_led, 0, 255, 0);
+                                led_on(led_ble_activity, 0, 255, 0);
                         } else {
-                                led_off(can_ble_led);
+                                led_off(led_ble_activity);
                         }
 
                         i++;
@@ -167,12 +159,12 @@ static void task_can_ble_led_blink(void *arg)
                 }
         }
 }
-#endif // CAN_BLE_LED_BLINK
+#endif // BLE_LED_BLINK
 
 static __unused void task_ble_blink_start(unsigned cpu)
 {
-#ifdef CAN_BLE_LED_BLINK
-        xTaskCreatePinnedToCore(task_can_ble_led_blink, "led_blink_ble", 4096, NULL, 1, NULL, cpu);
+#ifdef BLE_LED_BLINK
+        xTaskCreatePinnedToCore(task_ble_led_activity, "led_ble", 4096, NULL, 1, NULL, cpu);
 #endif
 }
 

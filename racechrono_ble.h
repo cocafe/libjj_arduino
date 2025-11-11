@@ -149,8 +149,8 @@ send:
         cnt_can_ble_send++;
         hz_overall++;
 
-#ifdef CAN_BLE_LED_BLINK
-        can_ble_txrx = 1;
+#ifdef BLE_LED_BLINK
+        ble_activity = 1;
 #endif
 }
 
