@@ -77,8 +77,6 @@ static void task_twai_rxq_worker(void *arg)
 
                 can_recv_one(&rx->f);
                 spsc_rbuf_rptr_put(&twai_rxq);
-
-                taskYIELD();
         }
 }
 

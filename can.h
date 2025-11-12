@@ -159,15 +159,14 @@ static void can_recv_one(can_frame_t *f)
                                 NULL
 #endif
                         );
+
+                        taskYIELD();
                 }
         }
 
 #ifdef CAN_LED_BLINK
         can_txrx = 1;
 #endif
-
-        // XXX: to avoid starvation of other tasks
-        // taskYIELD();
 }
 
 static void task_can_recv(void *arg)
@@ -183,12 +182,9 @@ static void task_can_recv(void *arg)
         while (1) {
                 while (can_dev->recv(f) == 0) {
                         can_recv_one(f);
-
-                        // XXX: to avoid starvation of other tasks
-                        taskYIELD();
                 }
 
-                vTaskDelay(pdMS_TO_TICKS(1));
+                // vTaskDelay(pdMS_TO_TICKS(1));
         }
 }
 
