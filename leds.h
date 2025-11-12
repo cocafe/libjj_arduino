@@ -13,6 +13,10 @@
 #define GPIO_LED_AUX                    (-1)
 #endif
 
+#ifndef GPIO_LED_FUNC
+#define GPIO_LED_FUNC                   (-1)
+#endif
+
 enum {
         LED_TYPE_INVALID,
         LED_GPIO_SIMPLE,
@@ -23,6 +27,7 @@ enum {
 enum {
         LED_SIMPLE_MAIN,
         LED_SIMPLE_AUX,
+        LED_SIMPLE_FUNC,
 #ifdef HAVE_WS2812_LED
         LED_RGB_WS2812,
 #endif
@@ -37,6 +42,7 @@ struct led_cfg {
 struct led_cfg led_cfgs[NUM_LEDS] = {
         [LED_SIMPLE_MAIN]       = { GPIO_LED_MAIN,      LED_GPIO_SIMPLE },
         [LED_SIMPLE_AUX]        = { GPIO_LED_AUX,       LED_GPIO_SIMPLE },
+        [LED_SIMPLE_FUNC]       = { GPIO_LED_FUNC,      LED_GPIO_SIMPLE },
 #ifdef HAVE_WS2812_LED
         [LED_RGB_WS2812]        = { GPIO_LED_WS2812,    LED_WS2812      },
 #endif

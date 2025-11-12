@@ -28,16 +28,14 @@ static void task_rst_btn(void *arg)
                                         vTaskDelay(pdMS_TO_TICKS(250));
                                         led_off(LED_WS2812);
                                         vTaskDelay(pdMS_TO_TICKS(250));
+#elif (GPIO_LED_FUNC >= 0)
+                                        led_on(LED_SIMPLE_FUNC, 255, 255, 255);
+                                        vTaskDelay(pdMS_TO_TICKS(250));
+                                        led_off(LED_SIMPLE_FUNC);
+                                        vTaskDelay(pdMS_TO_TICKS(250));
 #else
-                                        // TODO: pause other led blink task
-
-                                        led_on(LED_SIMPLE_MAIN, 0, 0, 0);
-                                        led_on(LED_SIMPLE_AUX, 0, 0, 0);
-                                        vTaskDelay(pdMS_TO_TICKS(250));
-                                        led_off(LED_SIMPLE_MAIN);
-                                        led_off(LED_SIMPLE_AUX);
-                                        vTaskDelay(pdMS_TO_TICKS(250));
-#endif // HAVE_WS2812_LED
+                                        vTaskDelay(pdMS_TO_TICKS(500));
+#endif
                                 }
 
                                 pr_info("restart now\n");
