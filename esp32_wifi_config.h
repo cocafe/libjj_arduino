@@ -56,8 +56,8 @@
                 CONFIG_WIFI_BAND_MODE,                          \
                 CONFIG_WIFI_NO_11B_RATE,                        \
                 ESP_WIFI_PHY_RATE_NOT_USE,                      \
-                WIFI_BW40,                                      \
-                WIFI_BW160,                                     \
+                ESP_WIFI_BW40,                                  \
+                ESP_WIFI_BW160,                                 \
         },                                                      \
         {                                                       \
                 CONFIG_WIFI_USE_CUSTOM_BUF_NUM,                 \
