@@ -25,11 +25,11 @@ void rpc_can_add(void)
                 c += snprintf(&buf[c], sizeof(buf) - c, "can_stats{t=\"tcp_recv\"} %llu\n", cnt_can_tcp_recv);
                 c += snprintf(&buf[c], sizeof(buf) - c, "can_stats{t=\"tcp_send\"} %llu\n", cnt_can_tcp_send);
 #endif
-#ifdef __LIBJJ_CAN_UDP_H__
-                c += snprintf(&buf[c], sizeof(buf) - c, "can_stats{t=\"udp_recv_err\"} %llu\n", cnt_can_udp_recv_error);
-                c += snprintf(&buf[c], sizeof(buf) - c, "can_stats{t=\"udp_recv\"} %llu\n", cnt_can_udp_recv);
-                c += snprintf(&buf[c], sizeof(buf) - c, "can_stats{t=\"udp_send_err\"} %llu\n", cnt_can_udp_send_error);
-                c += snprintf(&buf[c], sizeof(buf) - c, "can_stats{t=\"udp_send\"} %llu\n", cnt_can_udp_send);
+#ifdef __LIBJJ_CAN_UDP_MC_H__
+                c += snprintf(&buf[c], sizeof(buf) - c, "can_stats{t=\"udp_recv_err\"} %llu\n", cnt_can_udp_mc_recv_error);
+                c += snprintf(&buf[c], sizeof(buf) - c, "can_stats{t=\"udp_recv\"} %llu\n", cnt_can_udp_mc_recv);
+                c += snprintf(&buf[c], sizeof(buf) - c, "can_stats{t=\"udp_send_err\"} %llu\n", cnt_can_udp_mc_send_error);
+                c += snprintf(&buf[c], sizeof(buf) - c, "can_stats{t=\"udp_send\"} %llu\n", cnt_can_udp_mc_send);
 #endif
 #ifdef __LIBJJ_RACECHRONO_BLE_H__
                 c += snprintf(&buf[c], sizeof(buf) - c, "can_stats{t=\"ble_send\"} %llu\n", cnt_can_ble_send);

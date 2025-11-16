@@ -10,15 +10,15 @@
 
 enum {
         CAN_RLIMIT_TYPE_TCP,
-        CAN_RLIMIT_TYPE_UDP,
+        CAN_RLIMIT_TYPE_UDP_MC,
         CAN_RLIMIT_TYPE_RC,
         NUM_CAN_RLIMIT_TYPES,
 };
 
 static const char *str_rlimit_types[NUM_CAN_RLIMIT_TYPES] = {
-        [CAN_RLIMIT_TYPE_TCP] = "tcp",
-        [CAN_RLIMIT_TYPE_UDP] = "udp",
-        [CAN_RLIMIT_TYPE_RC]  = "rc",
+        [CAN_RLIMIT_TYPE_TCP]    = "tcp",
+        [CAN_RLIMIT_TYPE_UDP_MC] = "udp_mc",
+        [CAN_RLIMIT_TYPE_RC]     = "rc",
 };
 
 struct can_rlimit_cfg {
@@ -28,7 +28,7 @@ struct can_rlimit_cfg {
 
 struct can_rlimit_data {
         uint32_t                last_ts;
-        int16_t                 update_ms;      // say -1 to deny can id
+        int16_t                 update_ms; // say -1 to deny can id
 };
 
 struct can_rlimit_node {

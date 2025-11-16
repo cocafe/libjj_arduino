@@ -192,6 +192,18 @@ static __unused void jbuf_canudp_add(jbuf_t *b, const char *key, struct canudp_c
 {
         void *obj = jbuf_obj_open(b, key);
 
+        jbuf_bool_add(b, "enabled", cfg->enabled);
+        jbuf_uint_add(b, "port", cfg->port);
+
+        jbuf_obj_close(b, obj);
+}
+#endif // __LIBJJ_CAN_UDP_H__
+
+#ifdef __LIBJJ_CAN_UDP_MC_H__
+static __unused void jbuf_canudp_mc_add(jbuf_t *b, const char *key, struct canudp_mc_cfg *cfg)
+{
+        void *obj = jbuf_obj_open(b, key);
+
         jbuf_udpmc_cfg_add(b, "mc", &cfg->mc);
 
         jbuf_bool_add(b, "can_rx_forward", cfg->can_rx_fwd);
@@ -199,6 +211,6 @@ static __unused void jbuf_canudp_add(jbuf_t *b, const char *key, struct canudp_c
 
         jbuf_obj_close(b, obj);
 }
-#endif // __LIBJJ_CAN_UDP_H__
+#endif // __LIBJJ_CAN_UDP_MC_H__
 
 #endif // __LIBJJ_JBUF_MAKER_H__
