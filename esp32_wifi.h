@@ -46,9 +46,11 @@ enum {
         ESP_WIFI_AUTH_WPA_WPA2_PSK,
         ESP_WIFI_AUTH_WPA3_PSK,
         ESP_WIFI_AUTH_WPA2_WPA3_PSK,
+#if ESP_IDF_VERSION_MAJOR >= 5 && ESP_IDF_VERSION_MINOR >= 3
         ESP_WIFI_AUTH_WPA3_ENT_192,
         ESP_WIFI_AUTH_WPA3_EXT_PSK,
         ESP_WIFI_AUTH_WPA3_EXT_PSK_MIXED_MODE,
+#endif
         NUM_ESP_WIFI_AUTH_MODES,
 };
 
@@ -89,6 +91,15 @@ enum {
 };
 
 enum {
+        ESP_WIFI_BW20,
+        ESP_WIFI_BW40,
+        ESP_WIFI_BW80,
+        ESP_WIFI_BW160,
+        ESP_WIFI_BW80_BW80,
+        NUM_ESP_WIFI_BW_MODES,
+};
+
+enum {
         ESP_WIFI_BAND_MODE_2G_ONLY,
         ESP_WIFI_BAND_MODE_5G_ONLY,
         ESP_WIFI_BAND_MODE_AUTO,
@@ -114,12 +125,11 @@ static const char *str_wifi_ps_modes[] = {
 };
 
 static const char *str_wifi_bw[] = {
-        [0]                     = "unknown",
-        [WIFI_BW20]             = "20",
-        [WIFI_BW40]             = "40",
-        [WIFI_BW80]             = "80",
-        [WIFI_BW160]            = "160",
-        [WIFI_BW80_BW80]        = "80+80",
+        [ESP_WIFI_BW20]         = "20",
+        [ESP_WIFI_BW40]         = "40",
+        [ESP_WIFI_BW80]         = "80",
+        [ESP_WIFI_BW160]        = "160",
+        [ESP_WIFI_BW80_BW80]    = "80+80",
 };
 
 static const char *str_wifi_auth_modes[NUM_ESP_WIFI_AUTH_MODES] = {
@@ -129,9 +139,11 @@ static const char *str_wifi_auth_modes[NUM_ESP_WIFI_AUTH_MODES] = {
         [ESP_WIFI_AUTH_WPA_WPA2_PSK]            = "WPA_WPA2_PSK",
         [ESP_WIFI_AUTH_WPA3_PSK]                = "WPA3_PSK",
         [ESP_WIFI_AUTH_WPA2_WPA3_PSK]           = "WPA2_WPA3_PSK",
+#if ESP_IDF_VERSION_MAJOR >= 5 && ESP_IDF_VERSION_MINOR >= 3
         [ESP_WIFI_AUTH_WPA3_ENT_192]            = "WPA3_ENT_192",
         [ESP_WIFI_AUTH_WPA3_EXT_PSK]            = "WPA3_EXT_PSK",
         [ESP_WIFI_AUTH_WPA3_EXT_PSK_MIXED_MODE] = "WPA3_EXT_PSK_MIXED_MODE",
+#endif
 };
 
 static const char *str_wifi_cipher_types[] = {
@@ -191,6 +203,16 @@ static const char *str_wifi_band_modes[] = {
         [ESP_WIFI_BAND_MODE_AUTO]               = "AUTO",
 };
 
+#if ESP_IDF_VERSION_MAJOR >= 5 && ESP_IDF_VERSION_MINOR >= 3
+static const wifi_bandwidth_t wifi_bw_convert[] = {
+        [ESP_WIFI_BW20]                         = WIFI_BW20,
+        [ESP_WIFI_BW40]                         = WIFI_BW40,
+        [ESP_WIFI_BW80]                         = WIFI_BW80,
+        [ESP_WIFI_BW160]                        = WIFI_BW160,
+        [ESP_WIFI_BW80_BW80]                    = WIFI_BW80_BW80,
+};
+#endif
+
 static const wifi_phy_rate_t wifi_phy_rate_convert[] = {
         [ESP_WIFI_PHY_RATE_NOT_USE]             = WIFI_PHY_RATE_54M,
         [ESP_WIFI_PHY_RATE_1M_L]                = WIFI_PHY_RATE_1M_L,
@@ -241,9 +263,11 @@ static const wifi_auth_mode_t wifi_auth_mode_convert[] = {
         [ESP_WIFI_AUTH_WPA_WPA2_PSK]            = WIFI_AUTH_WPA_WPA2_PSK,
         [ESP_WIFI_AUTH_WPA3_PSK]                = WIFI_AUTH_WPA3_PSK,
         [ESP_WIFI_AUTH_WPA2_WPA3_PSK]           = WIFI_AUTH_WPA2_WPA3_PSK,
+#if ESP_IDF_VERSION_MAJOR >= 5 && ESP_IDF_VERSION_MINOR >= 3
         [ESP_WIFI_AUTH_WPA3_ENT_192]            = WIFI_AUTH_WPA3_ENT_192,
         [ESP_WIFI_AUTH_WPA3_EXT_PSK]            = WIFI_AUTH_WPA3_EXT_PSK,
         [ESP_WIFI_AUTH_WPA3_EXT_PSK_MIXED_MODE] = WIFI_AUTH_WPA3_EXT_PSK_MIXED_MODE,
+#endif
 };
 
 static const wifi_mode_t wifi_mode_convert[NUM_ESP_WIFI_MODES] = {
@@ -634,6 +658,12 @@ static const esp_timer_create_args_t timer_args_wifi_sta_reconn = {
         .name = "sta_reconn",
 };
 
+#if ESP_IDF_VERSION_MAJOR >= 5 && ESP_IDF_VERSION_MINOR >= 3
+#define wifi_event_pr pr_info
+#else
+#define wifi_event_pr(x, ...) do { } while (0)
+#endif
+
 // https://docs.espressif.com/projects/esp-idf/en/stable/esp32/api-guides/wifi.html#wi-fi-reason-code
 static void wifi_event_handle_internal(esp_event_base_t event_base,
                                        int32_t event_id,
@@ -645,14 +675,14 @@ static void wifi_event_handle_internal(esp_event_base_t event_base,
                 switch (event_id) {
                 case WIFI_EVENT_AP_STACONNECTED: {
                         wifi_event_ap_staconnected_t *e = (wifi_event_ap_staconnected_t *)event_data;
-                        pr_info("sta " MACSTR " joined, AID: %d\n", MAC2STR(e->mac), e->aid);
+                        wifi_event_pr("sta " MACSTR " joined, AID: %d\n", MAC2STR(e->mac), e->aid);
                         wifi_ap_got_sta_cnt++;
                         break;
                 }
 
                 case WIFI_EVENT_AP_STADISCONNECTED: {
                         wifi_event_ap_stadisconnected_t *e = (wifi_event_ap_stadisconnected_t *)event_data;
-                        pr_info("sta " MACSTR " left, AID: %d reason: %d\n", MAC2STR(e->mac), e->aid, e->reason);
+                        wifi_event_pr("sta " MACSTR " left, AID: %d reason: %d\n", MAC2STR(e->mac), e->aid, e->reason);
 
                         if (wifi_ap_got_sta_cnt > 0)
                                 wifi_ap_got_sta_cnt--;
@@ -663,24 +693,24 @@ static void wifi_event_handle_internal(esp_event_base_t event_base,
                 case WIFI_EVENT_STA_START:
                         if (ctx->netif_sta) {
                                 esp_wifi_connect();
-                                pr_info("sta connection started\n");
+                                wifi_event_pr("sta connection started\n");
                         }
                         break;
 
                 case WIFI_EVENT_STA_CONNECTED: {
                         wifi_event_sta_connected_t *e = (wifi_event_sta_connected_t *)event_data;
-                        pr_info("sta connected to %s (" MACSTR "), ch: %u\n", e->ssid, MAC2STR(e->bssid), e->channel);
+                        wifi_event_pr("sta connected to %s (" MACSTR "), ch: %u\n", e->ssid, MAC2STR(e->bssid), e->channel);
                         wifi_sta_connected = 1;
                         break;
                 }
 
                 case WIFI_EVENT_STA_DISCONNECTED: {
                         wifi_event_sta_disconnected_t *e = (wifi_event_sta_disconnected_t *)event_data;
-                        pr_info("sta disconnect %s (" MACSTR "), reason: %d rssi: %d\n", e->ssid, MAC2STR(e->bssid), e->reason, e->rssi);
+                        wifi_event_pr("sta disconnect %s (" MACSTR "), reason: %d rssi: %d\n", e->ssid, MAC2STR(e->bssid), e->reason, e->rssi);
                         wifi_sta_connected = 0;
 
                         if (!esp_timer_is_active(timer_wifi_sta_reconn)) {
-                                pr_info("schedule to reconnect to AP\n");
+                                wifi_event_pr("schedule to reconnect to AP\n");
                                 esp_timer_start_once(timer_wifi_sta_reconn, 1ULL * 1000 * 1000);
                         }
 
@@ -700,8 +730,8 @@ static void wifi_event_handle_internal(esp_event_base_t event_base,
         } else if (event_base == IP_EVENT) {
                 switch (event_id) {
                 case IP_EVENT_STA_GOT_IP: {
-                        // ip_event_got_ip_t *event = (ip_event_got_ip_t *)event_data;
-                        // pr_info("got ip:" IPSTR "\n", IP2STR(&event->ip_info.ip));
+                        ip_event_got_ip_t *event = (ip_event_got_ip_t *)event_data;
+                        wifi_event_pr("got ip:" IPSTR "\n", IP2STR(&event->ip_info.ip));
                         wifi_ipinfo_print(esp_netif_get_default_netif());
                         wifi_sta_ip_got = 1;
 
@@ -984,7 +1014,9 @@ int wifi_start(struct wifi_ctx *ctx, struct wifi_cfg *cfg)
                 defcfg.cache_tx_buf_num = cfg->buf.cache_tx_buf_num;
                 defcfg.rx_ba_win = cfg->buf.rx_ba_win;
                 defcfg.mgmt_sbuf_num = cfg->buf.mgmt_sbuf_num;
+#if ESP_IDF_VERSION_MAJOR >= 5 && ESP_IDF_VERSION_MINOR >= 3
                 defcfg.tx_hetb_queue_num = cfg->buf.tx_hetb_queue_num;
+#endif
         }
 
         defcfg.csi_enable = cfg->adv.csi;
@@ -1020,7 +1052,9 @@ int wifi_start(struct wifi_ctx *ctx, struct wifi_cfg *cfg)
         pr_info("\tmgmt_sbuf_num: %d\n", defcfg.mgmt_sbuf_num);
         pr_info("\tbeacon_max_len: %d\n", defcfg.beacon_max_len);
         pr_info("\tsta_disconnected_pm: %d\n", defcfg.sta_disconnected_pm);
+#if ESP_IDF_VERSION_MAJOR >= 5 && ESP_IDF_VERSION_MINOR >= 3
         pr_info("\ttx_hetb_queue_num: %d\n", defcfg.tx_hetb_queue_num);
+#endif
 
         ret = esp_wifi_set_mode(wifi_mode_convert[cfg->mode]);
         if (ret != ESP_OK) {
@@ -1117,20 +1151,24 @@ int wifi_start(struct wifi_ctx *ctx, struct wifi_cfg *cfg)
                 //         pr_err("failed to enable NAPT on AP interface\n");
                 // }
 
+#if ESP_IDF_VERSION_MAJOR >= 5 && ESP_IDF_VERSION_MINOR >= 3
+                if (cfg->adv.bw_2g < NUM_ESP_WIFI_BW_MODES && cfg->adv.bw_5g < NUM_ESP_WIFI_BW_MODES) {
 #if ESP_IDF_VERSION_MAJOR >= 5 && ESP_IDF_VERSION_MINOR >= 5
-                if (cfg->adv.band_mode != ESP_WIFI_BAND_MODE_AUTO) {
-                        wifi_bandwidths_t bw = { };
-                        bw.ghz_2g = (wifi_bandwidth_t)cfg->adv.bw_2g;
-                        bw.ghz_5g = (wifi_bandwidth_t)cfg->adv.bw_5g;
+                        if (cfg->adv.band_mode != ESP_WIFI_BAND_MODE_AUTO) {
+                                wifi_bandwidths_t bw = { };
+                                bw.ghz_2g = (wifi_bandwidth_t)wifi_bw_convert[cfg->adv.bw_2g];
+                                bw.ghz_5g = (wifi_bandwidth_t)wifi_bw_convert[cfg->adv.bw_5g];
 
-                        ret = esp_wifi_set_bandwidths(WIFI_IF_AP, &bw);
-                }
+                                ret = esp_wifi_set_bandwidths(WIFI_IF_AP, &bw);
+                        }
 #else
-                ret = esp_wifi_set_bandwidth(WIFI_IF_AP, (wifi_bandwidth_t)cfg->adv.bw_2g);
-#endif
-                if (ret != ESP_OK) {
-                        pr_err("esp_wifi_set_bandwidth(): 0x%x\n", ret);
+                        ret = esp_wifi_set_bandwidth(WIFI_IF_AP, (wifi_bandwidth_t)cfg->adv.bw_2g);
+#endif // 5.5
+                        if (ret != ESP_OK) {
+                                pr_err("esp_wifi_set_bandwidth(): 0x%x\n", ret);
+                        }
                 }
+#endif // 5.3
         }
 
         if (cfg->mode == ESP_WIFI_MODE_STA_AP || cfg->mode == ESP_WIFI_MODE_STA) {

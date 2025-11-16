@@ -212,7 +212,7 @@ static void event_udp_mc_wifi_event_cb(esp_event_base_t event_base, int32_t even
                         event_udp_mc_sock_create(inet_ntoa(addr), evt_udp_mc_addr, evt_udp_mc_port);
                 }
         }
-        
+
         if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_DISCONNECTED) {
                 event_udp_mc_sock_close();
         }

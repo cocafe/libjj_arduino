@@ -71,8 +71,10 @@ void jbuf_wifi_cfg_add(jbuf_t *b, const char *key, struct wifi_cfg *cfg)
                 jbuf_bool_add(b, "sta_idle_pm", cfg->adv.sta_disconnected_pm);
                 jbuf_bool_add(b, "no_11b_rate", cfg->adv.no_11b_rate);
                 jbuf_strval_add(b, "phy_rate", cfg->adv.phy_rate, str_wifi_tx_rates);
+#if ESP_IDF_VERSION_MAJOR >= 5 && ESP_IDF_VERSION_MINOR >= 3
                 jbuf_strval_add(b, "bw_2g", cfg->adv.bw_2g, str_wifi_bw);
                 jbuf_strval_add(b, "bw_5g", cfg->adv.bw_5g, str_wifi_bw);
+#endif
 
                 // jbuf_obj_close(b, adv);
         }

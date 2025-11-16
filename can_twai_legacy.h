@@ -153,7 +153,7 @@ static can_device_t can_twai = {
 
 int TWAI_init(struct twai_cfg *cfg)
 {
-        int mode;
+        twai_mode_t mode;
 
         if (cfg->pin_rx < 0 || cfg->pin_tx < 0)
                 return -EINVAL;
@@ -181,7 +181,7 @@ int TWAI_init(struct twai_cfg *cfg)
 
         twai_general_config_t g_config = TWAI_GENERAL_CONFIG_DEFAULT((gpio_num_t)cfg->pin_tx, 
                                                                      (gpio_num_t)cfg->pin_rx,
-                                                                     (twai_mode_t)cfg->mode);
+                                                                     mode);
         g_config.rx_queue_len = cfg->rx_qlen;
         twai_timing_config_t t_config = { };
         twai_filter_config_t f_config = TWAI_FILTER_CONFIG_ACCEPT_ALL();

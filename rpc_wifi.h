@@ -35,9 +35,11 @@ void rpc_wifi_add(void)
                         { "G",  WIFI_PROTOCOL_11G },
                         { "N",  WIFI_PROTOCOL_11N },
                         { "LR", WIFI_PROTOCOL_LR },
+#if ESP_IDF_VERSION_MAJOR >= 5 && ESP_IDF_VERSION_MINOR >= 3
                         { "A",  WIFI_PROTOCOL_11A },
                         { "AC", WIFI_PROTOCOL_11AC },
                         { "AX", WIFI_PROTOCOL_11AX },
+#endif
                 };
 
                 if (wifi_mode_get() == ESP_WIFI_MODE_STA_AP || wifi_mode_get() == ESP_WIFI_MODE_AP) {
@@ -73,6 +75,7 @@ void rpc_wifi_add(void)
                 http_rpc.send(200, "text/plain", buf);
         });
 
+#if ESP_IDF_VERSION_MAJOR >= 5 && ESP_IDF_VERSION_MINOR >= 3
         http_rpc.on("/wifi_bw", HTTP_GET, [](){
                 char buf[64] = { };
                 size_t c = 0;
@@ -104,6 +107,7 @@ void rpc_wifi_add(void)
 
                 http_rpc.send(200, "text/plain", buf);
         });
+#endif
 
         http_rpc.on("/wifi_tx_power", HTTP_GET, [](){
                 char buf[16] = { };
