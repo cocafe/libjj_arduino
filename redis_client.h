@@ -23,7 +23,7 @@ struct redis_cfg {
         unsigned port;
 };
 
-static int redis_sockfd;
+static int redis_sockfd = -1;
 static TaskHandle_t task_handle_redis_client;
 static SemaphoreHandle_t lck_redis_client_send;
 
