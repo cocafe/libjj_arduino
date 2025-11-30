@@ -24,6 +24,7 @@ void rpc_can_add(void)
                 c += snprintf(&buf[c], sizeof(buf) - c, "can_stats{t=\"tcp_send_bytes\"} %llu\n", cnt_can_tcp_send_bytes);
                 c += snprintf(&buf[c], sizeof(buf) - c, "can_stats{t=\"tcp_recv\"} %llu\n", cnt_can_tcp_recv);
                 c += snprintf(&buf[c], sizeof(buf) - c, "can_stats{t=\"tcp_send\"} %llu\n", cnt_can_tcp_send);
+                c += snprintf(&buf[c], sizeof(buf) - c, "can_stats{t=\"tcp_send_hz\"} %u\n", cnt_can_tcp_send_hz);
 #endif
 #ifdef __LIBJJ_CAN_UDP_MC_H__
                 c += snprintf(&buf[c], sizeof(buf) - c, "can_stats{t=\"udp_recv_err\"} %llu\n", cnt_can_udp_mc_recv_error);

@@ -31,6 +31,7 @@ static int can_tcp_client_fd = -1;
 static uint64_t cnt_can_tcp_send;       // send to remote
 static uint64_t cnt_can_tcp_send_bytes;
 static uint64_t cnt_can_tcp_send_error;
+static unsigned cnt_can_tcp_send_hz;
 static uint64_t cnt_can_tcp_recv;       // from remote
 static uint64_t cnt_can_tcp_recv_bytes;
 static uint64_t cnt_can_tcp_recv_error;
@@ -112,6 +113,9 @@ next_frame:
 
 static void can_tcp_recv_cb(can_frame_t *f, struct can_rlimit_node *rlimit)
 {
+        static unsigned ts_hz_counter = 0;
+        static unsigned hz_counter;
+        unsigned now = esp32_millis();
         int sockfd = READ_ONCE(can_tcp_client_fd);
         int n;
 
@@ -120,7 +124,7 @@ static void can_tcp_recv_cb(can_frame_t *f, struct can_rlimit_node *rlimit)
         }
 
 #ifdef CONFIG_HAVE_CAN_RLIMIT
-        if (is_can_id_ratelimited(rlimit, CAN_RLIMIT_TYPE_TCP, esp32_millis())) {
+        if (is_can_id_ratelimited(rlimit, CAN_RLIMIT_TYPE_TCP, now)) {
                 return;
         }
 #endif
@@ -139,6 +143,13 @@ static void can_tcp_recv_cb(can_frame_t *f, struct can_rlimit_node *rlimit)
                 WRITE_ONCE(can_tcp_client_fd, -1);
 
                 return;
+        }
+
+        hz_counter++;
+        if (now - ts_hz_counter >= 1000) {
+                cnt_can_tcp_send_hz = hz_counter;
+                ts_hz_counter = now;
+                hz_counter = 0;
         }
 
         cnt_can_tcp_send++;
@@ -247,6 +258,8 @@ static void task_can_tcp(void *arg)
                 struct sockaddr_in client_addr = { };
                 socklen_t client_addr_len = sizeof(client_addr);
                 int client_sock;
+
+                cnt_can_tcp_send_hz = 0;
 
                 client_sock = accept(listen_sock, (struct sockaddr *)&client_addr, &client_addr_len);
                 if (client_sock < 0) {
