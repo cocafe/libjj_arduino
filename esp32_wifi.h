@@ -24,6 +24,7 @@
 #include "list.h"
 #include "utils.h"
 #include "ping.h"
+#include "leds.h"
 
 #ifndef WIFI_DEFAULT_MAC
 #define WIFI_DEFAULT_MAC                ESP_MAC_EFUSE_FACTORY
@@ -278,7 +279,7 @@ static const wifi_mode_t wifi_mode_convert[NUM_ESP_WIFI_MODES] = {
 };
 
 struct wifi_assoc_cfg {
-        char ssid[24];
+        char ssid[20];
         char passwd[64];
         uint8_t auth;
         uint8_t cipher;
@@ -693,7 +694,7 @@ static void wifi_event_handle_internal(esp_event_base_t event_base,
                 case WIFI_EVENT_STA_START:
                         if (ctx->netif_sta) {
                                 esp_wifi_connect();
-                                wifi_event_pr("sta connection started\n");
+                                wifi_event_pr("sta try to connect to ssid \"%s\"\n", g_wifi_ctx.cfg->sta.assoc.ssid);
                         }
                         break;
 
@@ -718,6 +719,9 @@ static void wifi_event_handle_internal(esp_event_base_t event_base,
                 }
 
                 case WIFI_EVENT_AP_START:
+                        pr_info("start ap, ssid: \"%s\"\n", g_wifi_ctx.cfg->ap.assoc.ssid);
+                        break;
+
                 case WIFI_EVENT_AP_STOP:
                 case WIFI_EVENT_STA_STOP:
                 case WIFI_EVENT_STA_BEACON_TIMEOUT:

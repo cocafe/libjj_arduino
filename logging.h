@@ -33,6 +33,12 @@
                 __t = 1;                                \
         } while(0)
 
+#define pr_raw_ts(msg, fmt...)                          \
+        do {                                            \
+                ___pr_timestamp();                      \
+                ___pr_wrapped(msg, ##fmt);              \
+        } while(0)
+
 #define pr_raw(msg, fmt...)                             \
         do {                                            \
                 ___pr_wrapped(msg, ##fmt);              \

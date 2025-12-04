@@ -299,9 +299,9 @@ static __unused void save_reset_gpio_check(unsigned gpio_rst)
                                 now = esp32_millis();
 
 #ifdef HAVE_WS2812_LED
-                                led_on(LED_WS2812, 255, 255, 0);
+                                led_on(LED_RGB_WS2812, 255, 255, 0);
                                 delay(250);
-                                led_off(LED_WS2812);
+                                led_off(LED_RGB_WS2812);
                                 delay(250);
 #else
                                 led_on(LED_SIMPLE_MAIN, 0, 0, 0);
@@ -323,9 +323,9 @@ static __unused void save_reset_gpio_check(unsigned gpio_rst)
 
                                         while (digitalRead(gpio_rst) == LOW) {
 #ifdef HAVE_WS2812_LED
-                                                led_on(LED_WS2812, 255, 255, 255);
+                                                led_on(LED_RGB_WS2812, 255, 255, 255);
                                                 delay(250);
-                                                led_off(LED_WS2812);
+                                                led_off(LED_RGB_WS2812);
                                                 delay(250);
 #else
                                                 led_on(LED_SIMPLE_MAIN, 0, 0, 0);

@@ -24,9 +24,9 @@ static void task_rst_btn(void *arg)
                         } else if (now - ts_pressed >= 10 * 1000) {
                                 while (digitalRead(GPIO_BTN_RST) == LOW) {
 #ifdef HAVE_WS2812_LED
-                                        led_on(LED_WS2812, 255, 0, 255);
+                                        led_on(LED_RGB_WS2812, 255, 0, 255);
                                         vTaskDelay(pdMS_TO_TICKS(250));
-                                        led_off(LED_WS2812);
+                                        led_off(LED_RGB_WS2812);
                                         vTaskDelay(pdMS_TO_TICKS(250));
 #elif (GPIO_LED_FUNC >= 0)
                                         led_on(LED_SIMPLE_FUNC, 255, 255, 255);

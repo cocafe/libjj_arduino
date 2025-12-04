@@ -27,8 +27,8 @@
 #define GPIO_I2C_SCL1                   (-1)
 #endif
 
-#ifndef CONFIG_I2C_FREQ0
-#define CONFIG_I2C_FREQ0                (100 * 1000UL)
+#ifndef CONFIG_I2C_0_FREQ
+#define CONFIG_I2C_0_FREQ                (100 * 1000UL)
 #endif
 
 #ifndef CONFIG_I2C_1_FREQ
@@ -47,8 +47,8 @@ struct i2c_ctx {
         TwoWire *wire;
 };
 
-static struct i2c_ctx i2c_0;
-static struct i2c_ctx i2c_1;
+static __unused struct i2c_ctx i2c_0;
+static __unused struct i2c_ctx i2c_1;
 
 static void __i2cdetect(TwoWire *wire, int (*__snprintf)(char *buffer, size_t bufsz, const char *format, ...), char *buf, unsigned len, uint8_t first, uint8_t last)
 {

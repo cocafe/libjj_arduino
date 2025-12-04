@@ -19,8 +19,8 @@
 
 enum {
         LED_TYPE_INVALID,
-        LED_GPIO_SIMPLE,
-        LED_WS2812,
+        LED_TYPE_GPIO,
+        LED_TYPE_WS2812,
         NUM_LED_TYPES,
 };
 
@@ -40,11 +40,11 @@ struct led_cfg {
 };
 
 struct led_cfg led_cfgs[NUM_LEDS] = {
-        [LED_SIMPLE_MAIN]       = { GPIO_LED_MAIN,      LED_GPIO_SIMPLE },
-        [LED_SIMPLE_AUX]        = { GPIO_LED_AUX,       LED_GPIO_SIMPLE },
-        [LED_SIMPLE_FUNC]       = { GPIO_LED_FUNC,      LED_GPIO_SIMPLE },
+        [LED_SIMPLE_MAIN]       = { GPIO_LED_MAIN,      LED_TYPE_GPIO   },
+        [LED_SIMPLE_AUX]        = { GPIO_LED_AUX,       LED_TYPE_GPIO   },
+        [LED_SIMPLE_FUNC]       = { GPIO_LED_FUNC,      LED_TYPE_GPIO   },
 #ifdef HAVE_WS2812_LED
-        [LED_RGB_WS2812]        = { GPIO_LED_WS2812,    LED_WS2812      },
+        [LED_RGB_WS2812]        = { GPIO_LED_WS2812,    LED_TYPE_WS2812 },
 #endif
 };
 
@@ -149,13 +149,13 @@ static void led_on(unsigned which, uint8_t r, uint8_t g, uint8_t b)
                 return;
 
         switch (led->type) {
-        case LED_GPIO_SIMPLE:
+        case LED_TYPE_GPIO:
                 if (led->gpio >= 0)
                         gpio_led_on(led->gpio);
 
                 break;
 
-        case LED_WS2812:
+        case LED_TYPE_WS2812:
                 ws2812_led_on(r, g, b);
                 break;
 
@@ -175,13 +175,13 @@ static void led_off(unsigned which)
                 return;
 
         switch (led->type) {
-        case LED_GPIO_SIMPLE:
+        case LED_TYPE_GPIO:
                 if (led->gpio >= 0)
                         gpio_led_off(led->gpio);
 
                 break;
 
-        case LED_WS2812:
+        case LED_TYPE_WS2812:
                 ws2812_led_off();
                 break;
 
@@ -194,7 +194,7 @@ static __unused void led_init(void)
 {
         for (int i = 0; i < ARRAY_SIZE(led_cfgs); i++) {
                 struct led_cfg *led = &led_cfgs[i];
-                if (led->type != LED_GPIO_SIMPLE)
+                if (led->type != LED_TYPE_GPIO)
                         continue;
 
                 if (led->gpio < 0)
@@ -207,7 +207,7 @@ static __unused void led_init(void)
 #if defined (HAVE_WS2812_LED) && defined (GPIO_LED_WS2812)
         FastLED.addLeds<WS2812, GPIO_LED_WS2812, GRB>(led_ws2812, NUM_LED_WS2812);
         led_ws2812_brightness_set(led_ws2812_brightness);
-        led_off(LED_WS2812);
+        led_off(LED_RGB_WS2812);
 #endif
 }
 

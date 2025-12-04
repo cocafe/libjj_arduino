@@ -227,4 +227,27 @@ static __unused void jbuf_redis_client_add(jbuf_t *b, const char *key, struct re
 }
 #endif // __LIBJJ_REDIS_CLIENT_H__
 
+#ifdef __LIBJJ_ESP32_UART_H__
+static __unused void jbuf_uart_port_cfg_add(jbuf_t *b, const char *key, struct uart_port_cfg *cfg)
+{
+        void *obj = jbuf_obj_open(b, key);
+
+        jbuf_strval_add(b, "mode", cfg->uart_type, str_uart_types);
+        jbuf_strval_add(b, "timing", cfg->serial_mode, str_serial_modes);
+        jbuf_uint_add(b, "baudrate", cfg->baudrate);
+
+        {
+                void *pin = jbuf_obj_open(b, "pin");
+
+                jbuf_sint_add(b, "tx", cfg->pin.tx);
+                jbuf_sint_add(b, "rx", cfg->pin.rx);
+                jbuf_sint_add(b, "rede", cfg->pin.rede);
+
+                jbuf_obj_close(b, pin);
+        }
+
+        jbuf_obj_close(b, obj);
+}
+#endif // __LIBJJ_ESP32_UART_H__
+
 #endif // __LIBJJ_JBUF_MAKER_H__

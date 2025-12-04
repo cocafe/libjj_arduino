@@ -87,7 +87,7 @@ void rpc_pintest_add(void)
                         }
                         
                         http_rpc.send(200, "text/plain", "OK\n");
-                } else if (http_rpc.hasArg("get")) {
+                } else if (http_rpc.hasArg("dump")) {
                         if (!http_rpc.hasArg("pin")) {
                                 http_rpc.send(200, "text/plain", "<pin>\n");
                                 return;
@@ -138,8 +138,28 @@ void rpc_pintest_add(void)
                         http_rpc.send(200, "text/plain", buf);
 
                         free(buf);
+                }  else if (http_rpc.hasArg("get")) {
+                        char buf[32];
+
+                        if (!http_rpc.hasArg("pin")) {
+                                http_rpc.send(200, "text/plain", "<pin>\n");
+                                return;
+                        }
+
+                        String arg = http_rpc.arg("pin");
+                        int err;
+                        uint32_t i = strtoull_wrap(arg.c_str(), 10, &err);
+                        
+                        if (err || i > 255) {
+                                http_rpc.send(500, "text/plain", "invalid value\n");
+                                return;
+                        }
+
+                        snprintf(buf, sizeof(buf), "%s\n", digitalRead(i) == HIGH ? "HIGH" : "LOW");
+
+                        http_rpc.send(200, "text/plain", buf);
                 } else {
-                        http_rpc.send(200, "text/plain", "<get> <set>\n");
+                        http_rpc.send(200, "text/plain", "<get>/<set>/<dump>\n");
                 }
         });
 }

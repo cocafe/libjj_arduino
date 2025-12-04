@@ -16,19 +16,30 @@
 #define BLE_DEFAULT_MAC                 ESP_MAC_EFUSE_FACTORY
 #endif
 
-static const uint16_t RACECHRONO_SERVICE_UUID = 0x1ff8;
+static const uint16_t RC_SERVICE_UUID = 0x1ff8;
 
 // RaceChrono uses two BLE characteristics:
 // 1) 0x02 to request which PIDs to send, and how frequently
 // 2) 0x01 to be notified of data received for those PIDs
-static const uint16_t PID_CHARACTERISTIC_UUID = 0x2;
-static const uint16_t CAN_BUS_CHARACTERISTIC_UUID = 0x1;
+static const uint16_t RC_CHARACTERISTIC_UUID_CANBUS     = 0x1;
+static const uint16_t RC_CHARACTERISTIC_DATALEN_CANBUS  = 12; // 4 id + 8 data
+
+static const uint16_t RC_CHARACTERISTIC_UUID_PID        = 0x2;
+static const uint16_t RC_CHARACTERISTIC_DATALEN_PID     = 8;
+
+static const uint16_t RC_CHARACTERISTIC_UUID_GPS        = 0x3;
+static const uint16_t RC_CHARACTERISTIC_DATALEN_GPS     = 20;
+
+static const uint16_t RC_CHARACTERISTIC_UUID_GPSTIME    = 0x4;
+static const uint16_t RC_CHARACTERISTIC_DATALEN_GPSTIME = 3;
 
 struct ble_cfg {
         char devname[16];
         uint8_t enabled;
         uint8_t update_hz;
         uint8_t tx_power;
+        uint8_t have_canbus;
+        uint8_t have_gps;
 };
 
 struct ble_ctx {
@@ -37,6 +48,8 @@ struct ble_ctx {
         NimBLEAdvertising *advertising;
         NimBLECharacteristic *char_canbus;
         NimBLECharacteristic *char_pid_req;
+        NimBLECharacteristic *char_gps;
+        NimBLECharacteristic *char_gpstime;
         char *devname;
         struct ble_cfg *cfg;
 };
@@ -49,6 +62,11 @@ static uint8_t rc_allow_all = 0;
 static uint8_t rc_ready_to_send = 0;
 
 static unsigned rc_hz_overall = 0;
+
+struct ble_ctx *rc_ble_get(void)
+{
+        return &rc_ble;
+}
 
 static void rc_ready_to_send_timer(void *arg)
 {
@@ -91,6 +109,29 @@ static char *ble_device_name_generate(char *str)
         return dev_name;
 }
 
+void __unused rc_ble_gps_send(uint8_t *data, size_t len)
+{
+        struct ble_ctx *ctx = &rc_ble;
+
+        ctx->char_gps->setValue(data, len);
+        ctx->char_gps->notify();
+}
+
+void __unused rc_ble_gpstime_send(uint8_t *data, size_t len)
+{
+        struct ble_ctx *ctx = &rc_ble;
+
+        ctx->char_gpstime->setValue(data, len);
+        ctx->char_gpstime->notify();
+}
+
+void __unused rc_ble_gpstime_data_set(uint8_t *data, size_t len)
+{
+        struct ble_ctx *ctx = &rc_ble;
+
+        ctx->char_gpstime->setValue(data, len);
+}
+
 static void __rc_ble_can_frame_send(struct ble_ctx *ctx, can_frame_t *f)
 {
         static uint32_t lock = 0;
@@ -116,7 +157,7 @@ static void __rc_ble_can_frame_send(struct ble_ctx *ctx, can_frame_t *f)
         WRITE_ONCE(lock, 0);
 }
 
-static void rc_ble_can_frame_send(can_frame_t *f, struct can_rlimit_node *rlimit)
+void __unused rc_ble_can_frame_send(can_frame_t *f, struct can_rlimit_node *rlimit)
 {
         static uint32_t ts_hz_stats = 0;
         static unsigned hz_overall = 0;
@@ -152,7 +193,7 @@ send:
         ble_activity = 1;
 }
 
-static void rc_ble_can_frame_send_ratelimited(can_frame_t *f)
+void __unused rc_ble_can_frame_send_ratelimited(can_frame_t *f)
 {
         static struct can_rlimit_node *rlimit = NULL;
 
@@ -328,6 +369,11 @@ class CharacteristicCallbacks : public NimBLECharacteristicCallbacks
 
 static void racechrono_nimble_init(struct ble_ctx *ctx)
 {
+        NimBLECharacteristic *char_can = NULL;
+        NimBLECharacteristic *char_pid = NULL;
+        NimBLECharacteristic *char_gps = NULL;
+        NimBLECharacteristic *char_gpstime = NULL;
+
         NimBLEDevice::init(ctx->devname);
 
         /**
@@ -342,12 +388,18 @@ static void racechrono_nimble_init(struct ble_ctx *ctx)
         NimBLEServer *server = NimBLEDevice::createServer();
         server->setCallbacks(&serverCallbacks);
 
-        NimBLEService *service = server->createService((const NimBLEUUID)RACECHRONO_SERVICE_UUID);
+        NimBLEService *service = server->createService((const NimBLEUUID)RC_SERVICE_UUID);
 
-        NimBLECharacteristic *char_pid = service->createCharacteristic((const NimBLEUUID)PID_CHARACTERISTIC_UUID, NIMBLE_PROPERTY::WRITE);
-        char_pid->setCallbacks(&rc_char_pid_cbs);
+        if (ctx->cfg->have_canbus) {
+                char_can = service->createCharacteristic((const NimBLEUUID)RC_CHARACTERISTIC_UUID_CANBUS, NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::NOTIFY);
+                char_pid = service->createCharacteristic((const NimBLEUUID)RC_CHARACTERISTIC_UUID_PID, NIMBLE_PROPERTY::WRITE);
+                char_pid->setCallbacks(&rc_char_pid_cbs);
+        }
 
-        NimBLECharacteristic *char_can = service->createCharacteristic((const NimBLEUUID)CAN_BUS_CHARACTERISTIC_UUID, NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::NOTIFY);
+        if (ctx->cfg->have_gps) {
+                char_gps = service->createCharacteristic((const NimBLEUUID)RC_CHARACTERISTIC_UUID_GPS, NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::NOTIFY);
+                char_gpstime = service->createCharacteristic((const NimBLEUUID)RC_CHARACTERISTIC_UUID_GPSTIME, NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::NOTIFY);
+        }
 
         service->start();
 
@@ -360,10 +412,18 @@ static void racechrono_nimble_init(struct ble_ctx *ctx)
         ctx->server = server;
         ctx->service = service;
         ctx->advertising = advertising;
-        ctx->char_pid_req = char_pid;
-        ctx->char_canbus = char_can;
 
-        pr_info("done\n");
+        if (ctx->cfg->have_canbus) {
+                ctx->char_pid_req = char_pid;
+                ctx->char_canbus = char_can;
+        }
+
+        if (ctx->cfg->have_gps) {
+                ctx->char_gps = char_gps;
+                ctx->char_gpstime = char_gpstime;
+        }
+
+        pr_info("done, devname: \"%s\"\n", ctx->devname);
 }
 
 static int __unused racechrono_ble_init(struct ble_cfg *cfg)
@@ -378,6 +438,11 @@ static int __unused racechrono_ble_init(struct ble_cfg *cfg)
 
         if (!cfg->enabled)
                 return 0;
+
+        if (!cfg->have_canbus && !cfg->have_gps) {
+                pr_err("both canbus and gps are disabled\n");
+                return -EINVAL;
+        }
 
         esp32_stack_print("before nimble init");
 

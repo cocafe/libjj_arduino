@@ -530,11 +530,47 @@ int snprintf_resize(char **buf, size_t *pos, size_t *len, const char *fmt, ...)
         return ret;
 }
 
-static int is_valid_ipaddr(char *ipstr, int ipver)
+int is_valid_ipaddr(char *ipstr, int ipver)
 {
         unsigned char buf[sizeof(struct in6_addr)];
 
         return (inet_pton(ipver, ipstr, buf) == 1);
+}
+
+int hex_char_to_val(char c)
+{
+        if ('0' <= c && c <= '9')
+                return c - '0';
+
+        if ('a' <= c && c <= 'f')
+                return c - 'a' + 10;
+
+        if ('A' <= c && c <= 'F')
+                return c - 'A' + 10;
+
+        return -1; // invalid hex char
+}
+
+int hexstr_to_bytes(const char *hexstr, uint8_t *out, size_t out_size)
+{
+        size_t len = strlen(hexstr);
+        if (len % 2 != 0)
+                return -EINVAL; // must be even length
+
+        size_t bytes_len = len / 2;
+        if (bytes_len > out_size)
+                return -ENOSPC; // output buffer too small
+
+        for (size_t i = 0; i < bytes_len; i++) {
+                int hi = hex_char_to_val(hexstr[2 * i]);
+                int lo = hex_char_to_val(hexstr[2 * i + 1]);
+                if (hi < 0 || lo < 0)
+                        return -EINVAL; // invalid hex
+
+                out[i] = (hi << 4) | lo;
+        }
+
+        return (int)bytes_len;
 }
 
 #endif // __LIBJJ_UTLIS_H__
