@@ -17,6 +17,10 @@
 #define GPIO_LED_FUNC                   (-1)
 #endif
 
+#ifndef LED_WS2812_ORDER
+#define LED_WS2812_ORDER                GBR
+#endif
+
 enum {
         LED_TYPE_INVALID,
         LED_TYPE_GPIO,
@@ -205,7 +209,7 @@ static __unused void led_init(void)
         }
 
 #if defined (HAVE_WS2812_LED) && defined (GPIO_LED_WS2812)
-        FastLED.addLeds<WS2812, GPIO_LED_WS2812, GRB>(led_ws2812, NUM_LED_WS2812);
+        FastLED.addLeds<WS2812, GPIO_LED_WS2812, LED_WS2812_ORDER>(led_ws2812, NUM_LED_WS2812);
         led_ws2812_brightness_set(led_ws2812_brightness);
         led_off(LED_RGB_WS2812);
 #endif

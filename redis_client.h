@@ -16,7 +16,7 @@
 #include "logging.h"
 #include "jkey.h"
 
-struct redis_cfg {
+struct redis_client_cfg {
         uint8_t enabled;
         uint8_t nodelay;
         char server[32];
@@ -183,7 +183,7 @@ err:
 
 void task_redis_client(void *arg)
 {
-        struct redis_cfg *cfg = (struct redis_cfg *)arg;
+        struct redis_client_cfg *cfg = (struct redis_client_cfg *)arg;
         int sockfd;
 
         while (1) {
@@ -249,7 +249,7 @@ sockfree:
         vTaskDelete(NULL);
 }
 
-int redis_client_init(struct redis_cfg *cfg, unsigned cpu)
+int redis_client_init(struct redis_client_cfg *cfg, unsigned cpu)
 {
         if (!cfg->enabled)
                 return 0;

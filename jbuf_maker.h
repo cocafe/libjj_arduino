@@ -214,7 +214,7 @@ static __unused void jbuf_canudp_mc_add(jbuf_t *b, const char *key, struct canud
 #endif // __LIBJJ_CAN_UDP_MC_H__
 
 #ifdef __LIBJJ_REDIS_CLIENT_H__
-static __unused void jbuf_redis_client_add(jbuf_t *b, const char *key, struct redis_cfg *cfg)
+static __unused void jbuf_redis_client_add(jbuf_t *b, const char *key, struct redis_client_cfg *cfg)
 {
         void *obj = jbuf_obj_open(b, key);
 
