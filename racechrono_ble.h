@@ -62,6 +62,7 @@ static uint8_t rc_allow_all = 0;
 static uint8_t rc_ready_to_send = 0;
 
 static unsigned rc_hz_overall = 0;
+static unsigned rc_hz_counter = 0;
 
 struct ble_ctx *rc_ble_get(void)
 {
@@ -74,6 +75,7 @@ static void rc_ready_to_send_timer(void *arg)
                 rc_ready_to_send = 1;
         } else {
                 rc_ready_to_send = 0;
+                rc_hz_counter = 0;
                 rc_hz_overall = 0;
         }
 
@@ -86,6 +88,20 @@ static const esp_timer_create_args_t rc_ready_timer_args = {
         .arg = NULL,
         .dispatch_method = ESP_TIMER_TASK,
         .name = "rc_ready",
+};
+
+static void rc_hz_counter_timer(void *arg)
+{
+        rc_hz_overall = rc_hz_counter;
+        rc_hz_counter = 0;
+}
+
+static esp_timer_handle_t rc_hz_cnt_timer;
+static const esp_timer_create_args_t rc_hz_cnt_timer_args = {
+        .callback = rc_hz_counter_timer,
+        .arg = NULL,
+        .dispatch_method = ESP_TIMER_TASK,
+        .name = "rc_hzcnt",
 };
 
 static char *ble_device_name_generate(char *str)
@@ -115,6 +131,8 @@ void __unused rc_ble_gps_send(uint8_t *data, size_t len)
 
         ctx->char_gps->setValue(data, len);
         ctx->char_gps->notify();
+
+        rc_hz_counter++;
 }
 
 void __unused rc_ble_gpstime_send(uint8_t *data, size_t len)
@@ -123,6 +141,8 @@ void __unused rc_ble_gpstime_send(uint8_t *data, size_t len)
 
         ctx->char_gpstime->setValue(data, len);
         ctx->char_gpstime->notify();
+
+        rc_hz_counter++;
 }
 
 void __unused rc_ble_gpstime_data_set(uint8_t *data, size_t len)
@@ -159,10 +179,6 @@ static void __rc_ble_can_frame_send(struct ble_ctx *ctx, can_frame_t *f)
 
 void __unused rc_ble_can_frame_send(can_frame_t *f, struct can_rlimit_node *rlimit)
 {
-        static uint32_t ts_hz_stats = 0;
-        static unsigned hz_overall = 0;
-        uint32_t now = esp32_millis();
-
         if (unlikely(!rc_ready_to_send))
                 return;
 
@@ -173,7 +189,7 @@ void __unused rc_ble_can_frame_send(can_frame_t *f, struct can_rlimit_node *rlim
                 goto send;
 
 #ifdef CONFIG_HAVE_CAN_RLIMIT
-        if (is_can_id_ratelimited(rlimit, CAN_RLIMIT_TYPE_RC, now)) {
+        if (is_can_id_ratelimited(rlimit, CAN_RLIMIT_TYPE_RC, esp32_millis())) {
                 return;
         }
 #endif
@@ -181,14 +197,8 @@ void __unused rc_ble_can_frame_send(can_frame_t *f, struct can_rlimit_node *rlim
 send:
         __rc_ble_can_frame_send(&rc_ble, f);
 
-        if (now - ts_hz_stats >= 1000) {
-                ts_hz_stats = now;
-                rc_hz_overall = hz_overall;
-                hz_overall = 0;
-        }
-
         cnt_can_ble_send++;
-        hz_overall++;
+        rc_hz_counter++;
 
         ble_activity = 1;
 }
@@ -452,6 +462,12 @@ static int __unused racechrono_ble_init(struct ble_cfg *cfg)
         if (esp_timer_create(&rc_ready_timer_args, &rc_ready_timer) != ESP_OK) {
                 pr_err("failed to create timer\n");
                 return -ENOMEM;
+        }
+
+        if (esp_timer_create(&rc_hz_cnt_timer_args, &rc_hz_cnt_timer) == ESP_OK) {
+                esp_timer_start_periodic(rc_hz_cnt_timer, 1ULL * 1000 * 1000);
+        } else {
+                pr_err("failed to create hz counter timer\n");
         }
 
         racechrono_nimble_init(ctx);
