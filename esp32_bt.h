@@ -113,6 +113,54 @@ static int ble_is_connected = 0;
 
 static uint64_t cnt_can_ble_send; // send to remote
 
+enum {
+        BLE_EVENT_CONNECTED = 0,
+        BLE_EVENT_DISCONNECTED,
+        NUM_BLE_EVENTS,
+};
+
+static EventGroupHandle_t eg_ble_events;
+
+static void ble_event_init(void)
+{
+        eg_ble_events = xEventGroupCreate();
+}
+
+static int ble_event_wait(unsigned event, int timeout_ms)
+{
+        EventBits_t bits;
+        TickType_t tick;
+
+        if (timeout_ms < 0)
+                tick = portMAX_DELAY;
+        else
+                tick = pdMS_TO_TICKS(timeout_ms);
+        
+        if (event >= NUM_BLE_EVENTS) {
+                return -EINVAL;
+        }
+
+        // xEventGroupWaitBits() will return immediately if bit mask is set and matched already
+        // in consumers, will not clear bit here
+        bits = xEventGroupWaitBits(eg_ble_events, BIT(event), pdFALSE, pdFALSE, tick);
+        if (bits & BIT(event)) {
+                return 0;
+        }
+
+        return -ETIMEDOUT;
+}
+
+static void ble_event_post(unsigned event)
+{
+        xEventGroupClearBits(eg_ble_events, BIT(event));
+        xEventGroupSetBits(eg_ble_events, BIT(event));
+}
+
+static void ble_event_clear(unsigned event)
+{
+        xEventGroupClearBits(eg_ble_events, BIT(event));
+}
+
 static uint8_t ble_activity = 0;
 static int8_t led_ble_activity = -1;
 

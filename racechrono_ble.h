@@ -229,6 +229,9 @@ class ServerCallbacks : public NimBLEServerCallbacks
 
                 ble_is_connected = 1;
 
+                ble_event_clear(BLE_EVENT_DISCONNECTED);
+                ble_event_post(BLE_EVENT_CONNECTED);
+
                 if (!esp_timer_is_active(rc_ready_timer)) {
                         esp_timer_start_once(rc_ready_timer, 6ULL * 1000 * 1000);
                         pr_dbg("rc ready timer started\n");
@@ -250,6 +253,9 @@ class ServerCallbacks : public NimBLEServerCallbacks
                 pr_info("ble client disconnected, start advertising\n");
 
                 ble_is_connected = 0;
+
+                ble_event_clear(BLE_EVENT_CONNECTED);
+                ble_event_post(BLE_EVENT_DISCONNECTED);
 
                 // delay to cancel ready
                 if (!esp_timer_is_active(rc_ready_timer)) {
@@ -453,6 +459,8 @@ static int __unused racechrono_ble_init(struct ble_cfg *cfg)
                 pr_err("both canbus and gps are disabled\n");
                 return -EINVAL;
         }
+
+        ble_event_init();
 
         esp32_stack_print("before nimble init");
 
