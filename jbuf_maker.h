@@ -135,6 +135,15 @@ void __unused jbuf_ble_cfg_add(jbuf_t *b, const char *key, struct ble_cfg *cfg)
         jbuf_uint_add(b, "update_hz", cfg->update_hz);
         jbuf_strval_add(b, "tx_power", cfg->tx_power, str_ble_txpwr);
 
+        // {
+        //         void *chars = jbuf_obj_open(b, "chars");
+
+        //         jbuf_bool_add(b, "canbus", cfg->have_canbus);
+        //         jbuf_bool_add(b, "gps", cfg->have_gps);
+
+        //         jbuf_obj_close(b, chars);
+        // }
+
         jbuf_obj_close(b, obj);
 }
 #endif // __LIBJJ_RACECHRONO_BLE_H__
