@@ -192,7 +192,7 @@ void rpc_wifi_add(void)
                 if (http_rpc.hasArg("set")) {
                         String data = http_rpc.arg("set");
                         int err = 0;
-                        unsigned i = strtoull_wrap(data.c_str(), 16, &err);
+                        unsigned i = strtoull_wrap(data.c_str(), 10, &err);
 
                         if (esp_wifi_set_inactive_time(WIFI_IF_STA, i) == ESP_OK) {
                                 http_rpc.send(200, "text/plain", "OK\n");
