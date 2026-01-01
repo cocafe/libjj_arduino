@@ -109,7 +109,7 @@ void rpc_wifi_add(void)
         });
 #endif
 
-        http_rpc.on("/wifi_tx_power", HTTP_GET, [](){
+        http_rpc.on("/wifi_sta_rssi", HTTP_GET, [](){
                 char buf[16] = { };
                 int rssi = 0;
 
