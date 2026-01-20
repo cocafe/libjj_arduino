@@ -371,10 +371,16 @@ static struct wifi_ctx g_wifi_ctx;
 static uint8_t wifi_sta_connected;
 static uint8_t wifi_ap_got_sta_cnt;
 static uint8_t wifi_sta_ip_got;
+static uint8_t wifi_is_up = 0;
 
 static __unused int wifi_mode_get(void)
 {
         return g_wifi_ctx.cfg ? g_wifi_ctx.cfg->mode : (int)ESP_WIFI_MODE_OFF;
+}
+
+static __unused int is_wifi_up(void)
+{
+        return wifi_is_up;
 }
 
 void wifi_ipinfo_print(esp_netif_t *netif)
@@ -439,6 +445,11 @@ static int8_t  led_wifi_activity = -1;
 
 static void timer_cb_wifi_led(void *arg)
 {
+        if (!wifi_is_up) {
+                led_off(led_wifi_activity);
+                return;
+        }
+
         if (wifi_ap_got_sta_cnt > 0 || wifi_sta_connected) {
                 if (wifi_activity) {
                         static uint8_t last_on = 0;
@@ -978,7 +989,7 @@ void wifi_early_init(void)
         ESP_ERROR_CHECK(ret);
 }
 
-int wifi_start(struct wifi_ctx *ctx, struct wifi_cfg *cfg)
+int wifi_init(struct wifi_ctx *ctx, struct wifi_cfg *cfg)
 {
         esp_err_t ret;
 
@@ -1110,6 +1121,13 @@ int wifi_start(struct wifi_ctx *ctx, struct wifi_cfg *cfg)
                 }
         }
 
+        return ret;
+}
+
+int wifi_start(struct wifi_ctx *ctx, struct wifi_cfg *cfg)
+{
+        esp_err_t ret;
+
         ret = esp_wifi_start();
         if (ret != ESP_OK) {
                 pr_err("esp_wifi_start(): 0x%x\n", ret);
@@ -1200,6 +1218,36 @@ int wifi_start(struct wifi_ctx *ctx, struct wifi_cfg *cfg)
                         pr_err("esp_wifi_set_bandwidth(): 0x%x\n", ret);
                 }
         }
+
+        wifi_is_up = 1;
+
+        return 0;
+}
+
+int wifi_deinit(void)
+{
+        int err;
+
+        if ((err = esp_wifi_deinit())) {
+                pr_err("esp_wifi_deinit(): %d\n", err);
+                return -ENODEV;
+        }
+
+        return 0;
+}
+
+int wifi_stop(void)
+{
+        int err;
+
+        pr_info("\n");
+
+        if ((err = esp_wifi_stop())) {
+                pr_err("esp32_wifi_stop(): %d\n", err);
+                return -ENODEV;
+        }
+
+        wifi_is_up = 0;
 
         return 0;
 }
