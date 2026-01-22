@@ -617,7 +617,7 @@ static void task_wifi_sta_ping(void *arg)
                         vTaskDelay(pdMS_TO_TICKS(1000));
                 }
 
-                if (need_reconnect && wifi_sta_connected) {
+                if (need_reconnect && wifi_sta_connected && wifi_is_up) {
                         esp_wifi_disconnect();
                 }
         }
