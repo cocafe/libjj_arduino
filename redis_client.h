@@ -189,7 +189,7 @@ void task_redis_client(void *arg)
         while (1) {
                 if (wifi_mode_get() == ESP_WIFI_MODE_STA) {
                         if (!wifi_sta_connected || !wifi_sta_ip_got) {
-                                vTaskDelay(pdMS_TO_TICKS(1000));
+                                mdelay((1000));
                                 continue;
                         }
                 }
@@ -197,7 +197,7 @@ void task_redis_client(void *arg)
                 sockfd = socket(AF_INET, SOCK_STREAM, 0);
                 if (sockfd < 0) {
                         pr_err("socket(): %d %s\n", errno, strerror(abs(errno)));
-                        vTaskDelay(pdMS_TO_TICKS(1000));
+                        mdelay((1000));
                         continue;
                 }
 
@@ -209,7 +209,7 @@ void task_redis_client(void *arg)
                 if (connect(sockfd, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0) {
                         pr_info("connect() to %s:%d failure, %d %s\n",
                                 cfg->server, cfg->port, errno, strerror(abs(errno)));
-                        vTaskDelay(pdMS_TO_TICKS(1000));
+                        mdelay((1000));
                         goto sockfree;
                 }
 
@@ -243,7 +243,7 @@ sockfree:
                 shutdown(sockfd, SHUT_RDWR);
                 close(sockfd);
 
-                vTaskDelay(pdMS_TO_TICKS(1000));
+                mdelay((1000));
         }
 
         vTaskDelete(NULL);

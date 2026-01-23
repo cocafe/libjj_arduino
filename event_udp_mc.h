@@ -174,7 +174,7 @@ static void task_event_udp_mc_recv(void *arg)
 
         while (1) {
                 if (READ_ONCE(evt_udp_mc_sock) < 0) {
-                        vTaskDelay(pdMS_TO_TICKS(5000));
+                        mdelay((5000));
                         continue;
                 }
 
@@ -256,7 +256,7 @@ static void task_event_up_dev_hb(void *arg)
 
         while (1) {
                 event_udp_mc_send(EVENT_DEV_HEARTBEAT, (uint8_t *)&hb, sizeof(hb));
-                vTaskDelay(pdMS_TO_TICKS(5 * 1000));
+                mdelay((5 * 1000));
         }
 }
 

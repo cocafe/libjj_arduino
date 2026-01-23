@@ -137,7 +137,7 @@ static void task_can_udp_recv(void *arg)
 
         while (1) {
                 if (READ_ONCE(can_udp_mc_sock) < 0) {
-                        vTaskDelay(pdMS_TO_TICKS(5000));
+                        mdelay((5000));
                         continue;
                 }
 

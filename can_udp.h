@@ -90,7 +90,7 @@ static void task_can_udp(void *arg)
                 }
 
 sleep:
-                vTaskDelay(pdMS_TO_TICKS(100));
+                mdelay((100));
         }
 }
 

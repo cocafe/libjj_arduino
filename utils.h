@@ -573,4 +573,9 @@ int hexstr_to_bytes(const char *hexstr, uint8_t *out, size_t out_size)
         return (int)bytes_len;
 }
 
+static inline void mdelay(unsigned ms)
+{
+        vTaskDelay(pdMS_TO_TICKS(ms));
+}
+
 #endif // __LIBJJ_UTLIS_H__

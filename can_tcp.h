@@ -204,7 +204,7 @@ static void can_tcp_server_recv(int sockfd)
 
                         if (errno == EAGAIN) {
                                 pr_dbg("recv() timedout, n = %d\n", n);
-                                vTaskDelay(pdMS_TO_TICKS(100));
+                                mdelay((100));
 
                                 continue;
                         } else {
@@ -306,7 +306,7 @@ static void task_can_tcp(void *arg)
 
                 WRITE_ONCE(can_tcp_client_fd, -1);
 
-                vTaskDelay(pdMS_TO_TICKS(200));
+                mdelay((200));
         }
 }
 

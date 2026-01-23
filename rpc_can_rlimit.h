@@ -62,7 +62,7 @@ void rpc_can_rlimit_add(void)
                                 // if (enabled_saved) {
                                 //         can_rlimit.cfg->enabled = 0;
                                 //         while (can_rlimit_lck) {
-                                //                 vTaskDelay(pdMS_TO_TICKS(1));
+                                //                 mdelay((1));
                                 //         }
                                 // }
 

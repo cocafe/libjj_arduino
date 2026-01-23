@@ -71,7 +71,7 @@ static void task_twai_rxq_worker(void *arg)
         while (1) {
                 rx = (union twai_rx_slot *)spsc_rbuf_rptr_get(&twai_rxq);
                 if (!rx) {
-                        vTaskDelay(pdMS_TO_TICKS(1));
+                        mdelay((1));
                         continue;
                 }
 

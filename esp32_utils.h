@@ -106,9 +106,9 @@ static int esp32_top_stats_print(unsigned sampling_ms, int (*__snprintf)(char *b
         }
 
         if (unlikely(sampling_ms == 0)) {
-                vTaskDelay(pdMS_TO_TICKS(500));
+                mdelay((500));
         } else {
-                vTaskDelay(pdMS_TO_TICKS(sampling_ms));
+                mdelay((sampling_ms));
         }
 
         tasks2 = esp32_top_stats_snapshot(&task_cnt2, &rt2);
@@ -272,7 +272,7 @@ static int esp32_cpu_usage_get(unsigned sampling_ms)
         uint64_t idle_delta, total_delta;
 
         esp32_cpu_ticks_get(&idle_s, &total_s);
-        vTaskDelay(pdMS_TO_TICKS(sampling_ms));
+        mdelay((sampling_ms));
         esp32_cpu_ticks_get(&idle_e, &total_e);
 
         idle_delta = idle_e - idle_s;
@@ -352,7 +352,7 @@ static __unused void task_esp32_stack_print(void *arg)
 {
         while (1) {
                 esp32_stack_print(NULL);
-                vTaskDelay(pdMS_TO_TICKS(3000));
+                mdelay((3000));
         }
 }
 

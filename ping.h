@@ -217,7 +217,7 @@ int esp_ping4(IPAddress dst,
         // Wait for result or timeout (polling loop)
         unsigned long start = esp32_millis();
         while (!ctx.done && (esp32_millis() - start < intv_ms * count + 200)) {
-                vTaskDelay(pdMS_TO_TICKS(100));
+                mdelay((100));
         }
 
         esp_ping_stop(ping);

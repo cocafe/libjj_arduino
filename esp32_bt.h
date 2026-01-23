@@ -238,7 +238,7 @@ static void task_ble_conn_broadcast(void *arg)
         pr_info("started\n");
 
         while (1) {
-                vTaskDelay(pdMS_TO_TICKS(5 * 1000UL));
+                mdelay((5 * 1000UL));
 
                 if (ble_is_connected) {
 #ifdef __LIBJJ_EVENT_UDP_MC_H__

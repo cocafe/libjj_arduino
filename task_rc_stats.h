@@ -53,7 +53,7 @@ static void task_rc_stats_data(void *arg)
                 rc_ble_can_frame_send_ratelimited(f);
 
 sleep:
-                vTaskDelay(pdMS_TO_TICKS(1000));
+                mdelay((1000));
         }
 }
 

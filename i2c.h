@@ -145,7 +145,7 @@ static int __i2c_init(struct i2c_ctx *i2c, TwoWire *wire, struct i2c_cfg *cfg)
         i2c->cfg = cfg;
         i2c->wire = wire;
 
-        vTaskDelay(pdMS_TO_TICKS(300));
+        mdelay((300));
 
         return 0;
 }

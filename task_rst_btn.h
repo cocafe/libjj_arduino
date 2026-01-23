@@ -25,16 +25,16 @@ static void task_rst_btn(void *arg)
                                 while (digitalRead(GPIO_BTN_RST) == LOW) {
 #ifdef HAVE_WS2812_LED
                                         led_on(LED_RGB_WS2812, 255, 0, 255);
-                                        vTaskDelay(pdMS_TO_TICKS(250));
+                                        mdelay((250));
                                         led_off(LED_RGB_WS2812);
-                                        vTaskDelay(pdMS_TO_TICKS(250));
+                                        mdelay((250));
 #elif (GPIO_LED_FUNC >= 0)
                                         led_on(LED_SIMPLE_FUNC, 255, 255, 255);
-                                        vTaskDelay(pdMS_TO_TICKS(250));
+                                        mdelay((250));
                                         led_off(LED_SIMPLE_FUNC);
-                                        vTaskDelay(pdMS_TO_TICKS(250));
+                                        mdelay((250));
 #else
-                                        vTaskDelay(pdMS_TO_TICKS(500));
+                                        mdelay((500));
 #endif
                                 }
 
@@ -43,16 +43,16 @@ static void task_rst_btn(void *arg)
                                 ESP.restart();
                         }
 
-                        vTaskDelay(pdMS_TO_TICKS(500));
+                        mdelay((500));
                 }
 
-                vTaskDelay(pdMS_TO_TICKS(1000));
+                mdelay((1000));
         }
 }
 
 static __unused void task_rst_btn_start(unsigned cpu)
 {
-        vTaskDelay(pdMS_TO_TICKS(100));
+        mdelay((100));
         xTaskCreatePinnedToCore(task_rst_btn, "rst_btn", 4096, NULL, 1, NULL, cpu);
 }
 #endif // GPIO_BTN_RST
