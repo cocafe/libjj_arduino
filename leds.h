@@ -18,7 +18,7 @@
 #endif
 
 #ifndef LED_WS2812_ORDER
-#define LED_WS2812_ORDER                GBR
+#define LED_WS2812_ORDER                RGB
 #endif
 
 enum {
@@ -87,7 +87,7 @@ static void __ws2812_led_on(uint8_t idx, uint8_t r, uint8_t g, uint8_t b)
         if (unlikely(idx >= NUM_LED_WS2812))
                 return;
 
-        led_ws2812[idx] = CRGB(g, r, b);
+        led_ws2812[idx] = CRGB(r, g, b);
         FastLED.show();
 }
 
