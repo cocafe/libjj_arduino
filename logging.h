@@ -5,14 +5,24 @@
 
 #include "esp32_utils.h"
 
-#define ___pr_timestamp()                               \
-        do {                                            \
-                printf("[%8ju] ", esp32_millis());      \
+#if ARDUINO_USB_CDC_ON_BOOT
+        #if ARDUINO_USB_MODE
+                #define logging_printf HWCDCSerial.printf
+        #else
+                #define logging_printf USBSerial.printf
+        #endif // ARDUINO_USB_MODE
+#else
+#define logging_printf printf
+#endif // ARDUINO_USB_CDC_ON_BOOT
+
+#define ___pr_timestamp()                                          \
+        do {                                                       \
+                logging_printf("[%8ju] ", esp32_millis());      \
         } while (0)
 
-#define ___pr_wrapped(msg, fmt...)                      \
-        do {                                            \
-                printf(msg, ##fmt);                     \
+#define ___pr_wrapped(msg, fmt...)                                 \
+        do {                                                       \
+                logging_printf(msg, ##fmt);                     \
         } while (0)
 
 #define pr_info(msg, fmt...)                            \
