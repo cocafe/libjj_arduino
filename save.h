@@ -200,7 +200,7 @@ static int nvs_erase(void)
         return 0;
 }
 
-static void save_cfg_reset(void)
+void save_cfg_reset(void)
 {
         memcpy(&g_cfg, &g_cfg_default, sizeof(g_cfg));
 
