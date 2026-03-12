@@ -1385,51 +1385,51 @@ static void cjson_node_print(cJSON *node, int depth, const size_t *arr_idx)
         if (depth >= (sizeof(json_indent) - 1))
                 depth = sizeof(json_indent);
 
-        // printf("%.*s", depth, json_indent);
+        // pr_ser("%.*s", depth, json_indent);
         for (int i = 0; i < depth; i++)
-                printf("%s", "    ");
+                pr_ser("%s", "    ");
 
         if (arr_idx)
-                printf("[%zu] ", *arr_idx);
+                pr_ser("[%zu] ", *arr_idx);
         else if (node->string)
-                printf("\"%s\" ", nullstr_guard(node->string));
+                pr_ser("\"%s\" ", nullstr_guard(node->string));
 
         switch (node->type) {
         case cJSON_False:
-                printf(": false");
+                pr_ser(": false");
                 break;
         case cJSON_True:
-                printf(": true");
+                pr_ser(": true");
                 break;
         case cJSON_NULL:
-                printf("[null]");
+                pr_ser("[null]");
                 break;
         case cJSON_Number: {
                 double num = cJSON_GetNumberValue(node);
 
                 // does number have fraction part
                 if (rint(num) != num)
-                        printf(" : %.2f", num);
+                        pr_ser(" : %.2f", num);
                 else
-                        printf(" : %.0f", num);
+                        pr_ser(" : %.0f", num);
 
                 break;
         }
         case cJSON_String:
-                printf(" : \"%s\"", cJSON_GetStringValue(node));
+                pr_ser(" : \"%s\"", cJSON_GetStringValue(node));
                 break;
         case cJSON_Array:
-                printf("[array]");
+                pr_ser("[array]");
                 break;
         case cJSON_Object:
-                printf("[object]");
+                pr_ser("[object]");
                 break;
         case cJSON_Raw:
-                printf("[raws]");
+                pr_ser("[raws]");
                 break;
         }
 
-        printf("\n");
+        pr_ser("\n");
 }
 
 int jkey_cjson_load_recursive(jkey_t *jkey, cJSON *node, int depth)

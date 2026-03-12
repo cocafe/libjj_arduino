@@ -2,6 +2,7 @@
 #define __LIBJJ_ERRTRAP_H__
 
 #include "leds.h"
+#include "logging.h"
 
 static void err_trap()
 {
@@ -12,7 +13,7 @@ static void err_trap()
 
 static void __unused errtrap_print(const char *buf)
 {
-        printf(buf);
+        pr_ser(buf);
         fflush(stdout);
         err_trap();
 }

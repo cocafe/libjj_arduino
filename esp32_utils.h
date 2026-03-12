@@ -342,9 +342,9 @@ int esp32_tsens_init(void)
 static __unused void esp32_stack_print(const char *tag)
 {
         if (tag)
-                printf("%s: ", tag);
+                pr_ser("%s: ", tag);
 
-        printf("\"free_heap\" %u \"min_free_heap\" %u\n", heap_caps_get_free_size(MALLOC_CAP_INTERNAL), heap_caps_get_minimum_free_size(MALLOC_CAP_INTERNAL));
+        pr_ser("\"free_heap\" %u \"min_free_heap\" %u\n", heap_caps_get_free_size(MALLOC_CAP_INTERNAL), heap_caps_get_minimum_free_size(MALLOC_CAP_INTERNAL));
         // heap_caps_print_heap_info(MALLOC_CAP_INTERNAL);
 }
 

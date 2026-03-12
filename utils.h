@@ -11,6 +11,8 @@
 #include <lwip/netdb.h>
 #include <lwip/sockets.h>
 
+#include "logging.h"
+
 typedef uint32_t __u32;
 typedef uint64_t __u64;
 
@@ -253,25 +255,25 @@ static void __unused hexdump(const void *data, size_t size) {
         ascii[16] = '\0';
 
         for (i = 0; i < size; ++i) {
-                printf("%02X ", ((uint8_t *)data)[i]);
+                pr_ser("%02X ", ((uint8_t *)data)[i]);
                 if (((uint8_t *)data)[i] >= ' ' && ((uint8_t *)data)[i] <= '~') {
                         ascii[i % 16] = ((uint8_t *)data)[i];
                 } else {
                         ascii[i % 16] = '.';
                 }
                 if ((i + 1) % 8 == 0 || i + 1 == size) {
-                        printf(" ");
+                        pr_ser(" ");
                         if ((i + 1) % 16 == 0) {
-                                printf("|  %s \n", ascii);
+                                pr_ser("|  %s \n", ascii);
                         } else if (i + 1 == size) {
                                 ascii[(i + 1) % 16] = '\0';
                                 if ((i + 1) % 16 <= 8) {
-                                        printf(" ");
+                                        pr_ser(" ");
                                 }
                                 for (j = (i + 1) % 16; j < 16; ++j) {
-                                        printf("   ");
+                                        pr_ser("   ");
                                 }
-                                printf("|  %s \n", ascii);
+                                pr_ser("|  %s \n", ascii);
                         }
                 }
         }
@@ -285,27 +287,27 @@ static void __unused hexdump_addr(const void *data, size_t size, uint32_t prefix
 
         for (i = 0; i < size; ++i) {
                 if (i % 16 == 0)
-                        printf("%08lx | ", prefix_addr + i);
+                        pr_ser("%08lx | ", prefix_addr + i);
 
-                printf("%02X ", ((uint8_t *)data)[i]);
+                pr_ser("%02X ", ((uint8_t *)data)[i]);
                 if (((uint8_t *)data)[i] >= ' ' && ((uint8_t *)data)[i] <= '~') {
                         ascii[i % 16] = ((uint8_t *)data)[i];
                 } else {
                         ascii[i % 16] = '.';
                 }
                 if ((i + 1) % 8 == 0 || i + 1 == size) {
-                        printf(" ");
+                        pr_ser(" ");
                         if ((i + 1) % 16 == 0) {
-                                printf("|  %s \n", ascii);
+                                pr_ser("|  %s \n", ascii);
                         } else if (i + 1 == size) {
                                 ascii[(i + 1) % 16] = '\0';
                                 if ((i + 1) % 16 <= 8) {
-                                        printf(" ");
+                                        pr_ser(" ");
                                 }
                                 for (j = (i + 1) % 16; j < 16; ++j) {
-                                        printf("   ");
+                                        pr_ser("   ");
                                 }
-                                printf("|  %s \n", ascii);
+                                pr_ser("|  %s \n", ascii);
                         }
                 }
         }
