@@ -32,6 +32,7 @@ void rpc_led_add(void)
 
         http_rpc.on("/ledtest", HTTP_GET, [](){
                 int which = -1, state = -1;
+                unsigned r = 0, g = 0, b = 0;
 
                 if (http_rpc.hasArg("which")) {
                         String arg = http_rpc.arg("which");
@@ -46,7 +47,7 @@ void rpc_led_add(void)
                         which = (int)i;
                 }
 
-                if (http_rpc.hasArg("state")) {
+                if (http_rpc.hasArg("on")) {
                         String arg = http_rpc.arg("state");
                         int err;
                         uint32_t i = strtoull_wrap(arg.c_str(), 10, &err);
@@ -59,13 +60,52 @@ void rpc_led_add(void)
                         state = (int)i;
                 }
 
+                if (http_rpc.hasArg("r")) {
+                        String arg = http_rpc.arg("r");
+                        int err;
+                        uint32_t i = strtoull_wrap(arg.c_str(), 10, &err);
+
+                        if (err || i > 255 || i < 0) {
+                                http_rpc.send(500, "text/plain", "invalid value\n");
+                                return;
+                        }
+
+                        r = (unsigned)i;
+                }
+
+                if (http_rpc.hasArg("g")) {
+                        String arg = http_rpc.arg("g");
+                        int err;
+                        uint32_t i = strtoull_wrap(arg.c_str(), 10, &err);
+
+                        if (err || i > 255 || i < 0) {
+                                http_rpc.send(500, "text/plain", "invalid value\n");
+                                return;
+                        }
+
+                        g = (unsigned)i;
+                }
+
+                if (http_rpc.hasArg("b")) {
+                        String arg = http_rpc.arg("b");
+                        int err;
+                        uint32_t i = strtoull_wrap(arg.c_str(), 10, &err);
+
+                        if (err || i > 255 || i < 0) {
+                                http_rpc.send(500, "text/plain", "invalid value\n");
+                                return;
+                        }
+
+                        b = (unsigned)i;
+                }
+
                 if (which < 0 || state < 0 || which >= NUM_LEDS) {
-                        http_rpc.send(200, "text/plain", "<which: int> <state: 0/1>\n");
+                        http_rpc.send(200, "text/plain", "<which: int> <on: 0/1> <r> <g> <b>\n");
                         return;
                 }
 
                 if (state) {
-                        led_on(which, 255, 255, 255);
+                        led_on(which, r, g, b);
                 } else {
                         led_off(which);
                 }
