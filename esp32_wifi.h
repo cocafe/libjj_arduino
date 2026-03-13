@@ -309,6 +309,7 @@ struct wifi_sta_cfg {
         uint8_t btm_enabled;
         uint8_t mbo_enabled;
         uint8_t retry_count;
+        uint8_t ping_mon;
         uint16_t inactive_sec;
 };
 
@@ -517,7 +518,7 @@ static int wifi_led_timer_init(unsigned tick_ms)
         return 0;
 }
 
-static TaskHandle_t task_handle_sta_ping;
+static TaskHandle_t task_handle_sta_ping = NULL;
 
 static int task_wifi_conn_ping_cb(struct ping_ctx *ctx, struct pbuf *p, const ip_addr_t *addr)
 {
@@ -576,18 +577,10 @@ static void task_wifi_sta_ping(void *arg)
                         continue;
                 }
 
-                // if different gateway free and realloc
-                if (memcmp(&last_tgt, &dst, sizeof(ip_addr_t))) {
-                        if (pctx) {
-                                ping4_deinit(pctx);
-                                pctx = NULL;
-                        }
-
-                        pctx = ping4_init_ip4(dst, task_wifi_conn_ping_cb, (void *)&ping_success);
-                        if (!pctx) {
-                                pr_err("failed to init ping4 context, abort\n");
-                                continue;
-                        }
+                pctx = ping4_init_ip4(dst, task_wifi_conn_ping_cb, (void *)&ping_success);
+                if (!pctx) {
+                        pr_err("failed to init ping4 context, abort\n");
+                        continue;
                 }
 
                 while (1) {
@@ -619,6 +612,11 @@ static void task_wifi_sta_ping(void *arg)
 
                 if (need_reconnect && wifi_sta_connected && wifi_is_up) {
                         esp_wifi_disconnect();
+                }
+
+                if (pctx) {
+                        ping4_deinit(pctx);
+                        pctx = NULL;
                 }
         }
 }
@@ -750,7 +748,8 @@ static void wifi_event_handle_internal(esp_event_base_t event_base,
                         wifi_ipinfo_print(esp_netif_get_default_netif());
                         wifi_sta_ip_got = 1;
 
-                        xTaskNotifyGive(task_handle_sta_ping);
+                        if (task_handle_sta_ping != NULL)
+                                xTaskNotifyGive(task_handle_sta_ping);
 
                         break;
                 }
@@ -1196,7 +1195,8 @@ int wifi_start(struct wifi_ctx *ctx, struct wifi_cfg *cfg)
         if (cfg->mode == ESP_WIFI_MODE_STA_AP || cfg->mode == ESP_WIFI_MODE_STA) {
                 esp_wifi_set_inactive_time(WIFI_IF_STA, cfg->sta.inactive_sec);
 
-                xTaskCreatePinnedToCore(task_wifi_sta_ping, "ping_daemon", 4096, NULL, 1, &task_handle_sta_ping, CPU0);
+                if (cfg->sta.ping_mon)
+                        xTaskCreatePinnedToCore(task_wifi_sta_ping, "ping_daemon", 4096, NULL, 1, &task_handle_sta_ping, CPU0);
 
                 if (esp_timer_create(&timer_args_wifi_sta_reconn, &timer_wifi_sta_reconn) != ESP_OK) {
                         pr_err("failed to create timer\n");
