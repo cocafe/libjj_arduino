@@ -557,7 +557,6 @@ static void task_wifi_sta_ping(void *arg)
         int ping_success = 0;
         int need_reconnect = 0;
         struct ping_ctx *pctx = NULL;
-        ip_addr_t last_tgt = { };
 
         while (1) {
                 ip_addr_t dst = { };
