@@ -65,7 +65,7 @@ void rpc_led_add(void)
                         int err;
                         uint32_t i = strtoull_wrap(arg.c_str(), 10, &err);
 
-                        if (err || i > 255 || i < 0) {
+                        if (err || i > 255) {
                                 http_rpc.send(500, "text/plain", "invalid value\n");
                                 return;
                         }
@@ -78,7 +78,7 @@ void rpc_led_add(void)
                         int err;
                         uint32_t i = strtoull_wrap(arg.c_str(), 10, &err);
 
-                        if (err || i > 255 || i < 0) {
+                        if (err || i > 255) {
                                 http_rpc.send(500, "text/plain", "invalid value\n");
                                 return;
                         }
@@ -91,7 +91,7 @@ void rpc_led_add(void)
                         int err;
                         uint32_t i = strtoull_wrap(arg.c_str(), 10, &err);
 
-                        if (err || i > 255 || i < 0) {
+                        if (err || i > 255) {
                                 http_rpc.send(500, "text/plain", "invalid value\n");
                                 return;
                         }
