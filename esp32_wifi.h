@@ -373,6 +373,8 @@ static uint8_t wifi_sta_connected;
 static uint8_t wifi_ap_got_sta_cnt;
 static uint8_t wifi_sta_ip_got;
 static uint8_t wifi_is_up = 0;
+static uint32_t cnt_wifi_sta_conn;
+static uint32_t cnt_wifi_sta_disconn;
 
 static __unused int wifi_mode_get(void)
 {
@@ -711,6 +713,7 @@ static void wifi_event_handle_internal(esp_event_base_t event_base,
                         wifi_event_sta_connected_t *e = (wifi_event_sta_connected_t *)event_data;
                         wifi_event_pr("sta connected to %s (" MACSTR "), ch: %u\n", e->ssid, MAC2STR(e->bssid), e->channel);
                         wifi_sta_connected = 1;
+                        cnt_wifi_sta_conn++;
                         break;
                 }
 
@@ -718,6 +721,7 @@ static void wifi_event_handle_internal(esp_event_base_t event_base,
                         wifi_event_sta_disconnected_t *e = (wifi_event_sta_disconnected_t *)event_data;
                         wifi_event_pr("sta disconnect %s (" MACSTR "), reason: %d rssi: %d\n", e->ssid, MAC2STR(e->bssid), e->reason, e->rssi);
                         wifi_sta_connected = 0;
+                        cnt_wifi_sta_disconn++;
 
                         if (!esp_timer_is_active(timer_wifi_sta_reconn)) {
                                 wifi_event_pr("schedule to reconnect to AP\n");

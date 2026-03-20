@@ -181,12 +181,22 @@ void rpc_wifi_add(void)
                 }
         });
 
-        // http_rpc.on("/wifi_stats", HTTP_GET, [](){
-        //         if (esp_wifi_statis_dump(0xFFFFFFFF) == ESP_OK)
-        //                 http_rpc.send(200, "text/plain", "OK\n");
-        //         else
-        //                 http_rpc.send(200, "text/plain", "error\n");
-        // });
+        http_rpc.on("/wifi_stats", HTTP_GET, [](){
+                // if (esp_wifi_statis_dump(0xFFFFFFFF) == ESP_OK)
+                //         http_rpc.send(200, "text/plain", "OK\n");
+                // else
+                //         http_rpc.send(200, "text/plain", "error\n");
+
+                char buf[1024] = { };
+                int c = 0;
+
+                c += snprintf(&buf[c], sizeof(buf) - c, "# HELP wifi_stats\n");
+                c += snprintf(&buf[c], sizeof(buf) - c, "# TYPE wifi_stats gauge\n");
+                c += snprintf(&buf[c], sizeof(buf) - c, "wifi_stats{prop=\"%s\"} %lu\n", "cnt_sta_conn", cnt_wifi_sta_conn);
+                c += snprintf(&buf[c], sizeof(buf) - c, "wifi_stats{prop=\"%s\"} %lu\n", "cnt_sta_disconn", cnt_wifi_sta_disconn);
+
+                http_rpc.send(200, "text/plain", buf);
+        });
 
         http_rpc.on("/wifi_sta_inactive_time", HTTP_GET, [](){
                 if (http_rpc.hasArg("set")) {
