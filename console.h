@@ -93,6 +93,16 @@ static void console_cmd_save_cb(cmd *c)
         }
 }
 
+static void console_cmd_mem_cb(cmd *c)
+{
+        console_printf("free_heap: %u\n", heap_caps_get_free_size(MALLOC_CAP_INTERNAL));
+        console_printf("min_free_heap: %u\n", heap_caps_get_minimum_free_size(MALLOC_CAP_INTERNAL));
+        if (psramFound()) {
+                console_printf("free_psram: %u\n", heap_caps_get_free_size(MALLOC_CAP_SPIRAM));
+                console_printf("min_free_psram: %u\n", heap_caps_get_minimum_free_size(MALLOC_CAP_SPIRAM));
+        }
+}
+
 static void console_syscmd_add(void)
 {
         Command cmd_reboot = console_cli.addCommand("reboot", console_cmd_reboot_cb);
@@ -100,6 +110,8 @@ static void console_syscmd_add(void)
         Command cmd_top = console_cli.addCommand("top", console_cmd_top_cb);
         cmd_top.addFlagArgument("snapshot");
         cmd_top.addArgument("bufsz", "1600");
+
+        Command cmd_mem = console_cli.addCommand("mem", console_cmd_mem_cb);
 
         Command cmd_wifi = console_cli.addCommand("wifi", console_cmd_wifi_cb);
         cmd_wifi.addFlagArgument("up");
