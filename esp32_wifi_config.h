@@ -10,16 +10,22 @@
 #define CONFIG_WIFI_STA_IDLE_PM         0
 #define CONFIG_WIFI_USE_NVS             0
 #define CONFIG_WIFI_NO_11B_RATE         1
+
+#ifdef ARDUINO_ESP32C3_DEV
+#define CONFIG_WIFI_USE_CUSTOM_BUF_NUM  1
+#else
 #define CONFIG_WIFI_USE_CUSTOM_BUF_NUM  0
-#define CONFIG_WIFI_STATIC_RX_BUF_NUM   32
-#define CONFIG_WIFI_DYNAMIC_RX_BUF_NUM  0
-#define CONFIG_WIFI_STATIC_TX_BUF_NUM   32
-#define CONFIG_WIFI_DYNAMIC_TX_BUF_NUM  0
+#endif // ARDUINO_ESP32C3_DEV
+
+#define CONFIG_WIFI_STATIC_RX_BUF_NUM   8
+#define CONFIG_WIFI_DYNAMIC_RX_BUF_NUM  4
+#define CONFIG_WIFI_STATIC_TX_BUF_NUM   8
+#define CONFIG_WIFI_DYNAMIC_TX_BUF_NUM  4
 #define CONFIG_WIFI_RX_MGMT_BUF_NUM     5
 #define CONFIG_WIFI_CACHE_TX_BUF_NUM    0
-#define CONFIG_WIFI_MGMT_SBUF_NUM       32
+#define CONFIG_WIFI_MGMT_SBUF_NUM       8
 #define CONFIG_WIFI_TX_HETB_QUEUE_NUM   1
-#define CONFIG_WIFI_RX_BA_WIN           752
+#define CONFIG_WIFI_RX_BA_WIN           6
 
 #define CONFIG_WIFI_AP_USE_DHCPS        1
 #define CONFIG_WIFI_AP_MAX_STAS         4
@@ -34,6 +40,7 @@
 #define CONFIG_WIFI_STA_MBO_ENABLED     0
 #define CONFIG_WIFI_STA_CONN_RETRY_CNT  3
 #define CONFIG_WIFI_STA_INACTIVE_SEC    30
+#define CONFIG_WIFI_STA_PING_MON        0
 
 #define CONFIG_WIFI_MY_AP_CHANNEL       WIFI_CHANNEL_AUTO
 #define CONFIG_WIFI_MY_STA_CHANNEL      WIFI_CHANNEL_AUTO
@@ -112,6 +119,7 @@
                 CONFIG_WIFI_STA_BTM_ENABLED,                    \
                 CONFIG_WIFI_STA_MBO_ENABLED,                    \
                 CONFIG_WIFI_STA_CONN_RETRY_CNT,                 \
+                CONFIG_WIFI_STA_PING_MON,                       \
                 CONFIG_WIFI_STA_INACTIVE_SEC,                   \
         }
 
@@ -134,6 +142,7 @@
                 CONFIG_WIFI_STA_BTM_ENABLED,                    \
                 CONFIG_WIFI_STA_MBO_ENABLED,                    \
                 CONFIG_WIFI_STA_CONN_RETRY_CNT,                 \
+                CONFIG_WIFI_STA_PING_MON,                       \
                 CONFIG_WIFI_STA_INACTIVE_SEC,                   \
         }
 
