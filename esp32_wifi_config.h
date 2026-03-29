@@ -3,7 +3,7 @@
 
 #define CONFIG_WIFI_BAND_MODE           ESP_WIFI_BAND_MODE_AUTO
 #define CONFIG_WIFI_USE_DYNAMIC_CS      1
-#define CONFIG_WIFI_USE_CSI             1
+#define CONFIG_WIFI_USE_CSI             0
 #define CONFIG_WIFI_USE_RX_AMPDU        1
 #define CONFIG_WIFI_USE_TX_AMPDU        1
 #define CONFIG_WIFI_USE_TX_AMSDU        1
@@ -40,13 +40,12 @@
 #define CONFIG_WIFI_STA_MBO_ENABLED     0
 #define CONFIG_WIFI_STA_CONN_RETRY_CNT  3
 #define CONFIG_WIFI_STA_INACTIVE_SEC    30
-#define CONFIG_WIFI_STA_PING_MON        0
+#define CONFIG_WIFI_STA_PING_MON        1
 
 #define CONFIG_WIFI_MY_AP_CHANNEL       WIFI_CHANNEL_AUTO
 #define CONFIG_WIFI_MY_STA_CHANNEL      WIFI_CHANNEL_AUTO
 
-#define CONFIG_WIFI_INACTIVE_TIME       60
-#define CONFIG_WIFI_TX_POWER            20
+#define CONFIG_WIFI_TX_POWER            15
 
 #define WIFI_DEF_CONFIG(_mode)                                  \
         _mode,                                                  \

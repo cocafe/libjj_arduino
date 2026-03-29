@@ -1136,6 +1136,11 @@ int wifi_start(struct wifi_ctx *ctx, struct wifi_cfg *cfg)
                 return -EIO;
         }
 
+        ret = esp_wifi_set_dynamic_cs(cfg->adv.dynamic_cs);
+        if (ret != ESP_OK) {
+                pr_err("esp_wifi_set_dynamic_cs(): 0x%x\n", ret);
+        }
+
 #if ESP_IDF_VERSION_MAJOR >= 5 && ESP_IDF_VERSION_MINOR >= 5
         if (cfg->adv.band_mode < NUM_ESP_WIFI_MODES) {
                 ret = esp_wifi_set_band_mode(wifi_band_mode_convert[cfg->adv.band_mode]);
