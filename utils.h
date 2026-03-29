@@ -279,15 +279,16 @@ static void __unused hexdump(const void *data, size_t size) {
         }
 }
 
-static void __unused hexdump_addr(const void *data, size_t size, uint32_t prefix_addr)
+static void __unused hexdump_addr(const void *data, size_t size)
 {
+        intptr_t prefix_addr = (intptr_t)data;
         char ascii[17];
         size_t i, j;
         ascii[16] = '\0';
 
         for (i = 0; i < size; ++i) {
                 if (i % 16 == 0)
-                        pr_ser("%08lx | ", prefix_addr + i);
+                        pr_ser("%08x | ", prefix_addr + i);
 
                 pr_ser("%02X ", ((uint8_t *)data)[i]);
                 if (((uint8_t *)data)[i] >= ' ' && ((uint8_t *)data)[i] <= '~') {
