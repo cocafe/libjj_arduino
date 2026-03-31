@@ -26,6 +26,12 @@
 #include "ping.h"
 #include "leds.h"
 
+#if ESP_IDF_VERSION_MAJOR >= 5 && ESP_IDF_VERSION_MINOR >= 3
+#define wifi_event_pr pr_info
+#else
+#define wifi_event_pr(x, ...) do { } while (0)
+#endif
+
 #ifndef WIFI_DEFAULT_MAC
 #define WIFI_DEFAULT_MAC                ESP_MAC_EFUSE_FACTORY
 #endif
@@ -657,7 +663,7 @@ static void wifi_event_cb_call(esp_event_base_t event_base,
 
 static void wifi_sta_reconnect_timer(void *arg)
 {
-        pr_info("try reconnect to %s\n", g_wifi_ctx.cfg->sta.assoc.ssid);
+        wifi_event_pr("try reconnect to %s\n", g_wifi_ctx.cfg->sta.assoc.ssid);
         esp_wifi_connect();
 }
 
@@ -668,12 +674,6 @@ static const esp_timer_create_args_t timer_args_wifi_sta_reconn = {
         .dispatch_method = ESP_TIMER_TASK,
         .name = "sta_reconn",
 };
-
-#if ESP_IDF_VERSION_MAJOR >= 5 && ESP_IDF_VERSION_MINOR >= 3
-#define wifi_event_pr pr_info
-#else
-#define wifi_event_pr(x, ...) do { } while (0)
-#endif
 
 // https://docs.espressif.com/projects/esp-idf/en/stable/esp32/api-guides/wifi.html#wi-fi-reason-code
 static void wifi_event_handle_internal(esp_event_base_t event_base,
@@ -731,7 +731,7 @@ static void wifi_event_handle_internal(esp_event_base_t event_base,
                 }
 
                 case WIFI_EVENT_AP_START:
-                        pr_info("start ap, ssid: \"%s\"\n", g_wifi_ctx.cfg->ap.assoc.ssid);
+                        wifi_event_pr("start ap, ssid: \"%s\"\n", g_wifi_ctx.cfg->ap.assoc.ssid);
                         break;
 
                 case WIFI_EVENT_AP_STOP:
@@ -1136,11 +1136,6 @@ int wifi_start(struct wifi_ctx *ctx, struct wifi_cfg *cfg)
                 return -EIO;
         }
 
-        ret = esp_wifi_set_dynamic_cs(cfg->adv.dynamic_cs);
-        if (ret != ESP_OK) {
-                pr_err("esp_wifi_set_dynamic_cs(): 0x%x\n", ret);
-        }
-
 #if ESP_IDF_VERSION_MAJOR >= 5 && ESP_IDF_VERSION_MINOR >= 5
         if (cfg->adv.band_mode < NUM_ESP_WIFI_MODES) {
                 ret = esp_wifi_set_band_mode(wifi_band_mode_convert[cfg->adv.band_mode]);
@@ -1224,6 +1219,11 @@ int wifi_start(struct wifi_ctx *ctx, struct wifi_cfg *cfg)
 #endif
                 if (ret != ESP_OK) {
                         pr_err("esp_wifi_set_bandwidth(): 0x%x\n", ret);
+                }
+
+                ret = esp_wifi_set_dynamic_cs(cfg->adv.dynamic_cs);
+                if (ret != ESP_OK) {
+                        pr_err("esp_wifi_set_dynamic_cs(): 0x%x\n", ret);
                 }
         }
 
