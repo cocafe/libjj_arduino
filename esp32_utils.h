@@ -65,8 +65,7 @@ static inline __unused uint64_t esp32_microsecs(void)
         return esp_timer_get_time();
 }
 
-// arduino esp32 board lib v3.0.9 idf v5.1.4 does not have task traces
-#if ESP_IDF_VERSION_MAJOR >= 5 && ESP_IDF_VERSION_MINOR > 1
+#ifdef CONFIG_FREERTOS_USE_TRACE_FACILITY
 static TaskStatus_t *esp32_top_stats_snapshot(UBaseType_t *task_cnt, unsigned long *ulTotalRunTime)
 {
         TaskStatus_t *pxTaskStatusArray;

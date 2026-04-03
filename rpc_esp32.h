@@ -79,7 +79,7 @@ void rpc_esp32_add(void)
                         tempC = NAN;
                 }
 
-#if ESP_IDF_VERSION_MAJOR >= 5 && ESP_IDF_VERSION_MINOR > 1
+#ifdef CONFIG_FREERTOS_USE_TRACE_FACILITY
                 int cpu = 0;
 
                 if ((cpu = esp32_cpu_usage_get(100)) < 0) {
@@ -91,7 +91,7 @@ void rpc_esp32_add(void)
                 c += snprintf(&buf[c], sizeof(buf) - c, "# TYPE esp_stats gauge\n");
                 c += snprintf(&buf[c], sizeof(buf) - c, "esp_stats{t=\"uptime\"} %ju\n", esp32_millis() / 1000);
                 c += snprintf(&buf[c], sizeof(buf) - c, "esp_stats{t=\"tempC\"} %.2f\n", tempC);
-#if ESP_IDF_VERSION_MAJOR >= 5 && ESP_IDF_VERSION_MINOR > 1
+#ifdef CONFIG_FREERTOS_USE_TRACE_FACILITY
                 c += snprintf(&buf[c], sizeof(buf) - c, "esp_stats{t=\"cpu_usage\"} %d\n", cpu);
 #endif
                 c += snprintf(&buf[c], sizeof(buf) - c, "esp_stats{t=\"free_heap\"} %u\n", heap_caps_get_free_size(MALLOC_CAP_INTERNAL));

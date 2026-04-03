@@ -26,7 +26,7 @@
 #include "ping.h"
 #include "leds.h"
 
-#if ESP_IDF_VERSION_MAJOR >= 5 && ESP_IDF_VERSION_MINOR >= 3
+#if CONFIG_ESP_SYSTEM_EVENT_TASK_STACK_SIZE >= 4096
 #define wifi_event_pr pr_info
 #else
 #define wifi_event_pr(x, ...) do { } while (0)
