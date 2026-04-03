@@ -376,7 +376,7 @@ static portMUX_TYPE lck_wifi_event_cbs = portMUX_INITIALIZER_UNLOCKED;
 static struct wifi_ctx g_wifi_ctx;
 
 static uint8_t wifi_sta_connected;
-static uint8_t cnt_wifi_ap_got_sta;
+static uint8_t wifi_ap_got_sta_cnt;
 static uint8_t wifi_sta_ip_got;
 static uint8_t wifi_is_up = 0;
 static uint32_t cnt_wifi_sta_conn;
@@ -459,7 +459,7 @@ static void timer_cb_wifi_led(void *arg)
                 return;
         }
 
-        if (cnt_wifi_ap_got_sta > 0 || wifi_sta_connected) {
+        if (wifi_ap_got_sta_cnt > 0 || wifi_sta_connected) {
                 if (wifi_activity) {
                         static uint8_t last_on = 0;
 
@@ -687,7 +687,7 @@ static void wifi_event_handle_internal(esp_event_base_t event_base,
                 case WIFI_EVENT_AP_STACONNECTED: {
                         wifi_event_ap_staconnected_t *e = (wifi_event_ap_staconnected_t *)event_data;
                         wifi_event_pr("sta " MACSTR " joined, AID: %d\n", MAC2STR(e->mac), e->aid);
-                        cnt_wifi_ap_got_sta++;
+                        wifi_ap_got_sta_cnt++;
                         break;
                 }
 
@@ -695,8 +695,8 @@ static void wifi_event_handle_internal(esp_event_base_t event_base,
                         wifi_event_ap_stadisconnected_t *e = (wifi_event_ap_stadisconnected_t *)event_data;
                         wifi_event_pr("sta " MACSTR " left, AID: %d reason: %d\n", MAC2STR(e->mac), e->aid, e->reason);
 
-                        if (cnt_wifi_ap_got_sta > 0)
-                                cnt_wifi_ap_got_sta--;
+                        if (wifi_ap_got_sta_cnt > 0)
+                                wifi_ap_got_sta_cnt--;
 
                         break;
                 }
