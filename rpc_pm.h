@@ -13,9 +13,9 @@ void rpc_pm_add(void)
                         if (http_rpc.hasArg("max_freq")) {
                                 String _max_freq = http_rpc.arg("max_freq");
 
-                                if (is_str_equal((char *)_max_freq.c_str(), "max", CASELESS)) {
+                                if (is_str_equal((char *)_max_freq.c_str(), (char *)"max", CASELESS)) {
                                         max_freq = ESP_PM_CPU_FREQ_MAX;
-                                } else if (is_str_equal((char *)_max_freq.c_str(), "min", CASELESS)) {
+                                } else if (is_str_equal((char *)_max_freq.c_str(), (char *)"min", CASELESS)) {
                                         max_freq = 80;
                                 } else {
                                         int i = strtoll_wrap(_max_freq.c_str(), 10, &err);
@@ -32,9 +32,9 @@ void rpc_pm_add(void)
                         if (http_rpc.hasArg("min_freq")) {
                                 String _min_freq = http_rpc.arg("min_freq");
 
-                                if (is_str_equal((char *)_min_freq.c_str(), "max", CASELESS)) {
+                                if (is_str_equal((char *)_min_freq.c_str(), (char *)"max", CASELESS)) {
                                         min_freq = ESP_PM_CPU_FREQ_MAX;
-                                } else if (is_str_equal((char *)_min_freq.c_str(), "min", CASELESS)) {
+                                } else if (is_str_equal((char *)_min_freq.c_str(), (char *)"min", CASELESS)) {
                                         min_freq = 80;
                                 } else {
                                         int i = strtoll_wrap(_min_freq.c_str(), 10, &err);
