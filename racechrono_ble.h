@@ -33,13 +33,22 @@ static const uint16_t RC_CHARACTERISTIC_DATALEN_GPS     = 20;
 static const uint16_t RC_CHARACTERISTIC_UUID_GPSTIME    = 0x4;
 static const uint16_t RC_CHARACTERISTIC_DATALEN_GPSTIME = 3;
 
+struct ble_cfg_conn {
+        uint16_t intv_min_us;   // scale to 1.25ms unit
+        uint16_t intv_max_us;   // scale to 1.25ms unit
+        uint16_t timeout_ms;    // need scale to 10ms unit
+        uint8_t latency;        // number of intervals allowed to skip, power save purpose
+        uint8_t dle;            // BLE4.2 DLE, 0 for default 27 bytes, 1 for 251 bytes
+};
+
 struct ble_cfg {
-        char devname[16];
+        char devname[30];
         uint8_t enabled;
         uint8_t update_hz;
         uint8_t tx_power;
         uint8_t have_canbus;
         uint8_t have_gps;
+        struct ble_cfg_conn conn;
 };
 
 struct ble_ctx {
@@ -50,6 +59,7 @@ struct ble_ctx {
         NimBLECharacteristic *char_pid_req;
         NimBLECharacteristic *char_gps;
         NimBLECharacteristic *char_gpstime;
+        uint16_t conn_hdl;
         char *devname;
         struct ble_cfg *cfg;
 };
@@ -221,31 +231,87 @@ static void rc_can_rlimit_set_all(int update_hz)
 #endif
 }
 
+static void nimble_conn_param_update(NimBLEServer *server, struct ble_cfg_conn *cfg, uint16_t conn_hdl)
+{
+        unsigned intv_min = 12;
+        unsigned intv_max = 24;
+        unsigned latency = 0;
+        unsigned timeout = 180;
+
+        if (cfg->intv_min_us) {
+                intv_min = cfg->intv_min_us * 100 / 125 / 1000;
+        }
+
+        if (cfg->intv_max_us) {
+                intv_max = cfg->intv_max_us * 100 / 125 / 1000;
+        }
+
+        if (cfg->latency) {
+                latency = cfg->latency;
+        }
+
+        if (cfg->timeout_ms) {
+                timeout = cfg->timeout_ms / 10;
+        }
+
+        pr_info("try conn params: intv_min: %u intv_max: %u latency: %u timeout: %u\n",
+                intv_min, intv_max, latency, timeout);
+        server->updateConnParams(conn_hdl, intv_min, intv_max, latency, timeout);
+
+        if (cfg->dle) {
+                unsigned dle = cfg->dle;
+
+                if (dle >= 251)
+                        dle = 251;
+
+                pr_info("set DLE: %u\n", dle);
+                server->setDataLen(conn_hdl, dle);
+        }
+}
+
+static void rc_conn_param_update_timer_cb(void *arg)
+{
+        if (!ble_is_connected)
+                return;
+
+        nimble_conn_param_update(rc_ble.server, &rc_ble.cfg->conn, rc_ble.conn_hdl);
+}
+
+static esp_timer_handle_t rc_conn_param_update_timer;
+static const esp_timer_create_args_t rc_conn_param_update_timer_args = {
+        .callback = rc_conn_param_update_timer_cb,
+        .arg = NULL,
+        .dispatch_method = ESP_TIMER_TASK,
+        .name = "ble_conn_param_timer",
+};
+
 class ServerCallbacks : public NimBLEServerCallbacks
 {
         void onConnect(NimBLEServer *server, NimBLEConnInfo &connInfo) override
         {
-                pr_info("ble client connected (%s)\n", connInfo.getAddress().toString().c_str());
-
                 ble_is_connected = 1;
+                rc_ble.conn_hdl = connInfo.getConnHandle();
+
+                pr_info("ble client (%s) connected, conn: %u\n", connInfo.getAddress().toString().c_str(), connInfo.getConnHandle());
 
                 ble_event_clear(BLE_EVENT_DISCONNECTED);
                 ble_event_post(BLE_EVENT_CONNECTED);
 
-                if (!esp_timer_is_active(rc_ready_timer)) {
-                        esp_timer_start_once(rc_ready_timer, 6ULL * 1000 * 1000);
-                        pr_dbg("rc ready timer started\n");
+                if (esp_timer_is_active(rc_ready_timer)) {
+                        if (ESP_OK != esp_timer_stop(rc_ready_timer))
+                                pr_err("rc ready timer failed to stop\n");
                 }
 
-                /**
-                 *  We can use the connection handle here to ask for different connection parameters.
-                 *  Args: connection handle, min connection interval, max connection interval
-                 *  latency, supervision timeout.
-                 *  Units; Min/Max Intervals: 1.25 millisecond increments.
-                 *  Latency: number of intervals allowed to skip.
-                 *  Timeout: 10 millisecond increments.
-                 */
-                server->updateConnParams(connInfo.getConnHandle(), 24, 48, 0, 180);
+                esp_timer_start_once(rc_ready_timer, 6ULL * 1000 * 1000);
+                pr_dbg("rc ready timer started\n");
+
+                if (esp_timer_is_active(rc_conn_param_update_timer)) {
+                        if (ESP_OK != esp_timer_stop(rc_conn_param_update_timer))
+                                pr_err("rc conn param update timer failed to stop\n");
+                }
+
+                esp_timer_start_once(rc_conn_param_update_timer, 5ULL * 1000 * 1000);
+                pr_dbg("rc conn param update timer started\n");
         }
 
         void onDisconnect(NimBLEServer *server, NimBLEConnInfo &connInfo, int reason) override
@@ -253,6 +319,7 @@ class ServerCallbacks : public NimBLEServerCallbacks
                 pr_info("ble client disconnected, start advertising\n");
 
                 ble_is_connected = 0;
+                rc_ble.conn_hdl = 0;
 
                 ble_event_clear(BLE_EVENT_CONNECTED);
                 ble_event_post(BLE_EVENT_DISCONNECTED);
@@ -269,7 +336,21 @@ class ServerCallbacks : public NimBLEServerCallbacks
 
         void onMTUChange(uint16_t MTU, NimBLEConnInfo &connInfo) override
         {
-                pr_info("ble MTU updated: %u for connection ID: %u\n", MTU, connInfo.getConnHandle());
+                pr_info("ble MTU updated: conn: %u MTU: %u\n", connInfo.getConnHandle(), MTU);
+        }
+
+        void onConnParamsUpdate(NimBLEConnInfo& connInfo) override 
+        {
+                pr_info("ble conn params updated: intv: %u latency: %u timeout: %u MTU: %u\n",
+                        connInfo.getConnInterval(),
+                        connInfo.getConnLatency(),
+                        connInfo.getConnTimeout(),
+                        connInfo.getMTU());
+        }
+
+        void onPhyUpdate(NimBLEConnInfo& connInfo, uint8_t txPhy, uint8_t rxPhy) override
+        {
+                pr_info("ble phy updated: tx: %u rx: %u\n", txPhy, rxPhy);
         }
 
 #if 0   // we do not need secure now
@@ -381,6 +462,16 @@ class CharacteristicCallbacks : public NimBLECharacteristicCallbacks
                 NimBLEAttValue value = pCharacteristic->getValue();
                 rc_char_pid_on_write(value.data(), value.length());
         }
+
+        void onSubscribe(NimBLECharacteristic *pCharacteristic, NimBLEConnInfo& connInfo, uint16_t subValue) override
+        {
+                pr_info("conn %d subscribe state changed: %u\n", connInfo.getConnHandle(), subValue);
+        }
+
+        void onStatus(NimBLECharacteristic* pCharacteristic, NimBLEConnInfo& connInfo, int code) override
+        {
+                pr_info("conn %d status: %d\n", connInfo.getConnHandle(), code);
+        }
 } rc_char_pid_cbs;
 
 static void racechrono_nimble_init(struct ble_ctx *ctx)
@@ -469,6 +560,11 @@ static int __unused racechrono_ble_init(struct ble_cfg *cfg)
 
         if (esp_timer_create(&rc_ready_timer_args, &rc_ready_timer) != ESP_OK) {
                 pr_err("failed to create timer\n");
+                return -ENOMEM;
+        }
+
+        if (esp_timer_create(&rc_conn_param_update_timer_args, &rc_conn_param_update_timer) != ESP_OK) {
+                pr_err("failed to create conn param update timer\n");
                 return -ENOMEM;
         }
 

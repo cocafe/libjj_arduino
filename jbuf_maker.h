@@ -145,6 +145,18 @@ void __unused jbuf_ble_cfg_add(jbuf_t *b, const char *key, struct ble_cfg *cfg)
         //         jbuf_obj_close(b, chars);
         // }
 
+        {
+                void *conn = jbuf_obj_open(b, "conn");
+
+                jbuf_uint_add(b, "intv_min_us", cfg->conn.intv_min_us);
+                jbuf_uint_add(b, "intv_max_us", cfg->conn.intv_max_us);
+                jbuf_uint_add(b, "latency", cfg->conn.latency);
+                jbuf_uint_add(b, "timeout_ms", cfg->conn.timeout_ms);
+                jbuf_uint_add(b, "dle", cfg->conn.dle);
+
+                jbuf_obj_close(b, conn);
+        }
+
         jbuf_obj_close(b, obj);
 }
 #endif // __LIBJJ_RACECHRONO_BLE_H__
