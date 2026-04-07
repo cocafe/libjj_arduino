@@ -46,6 +46,7 @@ struct ble_cfg {
         uint8_t enabled;
         uint8_t update_hz;
         uint8_t tx_power;
+        uint8_t tx_power_idle;
         uint8_t have_canbus;
         uint8_t have_gps;
         struct ble_cfg_conn conn;
@@ -133,6 +134,23 @@ static char *ble_device_name_generate(char *str)
         }
 
         return dev_name;
+}
+
+int rc_ble_tx_power_set(enum ble_txpwr_t tx_power)
+{
+        if (tx_power >= NUM_BLE_TXPWR_LEVELS || tx_power < 0 || tx_power >= ARRAY_SIZE(ble_txpwr_to_esp_value)) {
+                pr_err("invalid tx power %d\n", tx_power);
+                return -EINVAL;
+        }
+
+        if (ESP_OK != esp_ble_tx_power_set(ESP_BLE_PWR_TYPE_DEFAULT, ble_txpwr_to_esp_value[tx_power])) {
+                pr_err("esp_ble_tx_power_set() failed\n");
+                return -EFAULT;
+        }
+
+        pr_info("BLE tx power set to %s\n", str_ble_txpwr[tx_power]);
+
+        return 0;
 }
 
 void __unused rc_ble_gps_send(uint8_t *data, size_t len)
@@ -312,6 +330,11 @@ class ServerCallbacks : public NimBLEServerCallbacks
 
                 esp_timer_start_once(rc_conn_param_update_timer, 5ULL * 1000 * 1000);
                 pr_dbg("rc conn param update timer started\n");
+
+                if (rc_ble.cfg->tx_power_idle < ARRAY_SIZE(ble_txpwr_to_esp_value) && 
+                    rc_ble.cfg->tx_power < ARRAY_SIZE(ble_txpwr_to_esp_value)) {
+                        rc_ble_tx_power_set((enum ble_txpwr_t)rc_ble.cfg->tx_power);
+                }
         }
 
         void onDisconnect(NimBLEServer *server, NimBLEConnInfo &connInfo, int reason) override
@@ -332,6 +355,10 @@ class ServerCallbacks : public NimBLEServerCallbacks
                 NimBLEDevice::startAdvertising();
 
                 rc_can_rlimit_set_all(-1);
+
+                if (rc_ble.cfg->tx_power_idle < ARRAY_SIZE(ble_txpwr_to_esp_value)) {
+                        rc_ble_tx_power_set((enum ble_txpwr_t)rc_ble.cfg->tx_power_idle);
+                }
         }
 
         void onMTUChange(uint16_t MTU, NimBLEConnInfo &connInfo) override
@@ -576,10 +603,10 @@ static int __unused racechrono_ble_init(struct ble_cfg *cfg)
 
         racechrono_nimble_init(ctx);
 
-        if (cfg->tx_power < ARRAY_SIZE(ble_txpwr_to_esp_value)) {
-                if (ESP_OK != esp_ble_tx_power_set(ESP_BLE_PWR_TYPE_DEFAULT, ble_txpwr_to_esp_value[cfg->tx_power])) {
-                        pr_err("esp_ble_tx_power_set() failed\n");
-                }
+        if (cfg->tx_power_idle < ARRAY_SIZE(ble_txpwr_to_esp_value)) {
+                rc_ble_tx_power_set((enum ble_txpwr_t)cfg->tx_power_idle);
+        } else if (cfg->tx_power < ARRAY_SIZE(ble_txpwr_to_esp_value)) {
+                rc_ble_tx_power_set((enum ble_txpwr_t)cfg->tx_power);
         }
 
         if (can_dev) {

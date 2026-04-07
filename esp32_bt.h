@@ -5,7 +5,7 @@
 
 #include <esp_bt.h>
 
-enum {
+enum ble_txpwr_t {
         BLE_TXPWR_MINUS_24DBM,
         BLE_TXPWR_MINUS_21DBM,
         BLE_TXPWR_MINUS_18DBM,
@@ -23,6 +23,7 @@ enum {
         BLE_TXPWR_18DBM,
         BLE_TXPWR_20DBM,
         NUM_BLE_TXPWR_LEVELS,
+        BLE_TXPWR_INVALID,
 };
 
 static const char *str_ble_txpwr[] = {
@@ -31,17 +32,19 @@ static const char *str_ble_txpwr[] = {
         [BLE_TXPWR_MINUS_18DBM] = "-18dBm",
         [BLE_TXPWR_MINUS_15DBM] = "-15dBm",
         [BLE_TXPWR_MINUS_12DBM] = "-12dBm",
-        [BLE_TXPWR_MINUS_9DBM] = "-9dBm",
-        [BLE_TXPWR_MINUS_6DBM] = "-6dBm",
-        [BLE_TXPWR_MINUS_3DBM] = "-3dBm",
-        [BLE_TXPWR_0DBM] = "0dBm",
-        [BLE_TXPWR_3DBM] = "3dBm",
-        [BLE_TXPWR_6DBM] = "6dBm",
-        [BLE_TXPWR_9DBM] = "9dBm",
-        [BLE_TXPWR_12DBM] = "12dBm",
-        [BLE_TXPWR_15DBM] = "15dBm",
-        [BLE_TXPWR_18DBM] = "18dBm",
-        [BLE_TXPWR_20DBM] = "20dBm",
+        [BLE_TXPWR_MINUS_9DBM]  = "-9dBm",
+        [BLE_TXPWR_MINUS_6DBM]  = "-6dBm",
+        [BLE_TXPWR_MINUS_3DBM]  = "-3dBm",
+        [BLE_TXPWR_0DBM]        = "0dBm",
+        [BLE_TXPWR_3DBM]        = "3dBm",
+        [BLE_TXPWR_6DBM]        = "6dBm",
+        [BLE_TXPWR_9DBM]        = "9dBm",
+        [BLE_TXPWR_12DBM]       = "12dBm",
+        [BLE_TXPWR_15DBM]       = "15dBm",
+        [BLE_TXPWR_18DBM]       = "18dBm",
+        [BLE_TXPWR_20DBM]       = "20dBm",
+        [NUM_BLE_TXPWR_LEVELS]  = "",
+        [BLE_TXPWR_INVALID]     = "invalid",
 };
 
 static const esp_power_level_t ble_txpwr_to_esp_value[NUM_BLE_TXPWR_LEVELS] = {
@@ -126,7 +129,7 @@ static void ble_event_init(void)
         eg_ble_events = xEventGroupCreate();
 }
 
-static int ble_event_wait(unsigned event, int timeout_ms)
+int ble_event_wait(unsigned event, int timeout_ms)
 {
         EventBits_t bits;
         TickType_t tick;

@@ -135,6 +135,7 @@ void __unused jbuf_ble_cfg_add(jbuf_t *b, const char *key, struct ble_cfg *cfg)
         jbuf_strbuf_add(b, "devname", cfg->devname);
         jbuf_uint_add(b, "update_hz", cfg->update_hz);
         jbuf_strval_add(b, "tx_power", cfg->tx_power, str_ble_txpwr);
+        jbuf_strval_add(b, "tx_power_idle", cfg->tx_power_idle, str_ble_txpwr);
 
         // {
         //         void *chars = jbuf_obj_open(b, "chars");

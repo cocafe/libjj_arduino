@@ -125,7 +125,7 @@ static void console_cmd_ble_cb(cmd *c)
 
         if (arg_txpwr.isSet()) {
                 int val = arg_txpwr.getValue().toInt();
-                if (val < 0)
+                if (val < -24 || val > 20)
                         return;
 
                 if (false == NimBLEDevice::setPower(val)) {
