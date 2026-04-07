@@ -2,6 +2,7 @@
 #define __LIBJJ_CONSOLE_H__
 
 #include <SimpleCLI.h>
+#include <esp_pm.h>
 
 SimpleCLI console_cli;
 static HardwareSerial *console_serial;
@@ -29,6 +30,7 @@ static void console_cmd_reboot_cb(cmd *c)
         ESP.restart();
 }
 
+#ifdef __LIBJJ_ESP32_WIFI_H__
 static void console_cmd_wifi_cb(cmd *c)
 {
         Command cmd(c);
@@ -47,8 +49,19 @@ static void console_cmd_wifi_cb(cmd *c)
                 }
         } else if (arg_nvsrst.isSet()) {
                 nvs_erase();
+        } else {
+                Argument arg_txpwr = cmd.getArgument("txpower");
+                int err;
+                int val = arg_txpwr.getValue().toInt();
+                if (val < 0)
+                        return;
+
+                if ((err = wifi_tx_power_set(val))) {
+                        console_printf("wifi_tx_power_set() failed: %d\n", err);
+                }
         }
 }
+#endif
 
 static void console_cmd_top_cb(cmd *c)
 {
@@ -103,6 +116,69 @@ static void console_cmd_mem_cb(cmd *c)
         }
 }
 
+#ifdef __LIBJJ_RACECHRONO_BLE_H__
+static void console_cmd_ble_cb(cmd *c)
+{
+        Command cmd(c);
+
+        Argument arg_txpwr = cmd.getArgument("txpower");
+
+        if (arg_txpwr.isSet()) {
+                int val = arg_txpwr.getValue().toInt();
+                if (val < 0)
+                        return;
+
+                if (false == NimBLEDevice::setPower(val)) {
+                        console_printf("NimBLEDevice::setPower() failed\n");
+                } else {
+                        console_printf("BLE tx power set to %d\n", val);
+                }
+        }
+}
+#endif
+
+#ifdef CONFIG_PM_ENABLE
+static void console_cmd_esp_pm_cb(cmd *cmd)
+{
+        int bufsz = 512;
+        char *buf = NULL;
+        size_t c = 0;
+        esp_pm_config_t pm_cfg = { };
+
+        if (ESP_OK != esp_pm_get_configuration(&pm_cfg)) {
+                console_printf("esp_pm_get_configuration() failed\n");
+                return;
+        }
+
+        buf = (char *)malloc(bufsz);
+        if (!buf) {
+                console_printf("No memory for output buffer\n");
+                return;
+        }
+
+        c += snprintf(&buf[c], bufsz - c, "max_freq: %dMHz\n", pm_cfg.max_freq_mhz);
+        c += snprintf(&buf[c], bufsz - c, "min_freq: %dMHz\n", pm_cfg.min_freq_mhz);
+        c += snprintf(&buf[c], bufsz - c, "light_sleep_enabled: %d\n", pm_cfg.light_sleep_enable);
+        c += snprintf(&buf[c], bufsz - c, "pm lock list:\n");
+
+        FILE *f = fmemopen(&buf[c], bufsz - c, "w");
+        if (f == NULL) {
+                console_printf("failed to open memory stream\n");
+                free(buf);
+                return;
+        }
+
+        esp_pm_dump_locks(f);
+
+        fflush(f);
+        fclose(f);
+
+        console_printf("%s\n", buf);
+
+        free(buf);
+}
+#endif
+
 static void console_syscmd_add(void)
 {
         Command cmd_reboot = console_cli.addCommand("reboot", console_cmd_reboot_cb);
@@ -113,10 +189,22 @@ static void console_syscmd_add(void)
 
         Command cmd_mem = console_cli.addCommand("mem", console_cmd_mem_cb);
 
+#ifdef CONFIG_PM_ENABLE
+        Command cmd_pm = console_cli.addCommand("pm", console_cmd_esp_pm_cb);
+#endif
+
+#ifdef __LIBJJ_ESP32_WIFI_H__
         Command cmd_wifi = console_cli.addCommand("wifi", console_cmd_wifi_cb);
         cmd_wifi.addFlagArgument("up");
         cmd_wifi.addFlagArgument("down");
         cmd_wifi.addFlagArgument("nvs_reset");
+        cmd_wifi.addArgument("txpower", "-1");
+#endif
+
+#ifdef __LIBJJ_RACECHRONO_BLE_H__
+        Command cmd_ble = console_cli.addCommand("ble", console_cmd_ble_cb);
+        cmd_ble.addArgument("txpower", "-1");
+#endif
 
         Command cmd_save = console_cli.addCommand("save", console_cmd_save_cb);
         cmd_save.addFlagArgument("reset");

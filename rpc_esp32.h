@@ -9,7 +9,7 @@ void rpc_esp32_add(void)
                 ESP.restart();
         });
 
-#if ESP_IDF_VERSION_MAJOR >= 5 && ESP_IDF_VERSION_MINOR > 1
+#if CONFIG_FREERTOS_USE_TRACE_FACILITY
         http_rpc.on("/esp32_top", HTTP_GET, [](){
                 char *buf;
                 unsigned sampling_ms = 500;
