@@ -1126,6 +1126,24 @@ int wifi_init(struct wifi_ctx *ctx, struct wifi_cfg *cfg)
         return ret;
 }
 
+int wifi_tx_power_set(uint8_t pwr)
+{
+        esp_err_t ret;
+
+        if (pwr > 21)
+                pwr = 21;
+        if (pwr < 2)
+                pwr = 2;
+
+        ret = esp_wifi_set_max_tx_power(pwr * 4);
+        if (ret != ESP_OK) {
+                pr_err("esp_wifi_set_max_tx_power(): 0x%x\n", ret);
+                return -EIO;
+        }
+
+        return 0;
+}
+
 int wifi_start(struct wifi_ctx *ctx, struct wifi_cfg *cfg)
 {
         esp_err_t ret;
@@ -1150,19 +1168,7 @@ int wifi_start(struct wifi_ctx *ctx, struct wifi_cfg *cfg)
                 pr_err("esp_wifi_set_ps(): 0x%x\n", ret);
         }
 
-        {
-                uint8_t pwr = cfg->adv.tx_power;
-
-                if (pwr > 21)
-                        pwr = 21;
-                if (pwr < 2)
-                        pwr = 2;
-
-                ret = esp_wifi_set_max_tx_power(pwr * 4);
-                if (ret != ESP_OK) {
-                        pr_err("esp_wifi_set_max_tx_power(): 0x%x\n", ret);
-                }
-        }
+        wifi_tx_power_set(cfg->adv.tx_power);
 
         if (cfg->mode == ESP_WIFI_MODE_STA_AP || cfg->mode == ESP_WIFI_MODE_STA) {
                 esp_netif_set_default_netif(ctx->netif_sta);
