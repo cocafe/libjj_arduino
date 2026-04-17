@@ -1235,6 +1235,8 @@ int wifi_start(struct wifi_ctx *ctx, struct wifi_cfg *cfg)
 
         wifi_is_up = 1;
 
+        esp32_stack_print("after wifi start");
+
         return 0;
 }
 
