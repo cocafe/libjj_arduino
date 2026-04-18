@@ -54,6 +54,7 @@ void esp32_phy_startup(int wifi_enabled, int bt_enabled)
 void esp32_phy_reset(int wifi_enabled, int bt_enabled)
 {
         esp32_phy_shutdown();
+        mdelay(100);
         esp32_phy_startup(wifi_enabled, bt_enabled);
 }
 
