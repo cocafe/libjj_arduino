@@ -17,6 +17,8 @@
 #include <esp_system.h>
 #include <esp_debug_helpers.h>
 #include <esp_cpu.h>
+#include <esp_phy_init.h>
+#include <esp_bt.h>
 
 #include <driver/temperature_sensor.h>
 
@@ -30,6 +32,31 @@
 #define CPU0                            (0)
 #define CPU1                            (1)
 #endif
+
+void esp32_phy_shutdown()
+{
+        esp_phy_modem_deinit();
+        esp_phy_common_clock_disable();
+        esp_wifi_bt_power_domain_off();
+}
+
+void esp32_phy_startup(int wifi_enabled, int bt_enabled)
+{
+        if (!wifi_enabled && !bt_enabled) {
+                return;
+        }
+
+        esp_wifi_bt_power_domain_on();
+        esp_phy_common_clock_enable();
+        esp_phy_modem_init();
+}
+
+void esp32_phy_reset(int wifi_enabled, int bt_enabled)
+{
+        esp32_phy_shutdown();
+        esp32_phy_startup(wifi_enabled, bt_enabled);
+}
+
 
 static inline int esp32_mac_get(esp_mac_type_t type, uint8_t *mac)
 {
