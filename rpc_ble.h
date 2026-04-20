@@ -29,8 +29,6 @@ void rpc_ble_add(void)
                         char buf[1024] = { };
                         size_t c = 0;
 
-                        c += snprintf(&buf[c], sizeof(buf) - c, "\n");
-
                         for (unsigned i = 0; i < ESP_BLE_PWR_TYPE_NUM; i++) {
                                 int esp_val = esp_ble_tx_power_get((esp_ble_power_type_t)i);
 
