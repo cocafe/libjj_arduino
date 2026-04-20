@@ -272,8 +272,8 @@ static void nimble_conn_param_update(NimBLEServer *server, struct ble_cfg_conn *
                 timeout = cfg->timeout_ms / 10;
         }
 
-        pr_info("try conn params: intv_min: %u intv_max: %u latency: %u timeout: %u\n",
-                intv_min, intv_max, latency, timeout);
+        pr_info("try conn params: intv_min: %u (%uus) intv_max: %u (%uus) latency: %u timeout: %u\n",
+                intv_min, intv_min * 125 / 100, intv_max, intv_max * 125 / 100, latency, timeout);
         server->updateConnParams(conn_hdl, intv_min, intv_max, latency, timeout);
 
         if (cfg->dle) {
@@ -368,8 +368,9 @@ class ServerCallbacks : public NimBLEServerCallbacks
 
         void onConnParamsUpdate(NimBLEConnInfo& connInfo) override 
         {
-                pr_info("ble conn params updated: intv: %u latency: %u timeout: %u MTU: %u\n",
+                pr_info("ble conn params updated: intv: %u (%uus) latency: %u timeout: %u MTU: %u\n",
                         connInfo.getConnInterval(),
+                        connInfo.getConnInterval() * 125 / 100,
                         connInfo.getConnLatency(),
                         connInfo.getConnTimeout(),
                         connInfo.getMTU());
