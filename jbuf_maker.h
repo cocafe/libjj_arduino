@@ -41,7 +41,7 @@ void jbuf_wifi_sta_cfg_add(jbuf_t *b, const char *key, struct wifi_sta_cfg *cfg)
         jbuf_wifi_assoc_cfg_add(b, "assoc", &cfg->assoc);
 
         jbuf_bool_add(b, "dhcpc", cfg->dhcpc);
-        jbuf_bool_add(b, "scan_mode", str_wifi_sta_scan_modes);
+        jbuf_strval_add(b, "scan_mode", cfg->scan_mode, str_wifi_sta_scan_modes);
         jbuf_bool_add(b, "rm", cfg->rm_enabled);
         jbuf_bool_add(b, "btm", cfg->btm_enabled);
         jbuf_bool_add(b, "mbo", cfg->mbo_enabled);
