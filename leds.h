@@ -77,6 +77,7 @@ static inline void gpio_led_switch(int gpio)
 
 #ifndef NUM_LED_WS2812
 #warning NUM_LED_WS2812 not defined, use default value 1
+#define NUM_LED_WS2812 1
 #endif
 
 CRGB led_ws2812[NUM_LED_WS2812];
