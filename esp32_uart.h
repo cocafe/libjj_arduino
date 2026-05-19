@@ -131,6 +131,9 @@ int esp32_uart_port_init(HardwareSerial *ser, struct uart_port_cfg *cfg)
         if (cfg->uart_type >= NUM_UART_TYPES)
                 return -EINVAL;
 
+        pinMode(cfg->pin.tx, OUTPUT);
+        pinMode(cfg->pin.rx, INPUT_PULLUP);
+
         ser->begin(cfg->baudrate, serial_mode_value_convert[cfg->serial_mode], cfg->pin.rx, cfg->pin.tx);
         delay(10);
 
