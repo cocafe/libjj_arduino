@@ -78,7 +78,7 @@
                 CONFIG_WIFI_RX_BA_WIN,                          \
         }
 
-#define WIFI_AP_CONFIG(_ssid, _auth, _passwd, _ip, _subnet)     \
+#define WIFI_AP_CONFIG(_ssid, _auth, _passwd, _ip, _subnet, _auto_off_sec) \
         {                                                       \
                 {                                               \
                         _ssid,                                  \
@@ -97,6 +97,7 @@
                 CONFIG_WIFI_AP_CSA_CNT,                         \
                 CONFIG_WIFI_AP_DTIM_PERIOD,                     \
                 CONFIG_WIFI_AP_BEACON_INTV,                     \
+                _auto_off_sec,                                  \
         }
 
 #define WIFI_STA_CONFIG(_ssid, _auth, _passwd)                  \

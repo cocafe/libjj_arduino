@@ -30,6 +30,7 @@ void jbuf_wifi_ap_cfg_add(jbuf_t *b, const char *key, struct wifi_ap_cfg *cfg)
         jbuf_uint_add(b, "csa_cnt", cfg->csa_count);
         jbuf_uint_add(b, "dtim_period", cfg->dtim_period);
         jbuf_uint_add(b, "beacon_intv", cfg->beacon_intv);
+        jbuf_uint_add(b, "auto_off_timeout_sec", cfg->auto_off_timeout_sec);
 
         jbuf_obj_close(b, obj);
 }

@@ -304,6 +304,7 @@ struct wifi_ap_cfg {
         uint8_t csa_count;
         uint8_t dtim_period;
         uint16_t beacon_intv;
+        uint16_t auto_off_timeout_sec;
 };
 
 // TODO: HE VHT configs
@@ -381,6 +382,8 @@ static uint8_t wifi_sta_ip_got;
 static uint8_t wifi_is_up = 0;
 static uint32_t cnt_wifi_sta_conn;
 static uint32_t cnt_wifi_sta_disconn;
+
+int wifi_stop(void);
 
 static __unused int wifi_mode_get(void)
 {
@@ -522,6 +525,43 @@ static int wifi_led_timer_init(unsigned tick_ms)
                 pr_err("failed to start timer\n");
                 return -EFAULT;
         }
+
+        return 0;
+}
+
+static void timer_cb_wifi_ap_auto_off(void *arg)
+{
+        if (!wifi_is_up)
+                return;
+
+        if (wifi_ap_got_sta_cnt == 0)
+                wifi_stop();
+}
+
+static esp_timer_handle_t timer_wifi_ap_auto_off;
+static const esp_timer_create_args_t timer_args_wifi_ap_auto_off = {
+        .callback = timer_cb_wifi_ap_auto_off,
+        .arg = NULL,
+        .dispatch_method = ESP_TIMER_TASK,
+        .name = "wifi_ap_off",
+};
+
+static int wifi_ap_auto_off_timer_init(struct wifi_cfg *cfg)
+{
+        if (cfg->ap.auto_off_timeout_sec == 0)
+                return 0;
+
+        if (esp_timer_create(&timer_args_wifi_ap_auto_off, &timer_wifi_ap_auto_off) != ESP_OK) {
+                pr_err("failed to create timer\n");
+                return -ENOMEM;
+        }
+
+        if (ESP_OK != esp_timer_start_once(timer_wifi_ap_auto_off, (uint64_t)cfg->ap.auto_off_timeout_sec * 1000ULL * 1000ULL)) {
+                pr_err("failed to start timer\n");
+                return -EFAULT;
+        }
+
+        pr_info("wifi ap auto off timer started\n");
 
         return 0;
 }
@@ -688,6 +728,14 @@ static void wifi_event_handle_internal(esp_event_base_t event_base,
                         wifi_event_ap_staconnected_t *e = (wifi_event_ap_staconnected_t *)event_data;
                         wifi_event_pr("sta " MACSTR " joined, AID: %d\n", MAC2STR(e->mac), e->aid);
                         wifi_ap_got_sta_cnt++;
+
+                        if (timer_wifi_ap_auto_off && esp_timer_is_active(timer_wifi_ap_auto_off)) {
+                                esp_timer_stop(timer_wifi_ap_auto_off);
+                                esp_timer_delete(timer_wifi_ap_auto_off);
+                                timer_wifi_ap_auto_off = NULL;
+                                pr_info("cancel wifi ap auto off timer\n");
+                        }
+
                         break;
                 }
 
@@ -1199,6 +1247,10 @@ int wifi_start(struct wifi_ctx *ctx, struct wifi_cfg *cfg)
                         }
                 }
 #endif // 5.3
+
+                if (cfg->mode == ESP_WIFI_MODE_AP) {
+                        wifi_ap_auto_off_timer_init(cfg);
+                }
         }
 
         if (cfg->mode == ESP_WIFI_MODE_STA_AP || cfg->mode == ESP_WIFI_MODE_STA) {
