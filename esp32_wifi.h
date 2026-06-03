@@ -384,6 +384,7 @@ static uint32_t cnt_wifi_sta_conn;
 static uint32_t cnt_wifi_sta_disconn;
 
 int wifi_stop(void);
+int wifi_deinit(void);
 
 static __unused int wifi_mode_get(void)
 {
@@ -534,8 +535,10 @@ static void timer_cb_wifi_ap_auto_off(void *arg)
         if (!wifi_is_up)
                 return;
 
-        if (wifi_ap_got_sta_cnt == 0)
+        if (wifi_ap_got_sta_cnt == 0) {
                 wifi_stop();
+                wifi_deinit();
+        }
 }
 
 static esp_timer_handle_t timer_wifi_ap_auto_off;
@@ -1295,6 +1298,8 @@ int wifi_start(struct wifi_ctx *ctx, struct wifi_cfg *cfg)
 int wifi_deinit(void)
 {
         int err;
+
+        pr_info("\n");
 
         if ((err = esp_wifi_deinit())) {
                 pr_err("esp_wifi_deinit(): %d\n", err);
