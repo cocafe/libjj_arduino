@@ -652,7 +652,7 @@ static void task_wifi_sta_ping(void *arg)
                         }
 
                         if (ping_failure >= ping_failure_thres) {
-                                pr_err("ping continuously failed for %u times, wifi may lost, reconnect now\n", ping_failure_thres);
+                                pr_err("ping continuously failed for %u times, wifi may lost\n", ping_failure_thres);
                                 need_reconnect = 1;
                                 break;
                         }
@@ -661,6 +661,7 @@ static void task_wifi_sta_ping(void *arg)
                 }
 
                 if (need_reconnect && wifi_sta_connected && wifi_is_up) {
+                        pr_info("reconnect now\n");
                         esp_wifi_disconnect();
                 }
 
