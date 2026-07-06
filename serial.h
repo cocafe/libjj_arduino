@@ -12,8 +12,10 @@ static void serial_init(unsigned baud_rate)
 
         Serial.begin(baud_rate);
 
-        while(!Serial);
+#if ARDUINO_USB_CDC_ON_BOOT == 0
+        while(!Serial)
+                mdelay(10);
+#endif
 }
-
 
 #endif // __LIBJJ_SERIAL_H_
