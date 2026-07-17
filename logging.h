@@ -62,6 +62,7 @@
 #define pr_info_once    pr_ts_func_once
 #define pr_err          pr_info
 #define pr_dbg          pr_info
+#define pr_warn         pr_info
 #define pr_verbose      pr_none
 
 #endif // __LIBJJ_LOGGING_H__
