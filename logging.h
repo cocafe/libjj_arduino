@@ -3,15 +3,19 @@
 
 #include <stdio.h>
 
+#ifndef LOGGING_SERIAL
 #if ARDUINO_USB_CDC_ON_BOOT
         #if ARDUINO_USB_MODE
-                #define pr_ser HWCDCSerial.printf
+                #define LOGGING_SERIAL HWCDCSerial
         #else
-                #define pr_ser USBSerial.printf
+                #define LOGGING_SERIAL USBSerial
         #endif // ARDUINO_USB_MODE
 #else
-#define pr_ser Serial.printf
+#define LOGGING_SERIAL Serial
 #endif // ARDUINO_USB_CDC_ON_BOOT
+#endif
+
+#define pr_ser LOGGING_SERIAL.printf
 
 #define ___pr_timestamp()                                          \
         do {                                                       \
@@ -23,14 +27,14 @@
                 pr_ser(msg, ##fmt);                     \
         } while (0)
 
-#define pr_info(msg, fmt...)                            \
+#define pr_ts_func(msg, fmt...)                         \
         do {                                            \
                 ___pr_timestamp();                      \
                 ___pr_wrapped("%s(): ", __func__);      \
                 ___pr_wrapped(msg, ##fmt);              \
         } while(0)
 
-#define pr_info_once(msg, fmt...)                       \
+#define pr_ts_func_once(msg, fmt...)                    \
         do {                                            \
                 static uint8_t __t = 0;                 \
                 if (__t)                                \
@@ -54,6 +58,8 @@
 
 #define pr_none(msg, fmt...) do { } while (0)
 
+#define pr_info         pr_ts_func
+#define pr_info_once    pr_ts_func_once
 #define pr_err          pr_info
 #define pr_dbg          pr_info
 #define pr_verbose      pr_none
