@@ -153,6 +153,36 @@ uint8_t *pattern_find(uint8_t *haystack, size_t haystack_len,
         return NULL;
 }
 
+__le16 modbus_crc16(const uint8_t *buf, int pktlen)
+{
+        uint16_t crc = 0xFFFF;
+
+        while (pktlen--) {
+                crc ^= *buf++;
+
+                for (int i = 0; i < 8; i++)
+                {
+                        if (crc & 1)
+                                crc = (crc >> 1) ^ 0xA001;
+                        else
+                                crc >>= 1;
+                }
+        }
+
+        return htole16(crc);
+}
+
+int modbus_crc16_check(const uint8_t *buf, int buflen)
+{
+        __le16 crc_orig = (buf[buflen - 1] << 8) | (buf[buflen - 2]);
+        __le16 crc_calc = modbus_crc16(buf, buflen - 2);
+        if (crc_calc != crc_orig) {
+                return -EINVAL;
+        }
+
+        return 0;
+}
+
 /*
  * Prevent the compiler from merging or refetching reads or writes. The
  * compiler is also forbidden from reordering successive instances of
