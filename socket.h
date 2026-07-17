@@ -54,7 +54,7 @@ static int __unused udp_mc_sock_create(const char *if_addr, const char *mc_addr,
         return sock;
 }
 
-static int udp_mc_sock_close(int sock)
+static int __unused udp_mc_sock_close(int sock)
 {
         if (sock < 0)
                 return -ENODATA;
