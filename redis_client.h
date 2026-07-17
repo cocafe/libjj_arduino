@@ -45,10 +45,10 @@ static int redis_cmd_token_count(const char *s)
         return count;
 }
 
-int redis_client_send(char *cmd)
+int redis_client_send(char *redis_cmd)
 {
-        static char buf[1024];
-        int token_cnt = redis_cmd_token_count(cmd);
+        char buf[2048]; // FIXME: may change to heap alloc?
+        int token_cnt = redis_cmd_token_count(redis_cmd);
         unsigned c = 0;
         int err = 0;
 
@@ -58,7 +58,7 @@ int redis_client_send(char *cmd)
         c += snprintf(&buf[c], sizeof(buf) - c, "*%d\r\n", token_cnt);
 
         {
-                char *tok = strtok(cmd, " ");
+                char *tok = strtok(redis_cmd, " ");
                 while (tok != NULL) {
                         unsigned toklen = strlen(tok);
                         c += snprintf(&buf[c], sizeof(buf) - c, "$%u\r\n%s\r\n", toklen, tok);
@@ -66,8 +66,9 @@ int redis_client_send(char *cmd)
                 }
         }
 
-        // pr_raw("send redis server:\n");
-        // hexdump(buf, c);
+        if (unlikely(c == sizeof(buf))) {
+                pr_warn("buffer may have run out\n");
+        }
 
         char *pos = buf;
         int sent = 0;
@@ -95,11 +96,12 @@ int redis_client_send(char *cmd)
 
 int redis_client_reply_check(void)
 {
-        char buf[1024] = { };
+        char buf[128];
         int retry = 0;
         int need_close = 0;
 
         while (1) {
+                // pr_dbg("wait for resp\n");
                 int n = recv(redis_sockfd, buf, sizeof(buf) - 1, 0);
                 if (n > 0) {
                         // pr_raw("recv redis server:\n");
