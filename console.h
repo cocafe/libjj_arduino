@@ -95,6 +95,7 @@ static void console_cmd_top_cb(cmd *c)
         free(buf);
 }
 
+#ifdef __LIBJJ_SAVE_H__
 static void console_cmd_save_cb(cmd *c)
 {
         Command cmd(c);
@@ -105,6 +106,7 @@ static void console_cmd_save_cb(cmd *c)
                 save_cfg_reset();
         }
 }
+#endif
 
 static void console_cmd_mem_cb(cmd *c)
 {
@@ -206,8 +208,10 @@ static void console_syscmd_add(void)
         cmd_ble.addArgument("txpower", "-1");
 #endif
 
+#ifdef __LIBJJ_SAVE_H__
         Command cmd_save = console_cli.addCommand("save", console_cmd_save_cb);
         cmd_save.addFlagArgument("reset");
+#endif
 }
 
 static void console_parse(String buf)
