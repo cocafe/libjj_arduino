@@ -33,6 +33,11 @@
 #define CPU1                            (1)
 #endif
 
+static inline void esp32_breakpoint()
+{
+        __builtin_trap();
+}
+
 void esp32_phy_shutdown()
 {
         esp_phy_modem_deinit();
