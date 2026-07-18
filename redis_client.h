@@ -16,6 +16,31 @@
 #include "logging.h"
 #include "jkey.h"
 
+// redis protocol format:
+// *<token_cnt>\r\n
+// $<token0_len>\r\n
+// <token0_str>\r\n
+// $<token1_len>\r\n
+// <token1_str>\r\n
+// ...
+//
+// example: "XADD mystream * field1 value1 field2 value2"
+// *7\r\n
+// $4\r\n
+// XADD\r\n
+// $8\r\n
+// mystream\r\n
+// $1\r\n
+// *\r\n
+// $6\r\n
+// field1\r\n
+// $6\r\n
+// value1\r\n
+// $6\r\n
+// field2\r\n
+// $6\r\n
+// value2\r\n
+
 struct redis_client_cfg {
         uint8_t enabled;
         uint8_t nodelay;
@@ -45,20 +70,20 @@ static int redis_cmd_token_count(const char *s)
         return count;
 }
 
-int redis_client_send(char *redis_cmd)
+int redis_client_cmd_send(char *cmd)
 {
         char buf[2048]; // FIXME: may change to heap alloc?
-        int token_cnt = redis_cmd_token_count(redis_cmd);
+        int token_cnt = redis_cmd_token_count(cmd);
         unsigned c = 0;
         int err = 0;
 
         if (token_cnt <= 0)
                 return -EINVAL;
-        
+
         c += snprintf(&buf[c], sizeof(buf) - c, "*%d\r\n", token_cnt);
 
         {
-                char *tok = strtok(redis_cmd, " ");
+                char *tok = strtok(cmd, " ");
                 while (tok != NULL) {
                         unsigned toklen = strlen(tok);
                         c += snprintf(&buf[c], sizeof(buf) - c, "$%u\r\n%s\r\n", toklen, tok);
@@ -99,9 +124,21 @@ int redis_client_reply_check(void)
         char buf[128];
         int retry = 0;
         int need_close = 0;
+        fd_set fds;
+        FD_ZERO(&fds);
+        FD_SET(redis_sockfd, &fds);
+        struct timeval tv = { .tv_sec = 1, .tv_usec = 0 };
 
-        while (1) {
-                // pr_dbg("wait for resp\n");
+        int ret = select(redis_sockfd + 1, &fds, NULL, NULL, &tv);
+        if (ret == 0) {
+                pr_dbg("time out for server resp\n");
+                return -EAGAIN;
+        } else if (ret < 0) {
+                pr_err("select(): %d %s\n", ret, strerror(ret));
+                return ret;
+        }
+
+        do {
                 int n = recv(redis_sockfd, buf, sizeof(buf) - 1, 0);
                 if (n > 0) {
                         // pr_raw("recv redis server:\n");
@@ -115,16 +152,16 @@ int redis_client_reply_check(void)
                                 return 0;
                         }
                 } else {
-                        if (errno == EINTR || errno == ETOOMANYREFS || errno == EAGAIN)
+                        if (errno == EINTR || errno == ETOOMANYREFS)
                                 continue;
-                        
+
                         if (errno == 0) {
                                 need_close = 1;
                                 break;
-                        } else if (errno == EAGAIN) {
+                        } else if (errno == EAGAIN || errno == EWOULDBLOCK) {
                                 retry++;
 
-                                if (retry >= 100) {
+                                if (retry >= 10) {
                                         pr_err("too many retry, disconnect\n");
                                         need_close = 1;
                                         break;
@@ -136,7 +173,7 @@ int redis_client_reply_check(void)
                                 break;
                         }
                 }
-        }
+        } while(1);
 
         if (need_close) {
                 xTaskNotifyGive(task_handle_redis_client);
@@ -146,15 +183,102 @@ int redis_client_reply_check(void)
         return 0;
 }
 
+int redis_xadd_token_print(char *buf, size_t buflen, int *pos, unsigned *tkncnt, const char *field, const char *value)
+{
+        int c;
+
+        c = snprintf(&buf[*pos], buflen - *pos, "$%u\r\n%s\r\n$%u\r\n%s\r\n", strlen(field), field, strlen(value), value);
+
+        if (c <= 0)
+                return -ENOSPC;
+
+        *tkncnt += 2;
+        *pos += c;
+
+        return 0;
+}
+
+int __redis_client_xadd_send(const char *redis_key, unsigned keylen, const char *buf_tokens, unsigned buflen, unsigned cnt_tokens)
+{
+        struct iovec iov[2];
+        char hdr[128];
+        int hdrlen;
+        int n;
+
+        hdrlen = snprintf(hdr, sizeof(hdr),
+                        "*%u\r\n"
+                        "$4\r\n"
+                        "XADD\r\n"
+                        "$%u\r\n"
+                        "%s\r\n"
+                        "$1\r\n"
+                        "*\r\n",
+                        3 + cnt_tokens,
+                        keylen,
+                        redis_key);
+
+        iov[0].iov_base = (void *)hdr;
+        iov[0].iov_len = hdrlen;
+        iov[1].iov_base = (void *)buf_tokens;
+        iov[1].iov_len = buflen;
+
+        n = writev(redis_sockfd, iov, 2);
+        if (n < 0) {
+                xTaskNotifyGive(task_handle_redis_client); // close sockfd
+                return n;
+        }
+
+        // pr_verbose("n = %d\n", n);
+
+        return 0;
+}
+
+int redis_client_xadd_send(const char *redis_key, unsigned keylen, const char *buf_tokens, unsigned buflen, unsigned cnt_tokens)
+{
+        int err = 0;
+
+        if (redis_sockfd < 0)
+                return -ENOENT;
+
+        xSemaphoreTake(lck_redis_client_send, portMAX_DELAY);
+
+        if ((err = __redis_client_xadd_send(redis_key, keylen, buf_tokens, buflen, cnt_tokens)) < 0) {
+                goto err;
+        }
+
+        if ((err = redis_client_reply_check()) < 0) {
+                goto err;
+        }
+
+err:
+        xSemaphoreGive(lck_redis_client_send);
+
+        return err;
+}
+
+int redis_client_xadd_send_async(const char *redis_key, unsigned keylen, const char *buf_tokens, unsigned buflen, unsigned cnt_tokens)
+{
+        int err = 0;
+
+        if (redis_sockfd < 0)
+                return -ENOENT;
+
+        xSemaphoreTake(lck_redis_client_send, portMAX_DELAY);
+        err = __redis_client_xadd_send(redis_key, keylen, buf_tokens, buflen, cnt_tokens);
+        xSemaphoreGive(lck_redis_client_send);
+
+        return err;
+}
+
 int redis_client_cmd_async(char *cmd)
 {
         int err = 0;
 
         if (redis_sockfd < 0)
                 return -ENOENT;
-        
+
         xSemaphoreTake(lck_redis_client_send, portMAX_DELAY);
-        err = redis_client_send(cmd);
+        err = redis_client_cmd_send(cmd);
         xSemaphoreGive(lck_redis_client_send);
 
         return err;
@@ -166,13 +290,13 @@ int redis_client_cmd(char *cmd)
 
         if (redis_sockfd < 0)
                 return -ENOENT;
-        
+
         xSemaphoreTake(lck_redis_client_send, portMAX_DELAY);
 
-        if ((err = redis_client_send(cmd)) < 0) {
+        if ((err = redis_client_cmd_send(cmd)) < 0) {
                 goto err;
         }
-        
+
         if ((err = redis_client_reply_check()) < 0) {
                 goto err;
         }
