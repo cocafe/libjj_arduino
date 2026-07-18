@@ -65,4 +65,43 @@ static int __unused udp_mc_sock_close(int sock)
         return 0;
 }
 
+extern "C" {
+ssize_t __attribute__((weak)) writev(int fd, const struct iovec *iov, int iovcnt)
+{
+        ssize_t total = 0;
+
+        for (int i = 0; i < iovcnt; i++)
+        {
+                const uint8_t *buf = (const uint8_t *)iov[i].iov_base;
+                size_t remain = iov[i].iov_len;
+
+                while (remain > 0) {
+                        ssize_t n = send(fd, buf, remain, 0);
+                        if (n > 0) {
+                                buf += n;
+                                remain -= n;
+                                total += n;
+                                continue;
+                        }
+
+                        if (n == 0) {
+                                return total ? total : -ECONNRESET;
+                        }
+
+                        if (errno == EINTR)
+                                continue;
+
+                        if (errno == EAGAIN || errno == EWOULDBLOCK)
+                                return total ? total : -EAGAIN;
+
+                        // pr_err("send(): %d %s\n", errno, strerror(errno));
+
+                        return total ? total : -errno;
+                }
+        }
+
+        return total;
+}
+} // "C"
+
 #endif // __LIBJJ_SOCKET_H__
