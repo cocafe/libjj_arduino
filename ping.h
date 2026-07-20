@@ -113,7 +113,7 @@ struct ping_ctx *ping4_init_ip4(ip_addr_t tgt, ping_cb_t cb, void *userdata)
         if (!ctx)
                 return NULL;
 
-        ctx->sem = xSemaphoreCreateBinary();
+        ctx->sem = xSemaphoreCreateCounting(10, 0);
         ctx->tgt = tgt;
         ctx->cb = cb;
         ctx->userdata = userdata;
