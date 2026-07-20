@@ -43,9 +43,10 @@ __le16 modbus_crc16(const uint8_t *buf, int pktlen)
 
 int modbus_crc16_check(const uint8_t *buf, int buflen)
 {
-        __le16 crc_orig = (buf[buflen - 1] << 8) | (buf[buflen - 2]);
-        __le16 crc_calc = modbus_crc16(buf, buflen - 2);
+        uint16_t crc_orig = (buf[buflen - 1] << 8) | (buf[buflen - 2]);
+        uint16_t crc_calc = le16toh(modbus_crc16(buf, buflen - 2));
         if (crc_calc != crc_orig) {
+                pr_info("crc_calc %04x != crc_orig %04x\n", crc_calc, crc_orig);
                 return -EINVAL;
         }
 
