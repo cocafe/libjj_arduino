@@ -216,4 +216,106 @@ static __unused void led_init(void)
 #endif
 }
 
+struct rgb_led {
+        uint8_t active;
+        uint8_t rgb[3];
+};
+
+struct rgb_led_ctx {
+        struct rgb_led *states;
+        unsigned states_cnt;
+        unsigned brightness;
+        unsigned intv_ms_off;
+        unsigned intv_ms_on;
+        void (*update_cb)(struct rgb_led_ctx *);
+};
+
+unsigned rgb_led_suspended = 0;
+
+void rgb_led_active_set(struct rgb_led_ctx *ctx, unsigned idx, int active)
+{
+        if (idx >= ctx->states_cnt)
+                return;
+        
+        ctx->states[idx].active = !!active;
+}
+
+void task_rgb_led(void *arg)
+{
+        struct rgb_led_ctx *ctx = (struct rgb_led_ctx *)arg;
+        struct rgb_led *state;
+        unsigned on = 0;
+        unsigned idx = 0;
+        unsigned brightness = 0;
+
+        if (!ctx->update_cb || !ctx->states || !ctx->states_cnt) {
+                vTaskDelete(NULL);
+        }
+
+        led_ws2812_brightness_set(5);
+
+        led_on(LED_RGB_WS2812, 255, 255, 255);
+        mdelay(1000);
+        led_off(LED_RGB_WS2812);
+
+        while (1) {
+                if (rgb_led_suspended) {
+                        mdelay(1000);
+                        continue;
+                }
+
+                ctx->update_cb(ctx);
+
+                if (brightness != ctx->brightness) {
+                        brightness = ctx->brightness;
+                        led_ws2812_brightness_set(brightness);
+                }
+
+                state = &ctx->states[idx];
+
+                if (!on) {
+                        led_off(LED_RGB_WS2812);
+                        mdelay(ctx->intv_ms_off);
+                        on = 1;
+                } else {
+                        unsigned next = idx + 1;
+                        unsigned have_active = 0;
+
+                        for (unsigned i = 0; i < ctx->states_cnt; i++) {
+                                if (ctx->states[i].active)
+                                        have_active++;
+                        }
+
+                        if (!have_active) {
+                                mdelay(500);
+                                continue;
+                        }
+
+                        if (ctx->states[idx].active) {
+                                led_on(LED_RGB_WS2812, state->rgb[0], state->rgb[1], state->rgb[2]);
+                        }
+
+                        mdelay(ctx->intv_ms_on);
+                        on = 0;
+
+                        while (1) {
+                                if (next >= ctx->states_cnt)
+                                        next = 0;
+
+                                if (ctx->states[next].active) {
+                                        idx = next;
+                                        break;
+                                }
+
+                                next++;
+                        }
+                }
+        }
+}
+
+static __unused void task_rgb_start(struct rgb_led_ctx *ctx, int cpu)
+{
+        xTaskCreatePinnedToCore(task_rgb_led, "rgb_led", 2048, ctx, 1, NULL, cpu);
+}
+
 #endif // __LIBJJ_LEDS_H__
