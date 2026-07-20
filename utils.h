@@ -255,25 +255,25 @@ static void __unused hexdump(const void *data, size_t size) {
         ascii[16] = '\0';
 
         for (i = 0; i < size; ++i) {
-                pr_ser("%02X ", ((uint8_t *)data)[i]);
+                pr_raw("%02X ", ((uint8_t *)data)[i]);
                 if (((uint8_t *)data)[i] >= ' ' && ((uint8_t *)data)[i] <= '~') {
                         ascii[i % 16] = ((uint8_t *)data)[i];
                 } else {
                         ascii[i % 16] = '.';
                 }
                 if ((i + 1) % 8 == 0 || i + 1 == size) {
-                        pr_ser(" ");
+                        pr_raw(" ");
                         if ((i + 1) % 16 == 0) {
-                                pr_ser("|  %s \n", ascii);
+                                pr_raw("|  %s \n", ascii);
                         } else if (i + 1 == size) {
                                 ascii[(i + 1) % 16] = '\0';
                                 if ((i + 1) % 16 <= 8) {
-                                        pr_ser(" ");
+                                        pr_raw(" ");
                                 }
                                 for (j = (i + 1) % 16; j < 16; ++j) {
-                                        pr_ser("   ");
+                                        pr_raw("   ");
                                 }
-                                pr_ser("|  %s \n", ascii);
+                                pr_raw("|  %s \n", ascii);
                         }
                 }
         }
@@ -288,27 +288,27 @@ static void __unused hexdump_addr(const void *data, size_t size)
 
         for (i = 0; i < size; ++i) {
                 if (i % 16 == 0)
-                        pr_ser("%08x | ", prefix_addr + i);
+                        pr_raw("%08x | ", prefix_addr + i);
 
-                pr_ser("%02X ", ((uint8_t *)data)[i]);
+                pr_raw("%02X ", ((uint8_t *)data)[i]);
                 if (((uint8_t *)data)[i] >= ' ' && ((uint8_t *)data)[i] <= '~') {
                         ascii[i % 16] = ((uint8_t *)data)[i];
                 } else {
                         ascii[i % 16] = '.';
                 }
                 if ((i + 1) % 8 == 0 || i + 1 == size) {
-                        pr_ser(" ");
+                        pr_raw(" ");
                         if ((i + 1) % 16 == 0) {
-                                pr_ser("|  %s \n", ascii);
+                                pr_raw("|  %s \n", ascii);
                         } else if (i + 1 == size) {
                                 ascii[(i + 1) % 16] = '\0';
                                 if ((i + 1) % 16 <= 8) {
-                                        pr_ser(" ");
+                                        pr_raw(" ");
                                 }
                                 for (j = (i + 1) % 16; j < 16; ++j) {
-                                        pr_ser("   ");
+                                        pr_raw("   ");
                                 }
-                                pr_ser("|  %s \n", ascii);
+                                pr_raw("|  %s \n", ascii);
                         }
                 }
         }
