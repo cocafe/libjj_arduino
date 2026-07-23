@@ -73,6 +73,7 @@ static inline void gpio_led_switch(int gpio)
 
 #ifdef HAVE_WS2812_LED
 
+#ifdef LED_USE_FASTLED
 #include <FastLED.h>
 
 #ifndef NUM_LED_WS2812
@@ -137,6 +138,79 @@ static __unused inline void led_ws2812_brightness_set(unsigned level)
 {
         FastLED.setBrightness(level > 255 ? 255 : level);
 }
+#endif // LED_USE_FASTLED
+
+#ifdef LED_USE_NEOPIXEL
+#include <Adafruit_NeoPixel.h>
+
+Adafruit_NeoPixel neopixels(NUM_LED_WS2812, GPIO_LED_WS2812, LED_WS2812_ORDER + NEO_KHZ800);
+
+unsigned led_ws2812_brightness = 10;
+
+static void __ws2812_led_on(uint8_t idx, uint8_t r, uint8_t g, uint8_t b)
+{
+        if (unlikely(idx >= NUM_LED_WS2812))
+                return;
+
+        neopixels.setBrightness(led_ws2812_brightness);
+        neopixels.setPixelColor(idx, neopixels.Color(r, g, b));
+        neopixels.show();
+}
+
+static void __ws2812_led_off(uint8_t idx)
+{
+        if (unlikely(idx >= NUM_LED_WS2812))
+                return;
+
+        neopixels.setBrightness(0);
+        // neopixels.setPixelColor(idx, neopixels.Color(0, 0, 0));
+        neopixels.show();
+}
+
+static void ws2812_led_on(uint8_t r, uint8_t g, uint8_t b)
+{
+        __ws2812_led_on(0, r, g, b);
+}
+
+static void ws2812_led_off(void)
+{
+        __ws2812_led_off(0);
+}
+
+static inline void __ws2812_led_flash(uint8_t idx, uint8_t r, uint8_t g, uint8_t b, int intv_ms)
+{
+        static long last_timestamp = 0;
+        static int last_state = LOW;
+        long ts = esp32_millis();
+
+        if (unlikely(idx >= NUM_LED_WS2812))
+                return;
+
+        if (ts - last_timestamp >= intv_ms) {
+                if (last_state == LOW) {
+                        __ws2812_led_on(idx, r, g, b);
+                        last_state = HIGH;
+                } else {
+                        __ws2812_led_off(idx);
+                        last_state = LOW;
+                }
+
+                last_timestamp = ts;
+        }
+}
+
+static inline __unused void led_ws2812_brightness_set(unsigned level)
+{
+        neopixels.setBrightness(level);
+        led_ws2812_brightness = level;
+}
+
+static inline __unused uint8_t led_ws2812_brightness_get(void)
+{
+        led_ws2812_brightness = neopixels.getBrightness();
+        return led_ws2812_brightness;
+}
+#endif // LED_USE_NEOPIXEL
 
 #else
 static inline void ws2812_led_on(uint8_t r, uint8_t g, uint8_t b) { }
@@ -210,9 +284,14 @@ static __unused void led_init(void)
         }
 
 #if defined (HAVE_WS2812_LED) && defined (GPIO_LED_WS2812)
+#if defined LED_USE_FASTLED
         FastLED.addLeds<WS2812, GPIO_LED_WS2812, LED_WS2812_ORDER>(led_ws2812, NUM_LED_WS2812);
         led_ws2812_brightness_set(led_ws2812_brightness);
         led_off(LED_RGB_WS2812);
+#elif defined LED_USE_NEOPIXEL
+        neopixels.begin();
+        neopixels.clear();
+#endif
 #endif
 }
 

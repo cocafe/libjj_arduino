@@ -15,18 +15,36 @@ void rpc_led_add(void)
                                 return;
                         }
 
-                        FastLED.setBrightness(i);
+                        led_ws2812_brightness_set(i);
 
                         http_rpc.send(200, "text/plain", "OK\n");
                 } else {
                         char buf[8] = { };
 
-                        snprintf(buf, sizeof(buf), "%d\n", FastLED.getBrightness());
+                        snprintf(buf, sizeof(buf), "%d\n", led_ws2812_brightness_get());
 
                         http_rpc.send(200, "text/plain", buf);
                 }
 
                 http_rpc.send(200, "text/plain", "OK\n");
+        });
+
+        http_rpc.on("/led_suspend", HTTP_GET, [](){
+                if (http_rpc.hasArg("set")) {
+                        String data = http_rpc.arg("set");
+                        int val;
+
+                        if (1 != sscanf(data.c_str(), "%d", &val)) {
+                                http_rpc.send(500, "text/plain", "Invalid value\n");
+                                return;
+                        }
+
+                        rgb_led_suspended = !!val;
+                }
+
+                char buf[16];
+                snprintf(buf, sizeof(buf), "%d\n", rgb_led_suspended);
+                http_rpc.send(200, "text/plain", buf);
         });
 #endif
 
