@@ -72,7 +72,12 @@ struct can_frame_t {
 } __attribute__((packed));
 
 union can_frame_raw8 {
-        uint8_t raw[sizeof(can_frame_t) + 8 + 2];
+        uint8_t raw[sizeof(can_frame_t) + 8];
+        can_frame_t f;
+} __attribute__((packed));
+
+union can_frame_raw16 {
+        uint8_t raw[sizeof(can_frame_t) + 16];
         can_frame_t f;
 } __attribute__((packed));
 
@@ -83,6 +88,7 @@ union can_frame_raw64 {
 
 typedef struct can_frame_t can_frame_t;
 typedef union can_frame_raw8 can_frame_raw8_t;
+typedef union can_frame_raw16 can_frame_raw16_t;
 typedef union can_frame_raw64 can_frame_raw64_t;
 
 } // C
