@@ -13,6 +13,79 @@
 
 #include "logging.h"
 
+#ifndef __unused
+#define __unused __attribute__((unused))
+#endif
+
+#ifndef __always_inline
+# define __always_inline	inline __attribute__((always_inline))
+#endif
+
+#if __GNUC__ || __clang__
+#define __UNUSED __attribute__((__unused__))
+#define __USED __attribute__((__used__))
+#define __PACKED __attribute__((packed))
+#define __ALIGNED(x) __attribute__((aligned(x)))
+#define __PRINTFLIKE(__fmt,__varargs) __attribute__((__format__ (__printf__, __fmt, __varargs)))
+#define __SCANFLIKE(__fmt,__varargs) __attribute__((__format__ (__scanf__, __fmt, __varargs)))
+#define __SECTION(x) __USED __attribute__((section(x)))
+#define __PURE __attribute((pure))
+#define __CONST __attribute((const))
+#define __NO_RETURN __attribute__((noreturn))
+#define __MALLOC __attribute__((malloc))
+#define __WEAK __attribute__((weak))
+#define __GNU_INLINE __attribute__((gnu_inline))
+#define __GET_CALLER(x) __builtin_return_address(0)
+#define __GET_FRAME(x) __builtin_frame_address(0)
+#define __NAKED __attribute__((naked))
+#define __ISCONSTANT(x) __builtin_constant_p(x)
+#define __NO_INLINE __attribute((noinline))
+#endif
+
+#ifndef __compiletime_error
+# define __compiletime_error(message)
+#endif
+
+#ifdef __OPTIMIZE__
+# define __compiletime_assert(condition, msg, prefix, suffix)		\
+	do {								\
+		extern void prefix ## suffix(void) __compiletime_error(msg); \
+		if (!(condition))					\
+			prefix ## suffix();				\
+	} while (0)
+#else
+# define __compiletime_assert(condition, msg, prefix, suffix) do { } while (0)
+#endif
+
+#define _compiletime_assert(condition, msg, prefix, suffix) \
+	__compiletime_assert(condition, msg, prefix, suffix)
+
+/**
+ * compiletime_assert - break build and emit msg if condition is false
+ * @condition: a compile-time constant condition to check
+ * @msg:       a message to emit if condition is false
+ *
+ * In tradition of POSIX assert, this macro will break the build if the
+ * supplied condition is *false*, emitting the supplied error message if the
+ * compiler has support to do so.
+ */
+#define compiletime_assert(condition, msg) \
+	_compiletime_assert(condition, msg, __compiletime_assert_, __COUNTER__)
+
+/* Force a compilation error if condition is true, but also produce a
+   result (of value 0 and type size_t), so the expression can be used
+   e.g. in a structure initializer (or where-ever else comma expressions
+   aren't permitted). */
+#define BUILD_BUG_ON_ZERO(e) (sizeof(struct { int:-!!(e); }))
+
+/* Are two types/vars the same type (ignoring qualifiers)? */
+#ifndef __same_type
+# define __same_type(a, b) __builtin_types_compatible_p(typeof(a), typeof(b))
+#endif
+
+/* &a[0] degrades to a pointer: a different type from an array */
+#define __must_be_array(a)	BUILD_BUG_ON_ZERO(__same_type((a), &(a)[0]))
+
 typedef uint32_t __u32;
 typedef uint64_t __u64;
 
@@ -22,10 +95,6 @@ typedef uint32_t __le32;
 typedef uint32_t __be32;
 typedef uint64_t __le64;
 typedef uint64_t __be64;
-
-#ifndef __unused
-#define __unused __attribute__((unused))
-#endif
 
 #ifndef __min
 #define __min(a, b)                             \
@@ -63,6 +132,10 @@ typedef uint64_t __be64;
  */
 #define __stringify_1(x...)     #x
 #define __stringify(x...)       __stringify_1(x)
+
+/* Indirect macros required for expanded argument pasting, eg. __LINE__. */
+#define ___PASTE(a, b) a##b
+#define __PASTE(a, b) ___PASTE(a, b)
 
 #define nullstr_guard(x)        ((x) ? (x) : "(null)")
 
