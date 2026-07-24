@@ -143,7 +143,7 @@ static __unused inline void led_ws2812_brightness_set(unsigned level)
 #ifdef LED_USE_NEOPIXEL
 #include <Adafruit_NeoPixel.h>
 
-Adafruit_NeoPixel neopixels(NUM_LED_WS2812, GPIO_LED_WS2812, LED_WS2812_ORDER + NEO_KHZ800);
+Adafruit_NeoPixel neopixels(NUM_LED_WS2812, GPIO_LED_WS2812, __PASTE(NEO_, LED_WS2812_ORDER) + NEO_KHZ800);
 
 unsigned led_ws2812_brightness = 10;
 
